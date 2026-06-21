@@ -867,40 +867,11 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
         <!-- Tab: Brand Kit -->
         <div id="s1-content-brand" class="s1-tab-pane">
           <div style="padding:14px 22px 0;">
-            <div class="dcard">
-              <h3>🎨 Brand Kit</h3>
-              <div class="bk-grid" style="margin-bottom:8px;">
-                <div>
-                  <div class="flbl">Brand Name</div>
-                  <input class="fi" id="bk-name" placeholder="e.g. NovaBite" style="margin-bottom:0;">
-                </div>
-                <div>
-                  <div class="flbl">Font Style</div>
-                  <select class="fsel" id="bk-font" style="margin:0;">
-                    <option value="Modern">Modern</option>
-                    <option value="Classic">Classic</option>
-                    <option value="Bold">Bold</option>
-                    <option value="Playful">Playful</option>
-                    <option value="Minimal">Minimal</option>
-                  </select>
-                </div>
-                <div>
-                  <div class="flbl">Brand Vibe</div>
-                  <input class="fi" id="bk-vibe" placeholder="e.g. energetic, bold, youthful" style="margin-bottom:0;">
-                </div>
-              </div>
-              <div style="margin-bottom:8px;">
-                <div class="flbl">Logo URL</div>
-                <input class="fi" id="bk-logo" placeholder="https://yoursite.com/logo.png" style="margin-bottom:0;">
-              </div>
-              <div>
-                <div class="bk-palette-hdr">
-                  <div class="flbl" style="margin:0;">Brand Colors <span style="font-weight:400;color:var(--t2);text-transform:none;letter-spacing:0;font-size:10px;">— picker · hex · label</span></div>
-                  <button class="btn bg bsm" id="bk-add-color" onclick="addBkColor()">+ Add Color</button>
-                </div>
-                <div id="bk-palette"></div>
-              </div>
-            </div>
+            <input type="hidden" id="bk-name">
+            <input type="hidden" id="bk-font">
+            <input type="hidden" id="bk-logo">
+            <input type="hidden" id="bk-vibe">
+            <div style="font-size:11px;color:var(--t2);padding:6px 0;">🎨 Brand Kit is managed in <span onclick="go('baseProfile')" style="color:var(--accent);cursor:pointer;">Base Profile →</span></div>
           </div>
         </div><!-- /s1-content-brand -->
 
@@ -1846,11 +1817,11 @@ function removeBkColor(i) {
 }
 
 function readBkColors() {
-  const rows = document.querySelectorAll('#bk-palette .bk-color-row');
+  const rows = document.querySelectorAll('#bp-colors-list .color-row');
   if (!rows.length) return;
-  S.brandColors = Array.from(rows).map((row, i) => ({
-    hex:   row.querySelector('.bk-color-pick').value,
-    label: row.querySelector('.bk-lbl').value.trim() || (BK_DEFAULTS[i] ? BK_DEFAULTS[i].label : 'Color')
+  S.brandColors = Array.from(rows).map(row => ({
+    hex:   row.querySelector('input[type="color"]').value,
+    label: row.querySelectorAll('input[type="text"]')[1]?.value.trim() || 'Color'
   }));
 }
 
@@ -4054,7 +4025,7 @@ function addProductCard(data) {
         <div class="bp-connected-pill" style="display:none;background:rgba(0,212,160,.12);border:1px solid rgba(0,212,160,.3);color:#00D4A0;border-radius:10px;padding:2px 8px;font-size:10px;font-weight:700;">✓ Connected</div>
         <button class="btn bg bsm" onclick="saveProduct('${localId}')">Save</button>
         <button class="btn bg bsm" style="color:var(--accent);border-color:rgba(0,212,160,.3);" onclick="connectProductToPipeline(this.closest('.bp-product-card').dataset.localId,this.closest('.bp-product-card').querySelector('.bp-prod-name').value,this.closest('.bp-product-card').querySelector('.bp-prod-price').value)">🔗 Connect</button>
-        <button class="bk-rm" onclick="removeBPProduct(this)" title="Delete">✕</button>
+        <button class="bk-rm" onclick="deleteProduct('${localId}')" title="Delete">✕</button>
       </div>
     </div>
     <div class="flbl">Product / Service Name</div>
@@ -4075,6 +4046,20 @@ function setBPType(btn, type) {
   const typeInput = btn.closest('.bp-product-card').querySelector('.bp-prod-type');
   if (typeInput) typeInput.value = type;
   markBPProdUnsaved(btn);
+}
+
+async function deleteProduct(localId) {
+  const card = document.querySelector('[data-local-id="' + localId + '"]');
+  const productId = card?.dataset.productId;
+  if (productId) {
+    try { await sb.from('products').delete().eq('id', productId); }
+    catch(e) { console.warn('[deleteProduct] DB error:', e.message); }
+  }
+  card?.remove();
+  const list  = document.getElementById('bp-products-list');
+  const empty = document.getElementById('bp-products-empty');
+  if (empty && list && !list.querySelector('.bp-product-card')) empty.style.display = 'block';
+  debouncedBPSave();
 }
 
 function removeBPProduct(btn) {
@@ -4401,6 +4386,10 @@ async function loadBaseProfile() {
       set('bp-youtube',       p.youtube);
       set('bp-brand-name',    p.brand_name);
       set('bp-brand-vibe',    p.brand_vibe);
+      // Populate hidden pipeline inputs
+      set('bk-name', p.brand_name);
+      set('bk-font', p.font_headline);
+      set('bk-vibe', p.brand_vibe);
       // Restore fonts
       S.brandFonts = {
         headline:    p.font_headline    || 'Barlow',
