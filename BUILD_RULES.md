@@ -4,6 +4,89 @@
 
 ---
 
+## 🔴 REPLIT + GITHUB WORKFLOW (Critical — Read This First)
+
+### The Problem We Solved
+Replit's built-in git UI creates "Published your App" commits that corrupt your real git history. Every time you click Sync or Republish in the Replit UI, Replit adds its own commits on top of your real Claude Code commits. This caused 200+ garbage commits and eventually deleted index.html entirely.
+
+### The Solution
+Never use the Replit git UI. Never click Sync. Never click Republish. Use the shell only.
+
+### Your Workflow (follow this every time)
+1. Claude Code builds feature → auto pushes to GitHub
+2. Open Replit Shell (not the UI)
+3. Run: `bash sync.sh`
+4. Refresh browser → changes are live
+
+Done. No clicking. No republishing.
+
+### sync.sh (must exist in every project)
+```bash
+#!/bin/bash
+echo "🔄 Syncing from GitHub..."
+git fetch origin
+git reset --hard origin/main
+echo "✅ All changes synced"
+echo "🟢 Done. App is live."
+```
+
+Make it executable: `chmod +x sync.sh`
+
+### If sync.sh does not exist in Replit
+Run this in Replit Shell to create it:
+```bash
+cat > sync.sh << 'EOF'
+#!/bin/bash
+echo "🔄 Syncing from GitHub..."
+git fetch origin
+git reset --hard origin/main
+echo "✅ All changes synced"
+echo "🟢 Done. App is live."
+EOF
+chmod +x sync.sh
+```
+
+### If the server crashes (app not responding)
+Run this in Replit Shell:
+```bash
+bash sync.sh && python3 server.py &
+```
+
+### If git history gets corrupted by Replit again
+Run this in Replit Shell to reset completely:
+```bash
+git fetch origin && git reset --hard origin/main && git clean -fd
+```
+
+If that does not work, nuclear option in Claude Code terminal:
+```bash
+git add -A && git commit -m "restore: full app" && git push origin main --force
+```
+Then in Replit Shell: `bash sync.sh`
+
+### GitHub Token Setup
+- Scope: repo only
+- Expiry: No expiration
+- Set remote: `git remote set-url origin https://[TOKEN]@github.com/[username]/[repo].git`
+- Never commit .env files or expose tokens in chat — revoke immediately if exposed
+
+### Rules
+1. NEVER click Sync in Replit UI
+2. NEVER click Republish in Replit UI
+3. ALWAYS use `bash sync.sh` in Replit Shell
+4. ALWAYS let Claude Code handle git commits
+5. ONE token per repo, no expiry, repo scope only
+6. If something breaks — check shell first, never the UI
+
+### For Every New Project
+1. Create GitHub repo
+2. Connect to Replit via shell (not UI git)
+3. Copy sync.sh to the new project
+4. Run `chmod +x sync.sh`
+5. Never touch the Replit git UI
+
+---
+
 ## ⚡ THE GOLDEN RULES (Never Break These)
 
 1. Read REFERENCES.md and META_ADS_AGENT_FRAMEWORK.md at the start of every session
