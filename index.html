@@ -1524,6 +1524,11 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
         <input class="fi" id="ar-competitors" placeholder="e.g. Gymshark, Huel, Athletic Greens">
       </div>
       <div class="ar-section">
+        <h4>Google Search Keywords</h4>
+        <p style="font-size:11px;color:var(--t2);margin-bottom:6px;">What would your competitors show up as on Google? Used to find local competitors on Google Maps.</p>
+        <input type="text" id="ar-google-keywords" class="fi" placeholder="e.g. teeth whitening, mobile teeth whitening, cosmetic teeth whitening">
+      </div>
+      <div class="ar-section">
         <h4>Reddit Keywords</h4>
         <input class="fi" id="ar-keywords" placeholder="e.g. protein powder, pre workout">
       </div>
@@ -3386,28 +3391,38 @@ async function runApifyActor(actorId, input, key) {
   throw new Error('Timed out after 90s');
 }
 
-async function scrapeMetaAdLibrary(keywords, country) {
+async function scrapeMetaAdLibrary(keywords, location, competitorUrls) {
   const apifyKey = KEYS.apify;
-  if (!apifyKey || !keywords?.length) return null;
+  if (!apifyKey || !keywords) return [];
   try {
     const hdrs = {'Content-Type':'application/json','Authorization':'Bearer '+apifyKey};
-    const startRes = await fetch(`${APIFY_API}/acts/apify~facebook-ads-scraper/runs`, {
-      method:'POST', headers:hdrs,
-      body: JSON.stringify({ searchTerms:keywords, country:country||'CA', maxAdsPerSearch:10, activeStatus:'ACTIVE' })
+    const city = location?.split(',')[0]||'';
+    const searchTerms = [keywords, city ? keywords+' '+city : null].filter(Boolean);
+    const inputPayload = { searchTerms, country:'CA', activeStatus:'ACTIVE', adType:'all', limit:15 };
+    if (competitorUrls?.length) inputPayload.pageUrls = competitorUrls;
+    console.log('[metaAds] starting run — searchTerms:', searchTerms);
+    const run = await fetch(`${APIFY_API}/acts/curious_coder~facebook-ads-library-scraper/runs`, {
+      method:'POST', headers:hdrs, body:JSON.stringify(inputPayload)
     });
-    if (!startRes.ok) return null;
-    const runId = (await startRes.json())?.data?.id;
-    if (!runId) return null;
-    for (let i = 0; i < 6; i++) {
-      await new Promise(r => setTimeout(r, 5000));
+    const runData = await run.json();
+    const runId = runData?.data?.id;
+    if (!runId) { console.warn('[metaAds] no run ID returned:', JSON.stringify(runData)); return []; }
+    console.log('[metaAds] run started:', runId);
+    for (let i = 0; i < 10; i++) {
+      await new Promise(r => setTimeout(r, 6000));
       const statusData = await (await fetch(`${APIFY_API}/actor-runs/${runId}`, {headers:hdrs})).json();
-      if (statusData?.data?.status === 'SUCCEEDED') {
-        const datasetId = statusData.data?.defaultDatasetId;
-        return await (await fetch(`${APIFY_API}/datasets/${datasetId}/items?limit=10`, {headers:hdrs})).json();
+      const runStatus = statusData?.data?.status;
+      console.log('[metaAds] poll', i+1, '— status:', runStatus);
+      if (runStatus === 'SUCCEEDED') {
+        const items = await (await fetch(`${APIFY_API}/actor-runs/${runId}/dataset/items?limit=15`, {headers:hdrs})).json();
+        console.log('[metaAds] found', items?.length, 'ads');
+        return items || [];
       }
+      if (runStatus === 'FAILED' || runStatus === 'ABORTED') { console.warn('[metaAds] run failed with status:', runStatus); return []; }
     }
-    return null;
-  } catch(e) { console.warn('[metaAdLibrary] scrape failed:', e.message); return null; }
+    console.warn('[metaAds] timed out after 10 polls');
+    return [];
+  } catch(e) { console.warn('[metaAds] scrape failed:', e.message); return []; }
 }
 
 async function scrapeRedditLanguage(keywords) {
@@ -3434,25 +3449,37 @@ async function scrapeRedditLanguage(keywords) {
   } catch(e) { console.warn('[redditScraper] scrape failed:', e.message); return null; }
 }
 
-async function discoverLocalCompetitors(keyword, location) {
+async function discoverLocalCompetitors() {
   const apifyKey = KEYS.apify;
-  if (!apifyKey || !keyword || !location) return [];
+  const googleKeyword = document.getElementById('ar-google-keywords')?.value?.trim()
+    || document.getElementById('ar-keywords')?.value?.trim()
+    || 'teeth whitening';
+  const bpLocation = document.getElementById('bp-location')?.value?.trim()
+    || S.location
+    || 'Ontario Canada';
+  const searchQuery = googleKeyword + ' ' + bpLocation;
+  if (!apifyKey || !googleKeyword) return [];
+  console.log('[googleMaps] searching:', searchQuery);
   try {
     const hdrs = {'Content-Type':'application/json','Authorization':'Bearer '+apifyKey};
     const startRes = await fetch(`${APIFY_API}/acts/apify~google-maps-scraper/runs`, {
       method:'POST', headers:hdrs,
-      body: JSON.stringify({ searchStringsArray:[`${keyword} near ${location}`], maxCrawledPlacesPerSearch:10, language:'en' })
+      body: JSON.stringify({ searchStringsArray:[searchQuery], maxCrawledPlacesPerSearch:10, language:'en' })
     });
-    if (!startRes.ok) return [];
+    if (!startRes.ok) { console.warn('[googleMaps] start failed:', startRes.status, await startRes.text()); return []; }
     const runId = (await startRes.json())?.data?.id;
-    if (!runId) return [];
+    if (!runId) { console.warn('[googleMaps] no run ID returned'); return []; }
+    console.log('[googleMaps] run ID:', runId);
     for (let i = 0; i < 8; i++) {
       await new Promise(r => setTimeout(r, 5000));
       const statusData = await (await fetch(`${APIFY_API}/actor-runs/${runId}`, {headers:hdrs})).json();
-      if (statusData?.data?.status === 'SUCCEEDED') {
+      const runStatus = statusData?.data?.status;
+      console.log('[googleMaps] poll', i+1, '— status:', runStatus);
+      if (runStatus === 'SUCCEEDED') {
         const datasetId = statusData.data?.defaultDatasetId;
-        const items = await (await fetch(`${APIFY_API}/datasets/${datasetId}/items?limit=10`, {headers:hdrs})).json();
-        return Array.isArray(items) ? items.map(p => ({
+        const places = await (await fetch(`${APIFY_API}/datasets/${datasetId}/items?limit=10`, {headers:hdrs})).json();
+        console.log('[googleMaps] found', places?.length, 'places');
+        return Array.isArray(places) ? places.map(p => ({
           name: p.title||p.name||'Unknown',
           address: p.address||p.location?.address||'',
           phone: p.phone||'',
@@ -3463,8 +3490,9 @@ async function discoverLocalCompetitors(keyword, location) {
           place_id: p.placeId||p.id||null
         })) : [];
       }
-      if (statusData?.data?.status === 'FAILED' || statusData?.data?.status === 'ABORTED') return [];
+      if (runStatus === 'FAILED' || runStatus === 'ABORTED') { console.warn('[googleMaps] run failed:', runStatus); return []; }
     }
+    console.warn('[googleMaps] timed out after 8 polls');
     return [];
   } catch(e) { console.warn('[googleMaps] scrape failed:', e.message); return []; }
 }
@@ -3524,6 +3552,8 @@ async function runAutoResearch() {
   }
   const competitors=document.getElementById('ar-competitors').value.trim();
   const keywords=document.getElementById('ar-keywords').value.trim();
+  const googleKeyword=document.getElementById('ar-google-keywords')?.value?.trim()||keywords.split(',')[0].trim()||'';
+  const competitorUrls=(document.getElementById('ar-competitor-urls')?.value?.trim()||'').split('\n').map(u=>u.trim()).filter(u=>u.startsWith('http'));
   const customSub=document.getElementById('ar-custom-sub').value.trim();
   const country=document.getElementById('ar-demo-country').value;
   const doDemographics=document.getElementById('ar-demographics').checked;
@@ -3545,15 +3575,15 @@ async function runAutoResearch() {
   const t3=(doDemographics&&compList.length)?arThinking(`🟣 Your Actor — ${compList[0]}…`):null;
   const t4=keywords?arThinking(`🔍 Scraping Meta Ad Library for competitor ads…`):null;
   const t5=keywords?arThinking(`💬 Scraping Reddit for customer language…`):null;
-  const t6=keywords&&location?arThinking(`🗺️ Discovering local competitors on Google Maps…`):null;
+  const t6=googleKeyword&&location?arThinking(`🗺️ Searching Google Maps for '${googleKeyword}' near ${location.split(',')[0]}…`):null;
   const kwList=keywords?keywords.split(',').map(k=>k.trim()).filter(Boolean):[];
   const [compRes,redditRes,demoRes,metaAdsRes,redditLiteRes,localCompRes]=await Promise.allSettled([
     compList.length?runApifyActor('curious_coder~facebook-ads-library-scraper',{urls:compList.map(c=>({url:`https://www.facebook.com/ads/library/?active_status=active&ad_type=all&country=${country}&q=${encodeURIComponent(c)}&search_type=keyword_unordered`})),maxAds:vol==='quick'?20:vol==='deep'?100:50},apifyKey):Promise.resolve([]),
     (keywords||subreddits.length)?runApifyActor('parseforge~reddit-posts-scraper',{searches:subreddits.length>0?subreddits.slice(0,3).map(sub=>({subreddit:sub.replace('r/',''),query:keywords||sub.replace('r/',''),sort:'top',time:'year'})):[{query:keywords,sort:'top',time:'year'}],maxItems:vol==='quick'?30:vol==='deep'?300:100,proxyConfiguration:{useApifyProxy:true}},apifyKey):Promise.resolve([]),
     (doDemographics&&compList.length)?runApifyActor('xanthic_mead~meta-ads-demographics-actor',{mode:'both',pageName:compList[0],niche:S.niche||document.getElementById('ar-keywords').value.trim().split(' ')[0]||'fitness',country,maxResults:vol==='quick'?10:vol==='deep'?50:25,adType:'ALL',status:'ACTIVE',sortBy:'SORT_BY_TOTAL_IMPRESSIONS'},apifyKey):Promise.resolve(null),
-    kwList.length?scrapeMetaAdLibrary(kwList,country):Promise.resolve(null),
+    googleKeyword?scrapeMetaAdLibrary(googleKeyword,location,competitorUrls):Promise.resolve([]),
     kwList.length?scrapeRedditLanguage(kwList):Promise.resolve(null),
-    (keywords&&location)?discoverLocalCompetitors(keywords.split(',')[0].trim(),location):Promise.resolve([])
+    (googleKeyword&&location)?discoverLocalCompetitors():Promise.resolve([])
   ]);
   if(t1)t1.remove(); if(t2)t2.remove(); if(t3)t3.remove(); if(t4)t4.remove(); if(t5)t5.remove(); if(t6)t6.remove();
   const metaAds = metaAdsRes.status==='fulfilled'&&Array.isArray(metaAdsRes.value) ? metaAdsRes.value : null;
