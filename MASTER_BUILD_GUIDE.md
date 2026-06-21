@@ -8,18 +8,19 @@
 ## 🚀 HOW TO START ANY NEW PROJECT
 
 1. Create GitHub repo
-2. Clone to local machine
-3. Copy these files from meta-ads-agent:
+2. Connect repo to Vercel (import project in Vercel dashboard)
+3. Clone to local machine
+4. Copy these files from meta-ads-agent:
    - MASTER_BUILD_GUIDE.md (this file)
    - SKILLS_GUIDE.md
    - BUILD_RULES.md
    - SUPABASE_FIXES.md
    - .claude/hooks/pre-session.sh
-4. Create CLAUDE.md for the new project
-5. Create REFERENCES.md for the new project
-6. Run: npx agent-skills-cli@latest add @Jeffallan/claude-skills
-7. Start Claude Code: cd /path/to/project && claude
-8. First command: "Read MASTER_BUILD_GUIDE.md and REFERENCES.md first"
+5. Create CLAUDE.md for the new project
+6. Create REFERENCES.md for the new project
+7. Run: npx agent-skills-cli@latest add @Jeffallan/claude-skills
+8. Start Claude Code: cd /path/to/project && claude
+9. First command: "Read MASTER_BUILD_GUIDE.md and REFERENCES.md first"
 
 ---
 
@@ -101,20 +102,16 @@ WITH CHECK (auth.uid() = user_id);
 **Root cause:** JWT expired → auth.uid() returns null → policy fails
 **Fix:** Use getUser() before any RLS-protected query to force token refresh
 
-### BUG 7: Replit corrupting git history
-**Symptom:** Git log shows "Published your App" commits, real commits disappear
-**Root cause:** Replit's git UI creates its own commits on top of real ones
-**Fix:** Never use Replit git UI. Shell only:
-```bash
-bash sync.sh
-```
-**Nuclear fix if corrupted:**
+### BUG 7: Git history corruption (historical — Replit-era)
+**Symptom:** Git log shows unexpected commits, real commits disappear
+**Root cause:** Replit's git UI was creating its own commits on top of real ones (no longer applicable — project is now on Vercel)
+**Fix (historical):** Never use Replit git UI. Always commit and push via Claude Code.
+**Nuclear fix if git gets in a bad state:**
 ```bash
 # In Claude Code terminal
 git add -A && git commit -m "restore" && git push origin main --force
-# In Replit Shell
-bash sync.sh
 ```
+Vercel auto-deploys the force-pushed main branch.
 
 ### BUG 8: Product deletes visually but returns on refresh
 **Symptom:** Delete button removes card from UI but it comes back after refresh
@@ -181,42 +178,30 @@ WITH CHECK (auth.uid() = user_id);
 
 ---
 
-## 💻 REPLIT + GITHUB WORKFLOW
+## 💻 VERCEL + GITHUB WORKFLOW
 
 ### Rules
-- NEVER click Sync in Replit UI
-- NEVER click Republish in Replit UI  
-- ALWAYS use bash sync.sh in Replit Shell
-- ALWAYS let Claude Code handle git commits
-
-### Setup sync.sh in every project
-```bash
-cat > sync.sh << 'EOF'
-#!/bin/bash
-echo "🔄 Syncing from GitHub..."
-git fetch origin
-git reset --hard origin/main
-echo "✅ All changes synced"
-echo "🟢 Done. App is live."
-EOF
-chmod +x sync.sh
-```
+- ALWAYS let Claude Code handle git commits and pushes
+- Vercel auto-deploys on every push to main — no manual steps
+- Set environment variables in Vercel dashboard, never in source code
+- Revoke GitHub tokens immediately if exposed in chat or commits
 
 ### Daily workflow
-Claude Code builds → git push to GitHub
+Claude Code builds → git push to GitHub → Vercel deploys automatically
 
-Replit Shell → bash sync.sh
+No shell sync needed. No manual republish.
 
-Browser Ctrl+Shift+R → changes live
+### If deploy is not updating
+1. Check Vercel dashboard → Deployments tab for build errors
+2. Verify the push reached GitHub: `git log --oneline -3`
+3. If needed, trigger a manual redeploy from the Vercel dashboard
 
-### If git corrupted
+### If git is in a bad state
 ```bash
 # Claude Code terminal
 git add -A && git commit -m "restore: full build" && git push origin main --force
-# Replit Shell  
-git init && git remote add origin [url] && git fetch origin && git checkout -B main origin/main
-bash sync.sh
 ```
+Vercel will pick up the force-push and redeploy automatically.
 
 ### GitHub token setup
 - Scope: repo only
