@@ -3308,6 +3308,54 @@ async function runApifyActor(actorId, input, key) {
   throw new Error('Timed out after 90s');
 }
 
+async function scrapeMetaAdLibrary(keywords, country) {
+  const apifyKey = KEYS.apify;
+  if (!apifyKey || !keywords?.length) return null;
+  try {
+    const hdrs = {'Content-Type':'application/json','Authorization':'Bearer '+apifyKey};
+    const startRes = await fetch(`${APIFY_API}/acts/apify~facebook-ads-scraper/runs`, {
+      method:'POST', headers:hdrs,
+      body: JSON.stringify({ searchTerms:keywords, country:country||'CA', maxAdsPerSearch:10, activeStatus:'ACTIVE' })
+    });
+    if (!startRes.ok) return null;
+    const runId = (await startRes.json())?.data?.id;
+    if (!runId) return null;
+    for (let i = 0; i < 6; i++) {
+      await new Promise(r => setTimeout(r, 5000));
+      const statusData = await (await fetch(`${APIFY_API}/actor-runs/${runId}`, {headers:hdrs})).json();
+      if (statusData?.data?.status === 'SUCCEEDED') {
+        const datasetId = statusData.data?.defaultDatasetId;
+        return await (await fetch(`${APIFY_API}/datasets/${datasetId}/items?limit=10`, {headers:hdrs})).json();
+      }
+    }
+    return null;
+  } catch(e) { console.warn('[metaAdLibrary] scrape failed:', e.message); return null; }
+}
+
+async function scrapeRedditLanguage(keywords) {
+  const apifyKey = KEYS.apify;
+  if (!apifyKey || !keywords?.length) return null;
+  try {
+    const hdrs = {'Content-Type':'application/json','Authorization':'Bearer '+apifyKey};
+    const startRes = await fetch(`${APIFY_API}/acts/trudax~reddit-scraper-lite/runs`, {
+      method:'POST', headers:hdrs,
+      body: JSON.stringify({ searches:keywords, maxItems:15, sort:'relevance' })
+    });
+    if (!startRes.ok) return null;
+    const runId = (await startRes.json())?.data?.id;
+    if (!runId) return null;
+    for (let i = 0; i < 6; i++) {
+      await new Promise(r => setTimeout(r, 5000));
+      const statusData = await (await fetch(`${APIFY_API}/actor-runs/${runId}`, {headers:hdrs})).json();
+      if (statusData?.data?.status === 'SUCCEEDED') {
+        const datasetId = statusData.data?.defaultDatasetId;
+        return await (await fetch(`${APIFY_API}/datasets/${datasetId}/items?limit=15`, {headers:hdrs})).json();
+      }
+    }
+    return null;
+  } catch(e) { console.warn('[redditScraper] scrape failed:', e.message); return null; }
+}
+
 async function runAutoResearch() {
   const apifyKey = KEYS.apify;
   if(!apifyKey){document.getElementById('ar-key-warning').style.display='block';return;}
@@ -3339,16 +3387,23 @@ async function runAutoResearch() {
   setSt('Auto-Research running…','run');
   const compList=competitors?competitors.split(',').map(c=>c.trim()).filter(Boolean):[];
   let compResults=[],redditResults=[],demographicData={};
-  const divEl=document.createElement('div');divEl.className='sdiv';divEl.textContent='Running 3 sources in parallel';stream.appendChild(divEl);
+  const divEl=document.createElement('div');divEl.className='sdiv';divEl.textContent='Running 5 sources in parallel';stream.appendChild(divEl);
   const t1=compList.length?arThinking(`📘 Meta Ad Library — ${compList.join(', ')}…`):null;
   const t2=(keywords||subreddits.length)?arThinking(`🟠 Reddit — "${keywords||subreddits[0]}"…`):null;
   const t3=(doDemographics&&compList.length)?arThinking(`🟣 Your Actor — ${compList[0]}…`):null;
-  const [compRes,redditRes,demoRes]=await Promise.allSettled([
+  const t4=keywords?arThinking(`🔍 Scraping Meta Ad Library for competitor ads…`):null;
+  const t5=keywords?arThinking(`💬 Scraping Reddit for customer language…`):null;
+  const kwList=keywords?keywords.split(',').map(k=>k.trim()).filter(Boolean):[];
+  const [compRes,redditRes,demoRes,metaAdsRes,redditLiteRes]=await Promise.allSettled([
     compList.length?runApifyActor('curious_coder~facebook-ads-library-scraper',{urls:compList.map(c=>({url:`https://www.facebook.com/ads/library/?active_status=active&ad_type=all&country=${country}&q=${encodeURIComponent(c)}&search_type=keyword_unordered`})),maxAds:vol==='quick'?20:vol==='deep'?100:50},apifyKey):Promise.resolve([]),
     (keywords||subreddits.length)?runApifyActor('parseforge~reddit-posts-scraper',{searches:subreddits.length>0?subreddits.slice(0,3).map(sub=>({subreddit:sub.replace('r/',''),query:keywords||sub.replace('r/',''),sort:'top',time:'year'})):[{query:keywords,sort:'top',time:'year'}],maxItems:vol==='quick'?30:vol==='deep'?300:100,proxyConfiguration:{useApifyProxy:true}},apifyKey):Promise.resolve([]),
-    (doDemographics&&compList.length)?runApifyActor('xanthic_mead~meta-ads-demographics-actor',{mode:'both',pageName:compList[0],niche:S.niche||document.getElementById('ar-keywords').value.trim().split(' ')[0]||'fitness',country,maxResults:vol==='quick'?10:vol==='deep'?50:25,adType:'ALL',status:'ACTIVE',sortBy:'SORT_BY_TOTAL_IMPRESSIONS'},apifyKey):Promise.resolve(null)
+    (doDemographics&&compList.length)?runApifyActor('xanthic_mead~meta-ads-demographics-actor',{mode:'both',pageName:compList[0],niche:S.niche||document.getElementById('ar-keywords').value.trim().split(' ')[0]||'fitness',country,maxResults:vol==='quick'?10:vol==='deep'?50:25,adType:'ALL',status:'ACTIVE',sortBy:'SORT_BY_TOTAL_IMPRESSIONS'},apifyKey):Promise.resolve(null),
+    kwList.length?scrapeMetaAdLibrary(kwList,country):Promise.resolve(null),
+    kwList.length?scrapeRedditLanguage(kwList):Promise.resolve(null)
   ]);
-  if(t1)t1.remove(); if(t2)t2.remove(); if(t3)t3.remove();
+  if(t1)t1.remove(); if(t2)t2.remove(); if(t3)t3.remove(); if(t4)t4.remove(); if(t5)t5.remove();
+  const metaAds = metaAdsRes.status==='fulfilled'&&Array.isArray(metaAdsRes.value) ? metaAdsRes.value : null;
+  const redditLite = redditLiteRes.status==='fulfilled'&&Array.isArray(redditLiteRes.value) ? redditLiteRes.value : null;
   // Process Meta Ad Library
   if(compRes.status==='fulfilled'&&compRes.value?.length){
     compResults=compRes.value;
@@ -3373,14 +3428,27 @@ async function runAutoResearch() {
     if(summary){demographicData=summary;const demo=summary.audience_demographics||{};const topAge=demo.age_breakdown?.[0]?.age_band||'Unknown';arMsg(`<span class="source-badge sb-audience">Demographics</span> ${compList[0]}: Top age ${topAge} · ${demo.gender?.primary_target||''}`,'res-bub');}
     if(discovery){S.researchSummary=`Audience discovery:\nInterests: ${(discovery.interests?.curated_by_niche||[]).map(i=>i.name).join(', ')}\nBudget: ${JSON.stringify(discovery.budget_framework?.recommended_test_budget||{})}`;arMsg(`<span class="source-badge sb-audience">Audience Discovery</span> Full targeting brief ready — interests, behaviors, budgets loaded`,'res-bub');}
   }else if(doDemographics&&compList.length){arMsg(`<span class="source-badge sb-audience">Your Actor</span> ⚠️ ${demoRes.reason?.message||'No data returned'}`,'think-bub');}
+  // Process keyword-based Meta Ad Library
+  if(metaAds?.length){
+    const adsHtml=metaAds.slice(0,5).map(ad=>`<div style="padding:8px;background:var(--s3);border-radius:6px;margin-bottom:6px;"><div style="font-size:11px;font-weight:700;color:var(--t1);">${escHtml(ad.pageName||'Unknown Brand')}</div><div style="font-size:12px;color:var(--t2);margin-top:2px;">${escHtml(ad.title||ad.body?.slice(0,100)||'—')}</div>${ad.callToAction?`<div style="font-size:10px;color:var(--accent);margin-top:4px;">CTA: ${escHtml(ad.callToAction)}</div>`:''}</div>`).join('');
+    arMsg(`<span class="source-badge sb-meta">Meta Ad Library (Keywords)</span> <strong>${metaAds.length} competitor ads</strong> found<br><div style="margin-top:8px;">${adsHtml}</div>`,'res-bub');
+  }else if(kwList.length){arMsg(`<span class="source-badge sb-meta">Meta Ad Library (Keywords)</span> 🎯 <strong>First-mover opportunity</strong> — no competitor ads found in this market`,'res-bub');}
+  // Process Reddit Lite customer voice
+  if(redditLite?.length){
+    const sorted=redditLite.slice().sort((a,b)=>(b.score||0)-(a.score||0));
+    const postsHtml=sorted.slice(0,5).map(p=>`<div style="padding:8px;background:var(--s3);border-radius:6px;margin-bottom:6px;"><div style="font-size:12px;color:var(--t1);font-style:italic;">"${escHtml((p.title||p.body||'').slice(0,120))}"</div><div style="font-size:10px;color:var(--t2);margin-top:4px;">▲ ${p.score||0} upvotes</div></div>`).join('');
+    arMsg(`<span class="source-badge sb-reddit">Reddit (Customer Voice)</span> <strong>${redditLite.length} posts</strong> analyzed<br><div style="margin-top:8px;">${postsHtml}</div>`,'res-bub');
+  }else if(kwList.length){arMsg(`<span class="source-badge sb-reddit">Reddit (Customer Voice)</span> ⚠️ No customer voice data found for these keywords`,'think-bub');}
   // Claude synthesis
-  const hasData=compResults.length>0||redditResults.length>0||Object.keys(demographicData).length>0;
+  const hasData=compResults.length>0||redditResults.length>0||Object.keys(demographicData).length>0||metaAds?.length>0||redditLite?.length>0;
   if(hasData){
     const tSynth=arThinking('Synthesizing all research into audience brief…');
     const actorAds=demoRes.status==='fulfilled'&&Array.isArray(demoRes.value)?demoRes.value.filter(i=>i.ad_id):[];
     const actorCopy=actorAds.slice(0,10).map(a=>[a.headline&&`Headline: ${a.headline}`,a.body&&`Body: ${a.body}`].filter(Boolean).join('\n')).filter(Boolean).join('\n---\n');
     const locationCtx=S.locationLat&&S.locationLon?`LOCATION: ${document.getElementById('bp-location')?.value||'not specified'} (${S.locationLat},${S.locationLon})`:'';
-    const synthPrompt=`Synthesize into audience intelligence brief. COMPETITOR: ${compList.join(', ')} PRODUCT: ${S.product||'not specified'} ${locationCtx} AD COPY (${compResults.length+actorAds.length} ads): ${(S.compCopy||actorCopy||'none').substring(0,2000)} REDDIT (${redditResults.length} posts): ${S.voice?S.voice.substring(0,1500):'none'} Cover: 1. TARGET AUDIENCE PROFILE 2. TOP PAIN POINTS 3. WINNING AD ANGLES 4. MARKET GAPS 5. RECOMMENDED HOOK. Max 300 words. Be specific. ${locationCtx?'Tailor insights for the specified location/market.':''}`;
+    const metaAdsContext=metaAds?.length?'COMPETITOR ADS FROM META AD LIBRARY:\n'+metaAds.slice(0,8).map(ad=>`- Brand: ${ad.pageName||'Unknown'} | Headline: ${ad.title||ad.body?.slice(0,80)||'N/A'} | CTA: ${ad.callToAction||'N/A'}`).join('\n'):'No competitor ads found in Meta Ad Library for this market.';
+    const redditContext=redditLite?.length?'REAL CUSTOMER LANGUAGE FROM REDDIT:\n'+redditLite.slice(0,10).map(p=>`- "${p.title||p.body?.slice(0,120)||'N/A'}" (${p.score||0} upvotes)`).join('\n'):'No Reddit customer voice data available.';
+    const synthPrompt=`Synthesize into audience intelligence brief. COMPETITOR: ${compList.join(', ')} PRODUCT: ${S.product||'not specified'} ${locationCtx} AD COPY (${compResults.length+actorAds.length} ads): ${(S.compCopy||actorCopy||'none').substring(0,2000)} REDDIT (${redditResults.length} posts): ${S.voice?S.voice.substring(0,1500):'none'} ${metaAdsContext} ${redditContext} Cover: 1. TARGET AUDIENCE PROFILE 2. TOP PAIN POINTS 3. WINNING AD ANGLES 4. MARKET GAPS 5. RECOMMENDED HOOK. Max 300 words. Be specific. ${locationCtx?'Tailor insights for the specified location/market.':''}`;
     const synthMsg=await ai(getSYSResearch(),[{role:'user',content:synthPrompt}]);
     tSynth.remove(); S.researchSummary=synthMsg;
     const painMatch=synthMsg.match(/PAIN POINTS[:\s]+([^\n]+)/i);
@@ -3389,7 +3457,7 @@ async function runAutoResearch() {
   }
   const hasActor=demoRes.status==='fulfilled'&&Array.isArray(demoRes.value)&&demoRes.value.length>0;
   const actorAdCount=hasActor?demoRes.value.filter(i=>i.ad_id).length:0;
-  arMsg(`<strong>✅ Auto-Research Complete</strong><div style="margin-top:10px;display:grid;grid-template-columns:repeat(3,1fr);gap:8px;"><div style="background:var(--s3);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:11px;font-weight:700;color:${compResults.length?'var(--accent)':'var(--t2)'};">${compResults.length} ads</div><div style="font-size:9px;color:var(--t2);">Ad Library</div></div><div style="background:var(--s3);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:11px;font-weight:700;color:${redditResults.length?'#ff6b35':'var(--t2)'};">${redditResults.length} posts</div><div style="font-size:9px;color:var(--t2);">Reddit</div></div><div style="background:var(--s3);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:11px;font-weight:700;color:${hasActor?'var(--purple)':'var(--t2)'};">${actorAdCount>0?actorAdCount+' ads':hasActor?'✓':'—'}</div><div style="font-size:9px;color:var(--t2);">Your Actor</div></div></div><div style="margin-top:8px;font-size:11px;color:var(--t2);">Go to Stage 1 → Save & Continue → ▶ Run Full Pipeline</div>`,'res-bub');
+  arMsg(`<strong>✅ Auto-Research Complete</strong><div style="margin-top:10px;display:grid;grid-template-columns:repeat(5,1fr);gap:6px;"><div style="background:var(--s3);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:11px;font-weight:700;color:${compResults.length?'var(--accent)':'var(--t2)'};">${compResults.length} ads</div><div style="font-size:9px;color:var(--t2);">Ad Library</div></div><div style="background:var(--s3);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:11px;font-weight:700;color:${redditResults.length?'#ff6b35':'var(--t2)'};">${redditResults.length} posts</div><div style="font-size:9px;color:var(--t2);">Reddit</div></div><div style="background:var(--s3);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:11px;font-weight:700;color:${hasActor?'var(--purple)':'var(--t2)'};">${actorAdCount>0?actorAdCount+' ads':hasActor?'✓':'—'}</div><div style="font-size:9px;color:var(--t2);">Your Actor</div></div><div style="background:var(--s3);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:11px;font-weight:700;color:${metaAds?.length?'var(--accent)':'var(--t2)'};">${metaAds?.length?metaAds.length+' ads':'🎯'}</div><div style="font-size:9px;color:var(--t2);">${metaAds?.length?'Meta KW':'1st Mover'}</div></div><div style="background:var(--s3);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:11px;font-weight:700;color:${redditLite?.length?'#ff6b35':'var(--t2)'};">${redditLite?.length||0} posts</div><div style="font-size:9px;color:var(--t2);">Cust. Voice</div></div></div><div style="margin-top:8px;font-size:11px;color:var(--t2);">Go to Stage 1 → Save & Continue → ▶ Run Full Pipeline</div>`,'res-bub');
   await savePipelineRun();
   updateCIDisplay();
   document.getElementById('ar-run-btn').disabled=false;
