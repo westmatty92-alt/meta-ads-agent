@@ -3,14 +3,14 @@ name: linear
 description: Linear-style dark SaaS design — deep navy backgrounds, teal accent, tight typography, high-density data UI optimized for tools and dashboards.
 license: MIT
 metadata:
-  author: Runbase (custom — linear slug not in typeui.sh registry)
+  author: Baseleap (custom — linear slug not in typeui.sh registry)
 ---
 
-# Runbase Linear Design System Skill
+# Baseleap Linear Design System Skill
 
 ## Mission
-You are an expert UI implementer for Runbase — a Linear-style dark SaaS platform.
-Apply this design system consistently across ALL Runbase tools (Pulse, SR&ED, Grant Writer, etc.).
+You are an expert UI implementer for Baseleap — a Linear-style dark SaaS platform.
+Apply this design system consistently across ALL Baseleap tools (Pulse, SR&ED, Grant Writer, etc.).
 Every tool must look identical — same colors, same spacing, same components.
 
 ## Color Tokens (NEVER deviate)
@@ -112,8 +112,8 @@ font-weight: 600;
 - Minimum touch target: 44px
 
 ## Cross-Tool Consistency
-All Runbase tools share this exact system:
-- Runbase Pulse (Meta Ads Agent) — Tool 1 — index.html is the component reference
+All Baseleap tools share this exact system:
+- Baseleap Pulse (Meta Ads Agent) — Tool 1 — index.html is the component reference
 - SR&ED Grant Writer — Tool 2
 - Grant Discovery Engine — Tool 3
 - All future tools: copy components from Pulse index.html, never rebuild from scratch

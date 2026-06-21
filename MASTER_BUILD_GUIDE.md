@@ -1,6 +1,6 @@
-# Runbase — Master Build Guide
+# Baseleap — Master Build Guide
 # Copy this to EVERY new project before starting
-# This document captures everything learned building Runbase Pulse
+# This document captures everything learned building Baseleap Pulse
 # Last updated: June 2026
 
 ---
@@ -297,8 +297,8 @@ project/
 - Linear design skill: .claude/skills/linear/SKILL.md
 - Minimal design skill: .claude/skills/minimal/SKILL.md
 
-### Runbase Design Language: Linear-Style Dark
-We use Linear-style design across ALL Runbase tools (Pulse, SR&ED, Grant Writer, etc.)
+### Baseleap Design Language: Linear-Style Dark
+We use Linear-style design across ALL Baseleap tools (Pulse, SR&ED, Grant Writer, etc.)
 Every tool must look and feel identical — same colors, same spacing, same components.
 
 ### Color Tokens (NEVER deviate from these)
@@ -365,8 +365,8 @@ Every tool must look and feel identical — same colors, same spacing, same comp
 5. Every new component must work in both the current app AND future tools
 
 ### Cross-Tool Consistency Rule
-ALL Runbase tools share the same design system:
-- Runbase Pulse (Meta Ads Agent) — Tool 1
+ALL Baseleap tools share the same design system:
+- Baseleap Pulse (Meta Ads Agent) — Tool 1
 - SR&ED Grant Writer — Tool 2
 - Grant Discovery Engine — Tool 3
 - All future tools follow the same system
@@ -396,7 +396,7 @@ npx typeui.sh pull agentic --format skill --providers claude-code
 npx typeui.sh pull clean --format skill --providers claude-code
 ```
 
-Note: `linear` is not in the typeui.sh registry — use .claude/skills/linear/SKILL.md (custom Runbase skill).
+Note: `linear` is not in the typeui.sh registry — use .claude/skills/linear/SKILL.md (custom Baseleap skill).
 Pulled files land in .claude/skills/design-system/SKILL.md — copy to a named subdirectory if keeping multiple.
 
 List all available skills (interactive):

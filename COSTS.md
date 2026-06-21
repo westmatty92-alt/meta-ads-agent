@@ -1,4 +1,4 @@
-# Runbase — Cost Tracking Document
+# Baseleap — Cost Tracking Document
 # Last updated: June 2026
 # Track all expenses here and update monthly
 
@@ -167,7 +167,7 @@ Add entries here monthly:
 | Flux via Replicate | ~$0.05/image | Alternative to DALL-E |
 | Replit hosting | $20-25/mo | When we upgrade from free |
 | Stripe | 2.9% + $0.30/transaction | When billing goes live |
-| n8n self-hosted | ~$10/mo VPS | Runbase Automate module |
+| n8n self-hosted | ~$10/mo VPS | Baseleap Automate module |
 
 ---
 

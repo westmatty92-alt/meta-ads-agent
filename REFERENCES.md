@@ -1,4 +1,4 @@
-# Runbase CRM — Master Reference Guide
+# Baseleap CRM — Master Reference Guide
 # FILE NAME TO REMEMBER: REFERENCES.md
 # HOW TO USE: Start every build conversation by saying "read REFERENCES.md first"
 
@@ -7,14 +7,14 @@
 ## 🏗️ BUSINESS MODEL
 
 ### The Core Principle
-Clients never log into GHL. Runbase is the interface. GHL is the engine.
+Clients never log into GHL. Baseleap is the interface. GHL is the engine.
 
 ### Two-Track Model
 **Track A — Services (Now)**
 Done-for-you services at $1,500-3,000/mo per client. Tools validate in real work. Every client is a case study. Cash flow funds the build.
 
 **Track B — Software (Building Toward)**
-Sell Runbase CRM subscriptions to agencies. White-label option for resellers.
+Sell Baseleap CRM subscriptions to agencies. White-label option for resellers.
 - Starter: $97/mo
 - Pro: $197/mo
 - Agency: $397/mo
@@ -23,7 +23,7 @@ Sell Runbase CRM subscriptions to agencies. White-label option for resellers.
 ### GHL Integration Strategy
 - Phase 1: Agency API Key (master key, all sub-accounts)
 - Phase 2: OAuth per Sub-Account (white-label)
-- Phase 3: Webhook Real-Time (pipeline events push to Runbase)
+- Phase 3: Webhook Real-Time (pipeline events push to Baseleap)
 
 ### Critical Architecture Rule
 Every module must be iFrame-embeddable for GHL from day one.
@@ -54,8 +54,8 @@ Auth via GHL SSO or login token per client.
    Audit to proposal. Package selection. Pushes to GHL as opportunity.
 
 ### Phase 2 — Growth
-7. **Runbase Automate — n8n Embedded** (access_key: n8n_automate) — Pro+
-   UNIQUE DIFFERENTIATOR. n8n self-hosted, branded as Runbase Automate. 400+ integrations. No per-task fees.
+7. **Baseleap Automate — n8n Embedded** (access_key: n8n_automate) — Pro+
+   UNIQUE DIFFERENTIATOR. n8n self-hosted, branded as Baseleap Automate. 400+ integrations. No per-task fees.
    
 8. **Brief-to-Everything Engine** (access_key: brief_engine) — Pro+
    UNIQUE DIFFERENTIATOR. One intake form pre-populates every tool automatically.
@@ -90,13 +90,27 @@ Auth via GHL SSO or login token per client.
 
 ---
 
+## 🎨 BRAND ASSETS
+
+- **Brand name:** Baseleap
+- **Product name:** Baseleap Pulse (Tool 1 of 17)
+- **Logo:** Dark background version — stacked layers icon + BASELEAP wordmark
+  - BASE: white (#E8EDF5)
+  - LEAP: teal (#00D4A0)
+  - Icon: Stacked layers in teal/dark-teal gradient
+- **Live URL:** https://meta-ads-agent-cyan.vercel.app/
+- **GitHub:** https://github.com/westmatty92-alt/meta-ads-agent
+- **Logo file:** Sleek_BASELEAP_Logo_with_Clean_Composition__2_.png (embed as base64 in index.html `_RB_LOGO2` constant)
+
+---
+
 ## 🆚 6 UNIQUE DIFFERENTIATORS (The Moat)
 1. AI Business Health Score — live 0-100, nobody else has this
 2. Brief-to-Everything Engine — one form pre-populates all tools
 3. Competitor Intelligence Feed — automated weekly competitor monitoring
 4. Industry Pre-Configuration — 20+ industry configs, respects existing brands
 5. Client Build Progress View — clients see their business being built in real time
-6. Runbase Automate (n8n) — unlimited automation, no per-task fees
+6. Baseleap Automate (n8n) — unlimited automation, no per-task fees
 
 ---
 
@@ -104,7 +118,7 @@ Auth via GHL SSO or login token per client.
 - Frontend: Single-page app (HTML → React rebuild planned)
 - Auth + Database: Supabase (pgcrypto for key encryption)
 - AI Engine: Anthropic API — Claude Sonnet 4.6
-- Automation: n8n self-hosted (branded as Runbase Automate)
+- Automation: n8n self-hosted (branded as Baseleap Automate)
 - GHL Integration: GHL Agency API v2
 - Image Generation: Flux via Replicate + DALL-E 3
 - Branded Templates: Bannerbear or Templated.io (NOT Canva API — Enterprise only)
@@ -140,7 +154,7 @@ Auth via GHL SSO or login token per client.
 ### GHL + External API Connectors (use for Phase 2 GHL integration)
 - **Composio Awesome Claude Skills** — https://github.com/ComposioHQ/awesome-claude-skills
   Pre-built Claude Code skills for connecting to external SaaS tools.
-  Most relevant for Runbase: GHL connector, Stripe connector, Google Sheets connector.
+  Most relevant for Baseleap: GHL connector, Stripe connector, Google Sheets connector.
   Use when building GHL OAuth per-sub-account integration in Phase 2.
   Install when ready: npx composio-core add gohighlevel
 
@@ -190,4 +204,4 @@ Key skills for this project:
 4. Canva Autofill API = Enterprise only. Use Bannerbear/Templated.io instead
 5. pgcrypto passphrase must move to env var before production
 6. shadcn/ui replaces building UI from scratch — check there first
-7. GHL is the engine. Runbase is the interface. Never reverse this.
+7. GHL is the engine. Baseleap is the interface. Never reverse this.

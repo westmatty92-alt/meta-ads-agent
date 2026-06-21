@@ -1,7 +1,7 @@
 Create a file called sync.sh in /home/admin/meta-ads-agent/ with this content:
 
 #!/bin/bash
-# Runbase Pulse — One-command sync and deploy
+# Baseleap Pulse — One-command sync and deploy
 # Run this in Replit Shell after every Claude Code push
 # Usage: bash sync.sh
 
@@ -19,6 +19,6 @@ python3 server.py &
 echo "✅ Server restarted"
 
 echo ""
-echo "🟢 Done. Runbase Pulse is live."
+echo "🟢 Done. Baseleap Pulse is live."
 
 Push this file to GitHub.

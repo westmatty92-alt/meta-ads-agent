@@ -1,4 +1,4 @@
-# Runbase — Application Build Rules
+# Baseleap — Application Build Rules
 # Apply these rules to EVERY project we build
 # Last updated: June 2026
 
@@ -54,7 +54,7 @@ echo "No manual sync needed"
 5. Canva Autofill API = Enterprise only — use Bannerbear/Templated.io instead
 6. pgcrypto passphrase must move to environment variable before production
 7. shadcn/ui first — always check if a component exists there before building from scratch
-8. GHL is the engine. Runbase is the interface. Never reverse this.
+8. GHL is the engine. Baseleap is the interface. Never reverse this.
 9. Every new repo gets Repomix set up before first Claude Code session
 10. Repomix runs once at session start, not continuously
 
@@ -308,7 +308,7 @@ Before ending every Claude Code session:
 
 ## 📁 STANDARD PROJECT FILE STRUCTURE
 
-Every Runbase project should have:
+Every Baseleap project should have:
 project-root/
 
 ├── index.html              ← main app file (or src/ for React)

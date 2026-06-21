@@ -1,4 +1,4 @@
-# Runbase Pulse — Claude Code Project Context
+# Baseleap Pulse — Claude Code Project Context
 
 ## How to start every session
 1. Read REFERENCES.md
@@ -6,7 +6,7 @@
 3. If .claude/context/codebase-context.xml exists, it contains the full packed codebase
 
 ## Project
-Runbase Pulse — Meta Ads Agent (Tool 1 of 17 in Runbase CRM platform)
+Baseleap Pulse — Meta Ads Agent (Tool 1 of 17 in Baseleap CRM platform)
 Single file app: index.html (~4500 lines)
 Stack: Vanilla JS + Supabase + Claude API + Apify + GHL
 
