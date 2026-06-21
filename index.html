@@ -4590,13 +4590,16 @@ document.querySelectorAll('.rb-logo-img').forEach(el => { el.src = _RB_LOGO2; })
 
 // ── Onboarding Tour ──────────────────────────────────────────
 const TOUR_STEPS = [
-  { target:'nav-baseProfile', title:'🏢 Base Profile',               nav:'baseProfile',  desc:"Start here. Add your client's business info, upload logos, set brand fonts and colors, and run the AI Brand DNA analyzer to capture their voice and style." },
-  { target:'nav-dashboard',   title:'📊 Dashboard',                  nav:'dashboard',    desc:'See all your ad performance metrics at a glance. Connect to GHL to sync live campaign data, compare periods, and get AI-powered improvement suggestions.' },
-  { target:'nav-autoResearch',title:'🤖 Auto-Research',              nav:'autoResearch', desc:"Let the AI automatically research your client's market, competitors, and audience. This feeds intelligence into every pipeline stage." },
-  { target:'nav-adLibrary',   title:'📚 Ad Library',                 nav:'adLibrary',    desc:'All your generated ads are stored here, organized by product. Browse, copy, and reuse your best performing ad concepts.' },
-  { target:'nav-data',        title:'⚡ Stage 1 — Client Intelligence',nav:'data',       desc:'Start the pipeline here. Select a product, set your campaign goal and ad format. The AI fills in customer and brand intelligence automatically.' },
-  { target:'nav-build',       title:'✍️ Stage 4 — Ad Builder',       nav:'build',        desc:'After running through the pipeline stages, the AI generates complete ad copy here — headlines, primary text, CTAs — all based on your brand DNA and research.' },
-  { target:'run-all',         title:'▶ Run Full Pipeline',           nav:null,           desc:"When you're ready, click this to run all 5 pipeline stages automatically. The AI does the heavy lifting — you review and approve." }
+  { target:'nav-baseProfile', title:'🏢 Base Profile',                    nav:'baseProfile',  desc:"Start here. Add your client's business info, upload logos, set brand fonts and colors, and run the AI Brand DNA analyzer to capture their voice and style." },
+  { target:'nav-dashboard',   title:'📊 Dashboard',                       nav:'dashboard',    desc:'See all your ad performance metrics at a glance. Connect to GHL to sync live campaign data, compare periods, and get AI-powered improvement suggestions.' },
+  { target:'nav-autoResearch',title:'🤖 Auto-Research',                   nav:'autoResearch', desc:"Let the AI automatically research your client's market, competitors, and audience. This feeds intelligence into every pipeline stage." },
+  { target:'nav-adLibrary',   title:'📚 Ad Library',                      nav:'adLibrary',    desc:'All your generated ads are stored here, organized by product. Browse, copy, and reuse your best performing ad concepts.' },
+  { target:'nav-data',        title:'⚡ Stage 1 — Client Intelligence',   nav:'data',         desc:'Start the pipeline here. Select a product, set your campaign goal and ad format. The AI fills in customer and brand intelligence automatically from your Base Profile.' },
+  { target:'nav-audit',       title:'🔍 Stage 2 — Audit',                 nav:'audit',        desc:"The AI audits your client's current ad account and identifies what is working, what is not, and where the biggest opportunities are." },
+  { target:'nav-research',    title:'🔬 Stage 3 — Research',              nav:'research',     desc:"Deep competitor research and audience intelligence. The AI finds what top competitors are running and identifies the best angles for your client's ads." },
+  { target:'nav-build',       title:'✍️ Stage 4 — Ad Builder',            nav:'build',        desc:'The AI generates complete ad copy — headlines, primary text, CTAs — all based on your brand DNA, audit findings, and competitor research.' },
+  { target:'nav-visual',      title:'🎨 Stage 5 — Visual',                nav:'visual',       desc:'Get AI-generated visual direction and creative briefs for your ads. Includes image concepts, color guidance, and design notes based on your brand kit.' },
+  { target:'run-all',         title:'▶ Run Full Pipeline',                nav:null,           desc:'When you are ready, click this to run all 5 pipeline stages automatically. The AI does the heavy lifting — you review and approve the results.' }
 ];
 
 let _tourStep = 0;
