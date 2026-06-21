@@ -1367,7 +1367,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
         <input class="fi" id="bp-linkedin" placeholder="https://linkedin.com/company/yourbrand" oninput="debouncedBPSave()" onchange="debouncedBPSave()">
         <div class="flbl">YouTube</div>
         <input class="fi" id="bp-youtube" placeholder="https://youtube.com/@yourbrand" oninput="debouncedBPSave()" onchange="debouncedBPSave()">
-        <button class="btn bp" style="width:100%;margin-top:8px;" onclick="analyzeBrand()">🔍 Analyze Brand</button>
+        <button class="btn bp" id="bp-analyze-btn" style="width:100%;margin-top:8px;" onclick="analyzeBrand()">🔍 Analyze Brand</button>
+        <div id="bp-analyze-locked" style="display:none;margin-top:8px;padding:8px 10px;background:rgba(0,212,160,.06);border:1px solid rgba(0,212,160,.15);border-radius:8px;font-size:11px;color:var(--t2);">✓ Brand analyzed — analysis is locked to preserve consistency &nbsp;<span onclick="confirmReanalyze()" style="cursor:pointer;text-decoration:underline;opacity:.7;">Re-analyze</span></div>
         <div style="font-size:10px;color:var(--t2);margin-top:6px;line-height:1.5;">
           💡 Brand DNA focuses on voice, tone, and creative direction — not follower counts.
           Social performance metrics are available in the Design Studio (coming Phase 3).
@@ -1755,6 +1756,7 @@ async function initApp(user) {
 
   await loadBusinesses();
   await loadBaseProfile();
+  renderBPBrandSnapshot();
   renderBkPalette();
   updateCIDisplay();
   renderBrandIntelCard();
@@ -3957,6 +3959,7 @@ async function analyzeBrand() {
     if (!jsonMatch) throw new Error('AI response contained no JSON object. Got: ' + stripped.substring(0, 120));
     const snap = JSON.parse(jsonMatch[0]);
     console.log('[analyzeBrand] Parsed snap OK:', Object.keys(snap));
+    S.brandSnapshot = snap;
 
     // ── Step 6a: Auto-populate Brand Voice/Vibe fields ───────────
     const vibeVal = [snap.tone, snap.personality].filter(Boolean).join(' · ');
@@ -3974,9 +3977,7 @@ async function analyzeBrand() {
     debouncedBPSave();
 
     // ── Step 6: Render brand snapshot card ───────────────────────
-    if (snapEl) {
-      snapEl.innerHTML = `<div class="rcard"><div class="rcard-lbl">🧬 Brand DNA <span class="ai-badge">✓ AI Generated</span>${!KEYS.apify ? ' <span style="opacity:.5;font-size:9px;">(AI-only — add Apify key for social data)</span>' : ''}</div><div style="display:flex;flex-direction:column;gap:4px;margin-top:6px;"><div class="bi-row"><span class="bi-label">Voice</span><span class="bi-value">${escHtml(snap.voice||'—')}</span></div><div class="bi-row"><span class="bi-label">Tone</span><span class="bi-value">${escHtml(snap.tone||'—')}</span></div><div class="bi-row"><span class="bi-label">Personality</span><span class="bi-value">${escHtml(snap.personality||'—')}</span></div><div class="bi-row"><span class="bi-label">Visual Style</span><span class="bi-value">${escHtml(snap.visual_style||'—')}</span></div><div class="bi-row"><span class="bi-label">Themes</span><span class="bi-value">${(snap.content_themes||[]).map(escHtml).join(' · ')||'—'}</span></div><div class="bi-row"><span class="bi-label">Target Emotion</span><span class="bi-value">${escHtml(snap.target_emotion||'—')}</span></div><div class="bi-row"><span class="bi-label">Differentiator</span><span class="bi-value">${escHtml(snap.differentiator||'—')}</span></div><div class="bi-row"><span class="bi-label">Language</span><span class="bi-value">${escHtml(snap.language_patterns||'—')}</span></div><div style="margin-top:6px;"><div class="bi-label" style="margin-bottom:4px;">Ad Angles</div><div>${(snap.ad_angles||[]).map(a=>'<span class="angle-pill">'+escHtml(a)+'</span>').join('')||'—'}</div></div><div style="margin-top:6px;"><div class="bi-label" style="margin-bottom:4px;">Hook Ideas</div><div>${(snap.hooks||[]).map(h=>'<span class="angle-pill" style="background:rgba(245,200,66,.1);border-color:rgba(245,200,66,.3);color:var(--yellow);">'+escHtml(h)+'</span>').join('')||'—'}</div></div><div class="bi-row" style="border-top:1px solid var(--border);padding-top:8px;margin-top:4px;"><span class="bi-label" style="color:var(--red);">Avoid</span><span class="bi-value" style="color:var(--t2);">${escHtml(snap.avoid||'—')}</span></div></div></div>`;
-    }
+    renderBPBrandSnapshot();
 
     // ── Step 7: Persist to Supabase ──────────────────────────────
     if (currentBizId && currentUser) {
@@ -3993,6 +3994,34 @@ async function analyzeBrand() {
     const msg = e.message || String(e);
     if (snapEl) snapEl.innerHTML = `<div style="color:var(--red);font-size:11px;line-height:1.5;">⚠ Analysis failed: ${escHtml(msg)}<br><span style="opacity:.7;">Check browser console (F12) for details.</span></div>`;
     setSt('Analysis failed', '');
+  }
+}
+
+function renderBPBrandSnapshot() {
+  const snapEl     = document.getElementById('bp-brand-snapshot');
+  const analyzeBtn = document.getElementById('bp-analyze-btn');
+  const lockedMsg  = document.getElementById('bp-analyze-locked');
+  const snap = S.brandSnapshot;
+  if (!snap) {
+    if (snapEl) { snapEl.style.display = 'none'; snapEl.innerHTML = ''; }
+    if (analyzeBtn) analyzeBtn.style.display = '';
+    if (lockedMsg)  lockedMsg.style.display  = 'none';
+    return;
+  }
+  if (analyzeBtn) analyzeBtn.style.display = 'none';
+  if (lockedMsg)  lockedMsg.style.display  = '';
+  if (!snapEl) return;
+  snapEl.style.display = 'block';
+  snapEl.innerHTML = `<div class="rcard"><div class="rcard-lbl">🧬 Brand DNA <span class="ai-badge">✓ AI Generated</span></div><div style="display:flex;flex-direction:column;gap:4px;margin-top:6px;"><div class="bi-row"><span class="bi-label">Voice</span><span class="bi-value">${escHtml(snap.voice||'—')}</span></div><div class="bi-row"><span class="bi-label">Tone</span><span class="bi-value">${escHtml(snap.tone||'—')}</span></div><div class="bi-row"><span class="bi-label">Personality</span><span class="bi-value">${escHtml(snap.personality||'—')}</span></div><div class="bi-row"><span class="bi-label">Visual Style</span><span class="bi-value">${escHtml(snap.visual_style||'—')}</span></div><div class="bi-row"><span class="bi-label">Themes</span><span class="bi-value">${(snap.content_themes||[]).map(escHtml).join(' · ')||'—'}</span></div><div class="bi-row"><span class="bi-label">Target Emotion</span><span class="bi-value">${escHtml(snap.target_emotion||'—')}</span></div><div class="bi-row"><span class="bi-label">Differentiator</span><span class="bi-value">${escHtml(snap.differentiator||'—')}</span></div><div class="bi-row"><span class="bi-label">Language</span><span class="bi-value">${escHtml(snap.language_patterns||'—')}</span></div><div style="margin-top:6px;"><div class="bi-label" style="margin-bottom:4px;">Ad Angles</div><div>${(snap.ad_angles||[]).map(a=>'<span class="angle-pill">'+escHtml(a)+'</span>').join('')||'—'}</div></div><div style="margin-top:6px;"><div class="bi-label" style="margin-bottom:4px;">Hook Ideas</div><div>${(snap.hooks||[]).map(h=>'<span class="angle-pill" style="background:rgba(245,200,66,.1);border-color:rgba(245,200,66,.3);color:var(--yellow);">'+escHtml(h)+'</span>').join('')||'—'}</div></div><div class="bi-row" style="border-top:1px solid var(--border);padding-top:8px;margin-top:4px;"><span class="bi-label" style="color:var(--red);">Avoid</span><span class="bi-value" style="color:var(--t2);">${escHtml(snap.avoid||'—')}</span></div></div></div>`;
+}
+
+function confirmReanalyze() {
+  if (confirm('Re-analyzing will overwrite your current Brand DNA. This should only be done if your brand has significantly changed. Continue?')) {
+    const btn    = document.getElementById('bp-analyze-btn');
+    const locked = document.getElementById('bp-analyze-locked');
+    if (btn)    btn.style.display    = '';
+    if (locked) locked.style.display = 'none';
+    analyzeBrand();
   }
 }
 
@@ -4430,6 +4459,7 @@ async function loadBaseProfile() {
       }
       if (p.brand_snapshot) S.brandSnapshot = p.brand_snapshot;
     }
+    renderBPBrandSnapshot();
     const products = productsRes.data || [];
     S.products = products;
     const list  = document.getElementById('bp-products-list');
