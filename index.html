@@ -3397,10 +3397,19 @@ async function scrapeMetaAdLibrary(keywords, location, competitorUrls) {
   try {
     const hdrs = {'Content-Type':'application/json','Authorization':'Bearer '+apifyKey};
     const city = location?.split(',')[0]||'';
-    const searchTerms = [keywords, city ? keywords+' '+city : null].filter(Boolean);
-    const inputPayload = { searchTerms, country:'CA', activeStatus:'ACTIVE', adType:'all', limit:15 };
-    if (competitorUrls?.length) inputPayload.pageUrls = competitorUrls;
-    console.log('[metaAds] starting run — searchTerms:', searchTerms);
+    const baseUrl = 'https://www.facebook.com/ads/library/?active_status=active&ad_type=all&country=CA&search_type=keyword_unordered&q=';
+    const urls = [
+      baseUrl + encodeURIComponent(keywords),
+      city ? baseUrl + encodeURIComponent(keywords+' '+city) : null
+    ].filter(Boolean);
+    if (competitorUrls?.length) {
+      competitorUrls.forEach(pageUrl => {
+        const pageIdMatch = pageUrl.match(/facebook\.com\/(?:pg\/)?([^/?#]+)/);
+        if (pageIdMatch) urls.push('https://www.facebook.com/ads/library/?active_status=all&ad_type=all&country=CA&view_all_page_id='+pageIdMatch[1]);
+      });
+    }
+    const inputPayload = { urls, maxAds:15 };
+    console.log('[metaAds] starting run — urls:', urls);
     const run = await fetch(`${APIFY_API}/acts/curious_coder~facebook-ads-library-scraper/runs`, {
       method:'POST', headers:hdrs, body:JSON.stringify(inputPayload)
     });
@@ -3462,9 +3471,9 @@ async function discoverLocalCompetitors() {
   console.log('[googleMaps] searching:', searchQuery);
   try {
     const hdrs = {'Content-Type':'application/json','Authorization':'Bearer '+apifyKey};
-    const startRes = await fetch(`${APIFY_API}/acts/apify~google-maps-scraper/runs`, {
+    const startRes = await fetch(`${APIFY_API}/acts/compass~crawler-google-places/runs`, {
       method:'POST', headers:hdrs,
-      body: JSON.stringify({ searchStringsArray:[searchQuery], maxCrawledPlacesPerSearch:10, language:'en' })
+      body: JSON.stringify({ searchString:searchQuery, maxCrawledPlaces:10, language:'en', countryCode:'CA' })
     });
     if (!startRes.ok) { console.warn('[googleMaps] start failed:', startRes.status, await startRes.text()); return []; }
     const runId = (await startRes.json())?.data?.id;
@@ -3481,13 +3490,12 @@ async function discoverLocalCompetitors() {
         console.log('[googleMaps] found', places?.length, 'places');
         return Array.isArray(places) ? places.map(p => ({
           name: p.title||p.name||'Unknown',
-          address: p.address||p.location?.address||'',
+          address: p.address||p.street||'',
           phone: p.phone||'',
           website: p.website||'',
           rating: p.totalScore||p.rating||null,
-          reviews: p.reviewsCount||p.userRatingsTotal||0,
-          facebook_url: p.website?.includes('facebook.com') ? p.website : null,
-          place_id: p.placeId||p.id||null
+          reviews: p.reviewsCount||p.reviews||0,
+          facebook: p.facebook||null
         })) : [];
       }
       if (runStatus === 'FAILED' || runStatus === 'ABORTED') { console.warn('[googleMaps] run failed:', runStatus); return []; }
