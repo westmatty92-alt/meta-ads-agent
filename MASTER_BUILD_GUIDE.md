@@ -291,6 +291,123 @@ project/
 
 ---
 
+## 🎨 DESIGN SYSTEM RULES (Read Before Any UI Work)
+
+### TypeUI Skills Installed
+- Linear design skill: .claude/skills/linear/SKILL.md
+- Minimal design skill: .claude/skills/minimal/SKILL.md
+
+### Runbase Design Language: Linear-Style Dark
+We use Linear-style design across ALL Runbase tools (Pulse, SR&ED, Grant Writer, etc.)
+Every tool must look and feel identical — same colors, same spacing, same components.
+
+### Color Tokens (NEVER deviate from these)
+```css
+--bg-primary: #0A1628      /* Main background */
+--bg-surface: #111D35      /* Cards and panels */
+--bg-elevated: #162240     /* Elevated elements, dropdowns */
+--border: #1E3A5F          /* All borders */
+--border-subtle: #162240   /* Subtle dividers */
+--t1: #E8EDF5              /* Primary text */
+--t2: #7A95B8              /* Secondary text */
+--t3: #4A6080              /* Muted text, placeholders */
+--volt: #00D4A0            /* Primary accent — teal green */
+--accent: #2563EB          /* Secondary accent — blue */
+--red: #FF5050             /* Errors, risk flags, delete */
+--yellow: #F5C842          /* Warnings, pending states */
+--green: #00C896           /* Success, approved states */
+```
+
+### Typography Rules
+- Display/Hero: Barlow ExtraBold 800
+- Section headers: Barlow SemiBold 600
+- Body text: Inter Regular 400
+- Labels/caps: Inter Medium 500 uppercase letter-spacing
+- Data/metrics: Inter Bold 700
+- NEVER use system fonts — always load from Google Fonts
+
+### Spacing System
+- Base unit: 4px
+- Component padding: 12px, 16px, 20px, 24px
+- Section gaps: 24px, 32px, 48px
+- Border radius: 6px (inputs), 8px (cards), 12px (modals), 16px (large panels)
+- NEVER use arbitrary pixel values — use the scale
+
+### Component Rules
+- Buttons: border-radius 8px, padding 10px 20px, font-weight 600
+- Primary button: background var(--volt), color #000
+- Secondary button: border 1px solid var(--border), background transparent
+- Inputs: border 1px solid var(--border), border-radius 6px, padding 10px 12px
+- Cards: background var(--bg-surface), border 1px solid var(--border), border-radius 12px
+- Modals: background var(--bg-surface), border 1px solid var(--border), border-radius 16px, max-width 520px
+- Status badges: border-radius 20px, padding 4px 10px, font-size 11px, font-weight 600
+
+### Status Color System (use consistently everywhere)
+- Approved/Complete: var(--green) #00C896
+- In Progress/Working: var(--volt) #00D4A0
+- Pending/Awaiting: var(--yellow) #F5C842
+- Error/Risk/Delete: var(--red) #FF5050
+- Locked/Disabled: var(--t3) #4A6080
+- AI Generated badge: var(--accent) #2563EB
+
+### CSS Rules (NEVER Break These)
+- NEVER use inset shorthand — use top/right/bottom/left explicitly
+- ALWAYS set z-index:200 on header to prevent overlay blocking
+- NEVER use !important — fix specificity properly
+- ALWAYS use CSS variables for colors — never hardcode hex values
+- NEVER use margin:auto on flex children — use justify-content on parent
+
+### Before ANY UI Work
+1. Read .claude/skills/linear/SKILL.md
+2. Read this design system section
+3. Check existing components before building new ones
+4. Never introduce a new color, font, or spacing value not in the system
+5. Every new component must work in both the current app AND future tools
+
+### Cross-Tool Consistency Rule
+ALL Runbase tools share the same design system:
+- Runbase Pulse (Meta Ads Agent) — Tool 1
+- SR&ED Grant Writer — Tool 2
+- Grant Discovery Engine — Tool 3
+- All future tools follow the same system
+
+When building UI for any new tool, copy components from index.html first.
+Never rebuild from scratch what already exists.
+
+### Quality Gates (Check Before Every Commit)
+- [ ] All colors use CSS variables (no hardcoded hex)
+- [ ] All fonts are Barlow or Inter (no system fonts)
+- [ ] All spacing follows the 4px scale
+- [ ] Border radius matches component type rules
+- [ ] Status colors match the status color system
+- [ ] No inset shorthand in CSS
+- [ ] Header has z-index:200
+- [ ] Component works on mobile (min-width: 320px)
+- [ ] No !important used
+
+---
+
+## 🛠️ TYPEUI COMMANDS REFERENCE
+
+Install a design skill:
+```bash
+npx typeui.sh pull minimal --format skill --providers claude-code
+npx typeui.sh pull agentic --format skill --providers claude-code
+npx typeui.sh pull clean --format skill --providers claude-code
+```
+
+Note: `linear` is not in the typeui.sh registry — use .claude/skills/linear/SKILL.md (custom Runbase skill).
+Pulled files land in .claude/skills/design-system/SKILL.md — copy to a named subdirectory if keeping multiple.
+
+List all available skills (interactive):
+```bash
+npx typeui.sh list
+```
+
+Preview skills: https://www.typeui.sh/design-skills
+
+---
+
 ## 📋 SESSION START CHECKLIST
 
 - [ ] cd to project directory
