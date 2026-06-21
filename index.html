@@ -665,7 +665,6 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
         <div class="s1-tabs-bar">
           <button class="s1-tab active" id="s1tab-info" onclick="switchS1Tab('info')">📋 Client Info</button>
           <button class="s1-tab" id="s1tab-perf" onclick="switchS1Tab('perf')">📊 Performance Data</button>
-          <button class="s1-tab" id="s1tab-brand" onclick="switchS1Tab('brand')">🎨 Brand Kit</button>
         </div>
 
         <!-- Tab: Client Info -->
@@ -865,16 +864,11 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
           </div>
         </div><!-- /s1-content-perf -->
 
-        <!-- Tab: Brand Kit -->
-        <div id="s1-content-brand" class="s1-tab-pane">
-          <div style="padding:14px 22px 0;">
-            <input type="hidden" id="bk-name">
-            <input type="hidden" id="bk-font">
-            <input type="hidden" id="bk-logo">
-            <input type="hidden" id="bk-vibe">
-            <div style="font-size:11px;color:var(--t2);padding:6px 0;">🎨 Brand Kit is managed in <span onclick="go('baseProfile')" style="color:var(--accent);cursor:pointer;">Base Profile →</span></div>
-          </div>
-        </div><!-- /s1-content-brand -->
+        <!-- Hidden Brand Kit inputs — read by go() to populate pipeline state -->
+        <input type="hidden" id="bk-name">
+        <input type="hidden" id="bk-font">
+        <input type="hidden" id="bk-logo">
+        <input type="hidden" id="bk-vibe">
 
       </div><!-- /stage1-body -->
     </div>
@@ -4103,13 +4097,22 @@ function updateFontPreview(type, fontName) {
 }
 
 function filterFonts(input, selectId) {
-  const sel = document.getElementById(selectId);
-  if (!sel) return;
-  const term = input.value.trim().toLowerCase();
-  Array.from(sel.options).forEach(opt => {
-    opt.hidden = !!(term && !opt.value.toLowerCase().includes(term));
+  const query = input.value.toLowerCase().trim();
+  const select = document.getElementById(selectId);
+  if (!select) return;
+  let firstVisible = null;
+  Array.from(select.options).forEach(opt => {
+    const matches = opt.text.toLowerCase().includes(query);
+    opt.style.display = matches ? '' : 'none';
+    if (matches && !firstVisible) firstVisible = opt;
   });
-  if (sel.value) updateFontPreview(selectId.replace('bp-font-', ''), sel.value);
+  if (select.options[select.selectedIndex] && select.options[select.selectedIndex].style.display === 'none') {
+    if (firstVisible) {
+      select.value = firstVisible.value;
+      const type = selectId.replace('bp-font-', '');
+      updateFontPreview(type, firstVisible.value);
+    }
+  }
 }
 
 function addBrandColor(hex, label) {
