@@ -1,4 +1,38 @@
 <!-- Version: 2.1 June 2026 -->
+<!--
+RUN IN SUPABASE SQL EDITOR:
+
+CREATE TABLE IF NOT EXISTS competitor_intelligence (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  business_id uuid REFERENCES businesses(id) ON DELETE CASCADE,
+  user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE,
+  product_id uuid REFERENCES products(id) ON DELETE SET NULL,
+  competitor_name text NOT NULL,
+  address text,
+  phone text,
+  website text,
+  rating numeric,
+  review_count integer,
+  facebook_url text,
+  has_active_meta_ads boolean DEFAULT false,
+  meta_ad_count integer DEFAULT 0,
+  meta_ads_data jsonb DEFAULT '[]'::jsonb,
+  google_maps_data jsonb DEFAULT '{}'::jsonb,
+  first_discovered_at timestamptz DEFAULT now(),
+  last_updated_at timestamptz DEFAULT now()
+);
+
+ALTER TABLE competitor_intelligence
+  ADD CONSTRAINT competitor_intelligence_business_competitor_unique
+  UNIQUE (business_id, competitor_name);
+
+ALTER TABLE competitor_intelligence ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "users_own_competitor_intelligence" ON competitor_intelligence
+FOR ALL TO authenticated
+USING (auth.uid() = user_id)
+WITH CHECK (auth.uid() = user_id);
+-->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1529,9 +1563,14 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
           <option value="AU">🇦🇺 Australia</option>
         </select>
       </div>
+      <div class="ar-section">
+        <h4>Competitor Facebook Pages (optional)</h4>
+        <p style="font-size:11px;color:var(--t2);margin-bottom:6px;">Paste Facebook page URLs to scrape their active Meta ads directly.</p>
+        <textarea id="ar-competitor-urls" class="fi" rows="3" style="resize:vertical;" placeholder="https://www.facebook.com/competitorname/&#10;https://www.facebook.com/anotherbusiness/"></textarea>
+      </div>
       <button class="ar-run-btn" id="ar-run-btn" onclick="runAutoResearch()">🚀 Run Auto-Research</button>
       <div style="padding:0 16px 14px;font-size:10px;color:var(--t2);line-height:1.6;">
-        3 sources in parallel: Meta Ad Library · Reddit · Your Apify Actor<br>
+        6 sources in parallel: Meta Ad Library · Reddit · Your Actor · Meta KW · Reddit Lite · Google Maps<br>
         Results auto-fill Stage 1 fields.
         <div id="ar-key-warning" style="color:var(--red);display:none;margin-top:4px;">⚠️ Apify key not set — go to Settings first.</div>
       </div>
@@ -1758,6 +1797,7 @@ async function initApp(user) {
 
   await loadBusinesses();
   await loadBaseProfile();
+  await loadCompetitorIntelligence();
   renderBPBrandSnapshot();
   renderBkPalette();
   updateCIDisplay();
@@ -2385,10 +2425,15 @@ async function runAudit() {
 
 // ── Research ──────────────────────────────────────────────────
 function getSYSResearch() {
+  const competitorContext = S.competitorIntelligence?.length
+    ? '\nSAVED COMPETITOR INTELLIGENCE:\n' + S.competitorIntelligence.map(c =>
+        `- ${c.competitor_name||c.name} | Rating: ${c.rating||'—'}/5 (${c.review_count||c.reviews||0} reviews) | Has Meta Ads: ${c.has_active_meta_ads ? 'YES — '+c.meta_ad_count+' active ads' : 'NO'} | Address: ${c.address||'—'}`
+      ).join('\n')
+    : '';
   return `You are a market intelligence analyst for Meta Ads. Synthesize competitive data and audience psychology into a winning creative brief.
 Analyze: 1. COMPETITOR PLAYBOOK 2. AUDIENCE INTELLIGENCE 3. WINNING ANGLES 4. MARKET GAPS 5. RECOMMENDED ANGLE 6. TOP 3 HOOKS TO TEST
 Be specific. No generic advice. End with RECOMMENDED ANGLE and TOP 3 HOOKS.
-If brand snapshot is available use this tone and angles: ${S.brandSnapshot ? JSON.stringify(S.brandSnapshot) : 'not available'}`;
+If brand snapshot is available use this tone and angles: ${S.brandSnapshot ? JSON.stringify(S.brandSnapshot) : 'not available'}${competitorContext}`;
 }
 
 async function runResearch() {
@@ -2437,7 +2482,8 @@ Brand personality: ${S.brandSnapshot?.personality || 'not specified'}
 Visual style: ${S.brandSnapshot?.visual_style || 'not specified'}
 Proven angles: ${(S.brandSnapshot?.ad_angles || []).join(', ') || 'not specified'}
 Brand hook ideas: ${(S.brandSnapshot?.hooks || []).join(', ') || 'not specified'}
-Never use in ads: ${S.brandSnapshot?.avoid || 'not specified'}`;
+Never use in ads: ${S.brandSnapshot?.avoid || 'not specified'}
+Competitor intelligence: ${S.competitorIntelligence?.length ? S.competitorIntelligence.slice(0,5).map(c=>`${c.competitor_name||c.name}: ${c.has_active_meta_ads?c.meta_ad_count+' active Meta ads':'no Meta ads'} | rating ${c.rating||'—'}`).join(' | ') : 'none saved — run Auto-Research first'}`;
   S.history.build=[{role:'user',content:msg}];
   const reply=await ai(SYS_BUILD,S.history.build);
   S.history.build.push({role:'assistant',content:reply});
@@ -3388,6 +3434,79 @@ async function scrapeRedditLanguage(keywords) {
   } catch(e) { console.warn('[redditScraper] scrape failed:', e.message); return null; }
 }
 
+async function discoverLocalCompetitors(keyword, location) {
+  const apifyKey = KEYS.apify;
+  if (!apifyKey || !keyword || !location) return [];
+  try {
+    const hdrs = {'Content-Type':'application/json','Authorization':'Bearer '+apifyKey};
+    const startRes = await fetch(`${APIFY_API}/acts/apify~google-maps-scraper/runs`, {
+      method:'POST', headers:hdrs,
+      body: JSON.stringify({ searchStringsArray:[`${keyword} near ${location}`], maxCrawledPlacesPerSearch:10, language:'en' })
+    });
+    if (!startRes.ok) return [];
+    const runId = (await startRes.json())?.data?.id;
+    if (!runId) return [];
+    for (let i = 0; i < 8; i++) {
+      await new Promise(r => setTimeout(r, 5000));
+      const statusData = await (await fetch(`${APIFY_API}/actor-runs/${runId}`, {headers:hdrs})).json();
+      if (statusData?.data?.status === 'SUCCEEDED') {
+        const datasetId = statusData.data?.defaultDatasetId;
+        const items = await (await fetch(`${APIFY_API}/datasets/${datasetId}/items?limit=10`, {headers:hdrs})).json();
+        return Array.isArray(items) ? items.map(p => ({
+          name: p.title||p.name||'Unknown',
+          address: p.address||p.location?.address||'',
+          phone: p.phone||'',
+          website: p.website||'',
+          rating: p.totalScore||p.rating||null,
+          reviews: p.reviewsCount||p.userRatingsTotal||0,
+          facebook_url: p.website?.includes('facebook.com') ? p.website : null,
+          place_id: p.placeId||p.id||null
+        })) : [];
+      }
+      if (statusData?.data?.status === 'FAILED' || statusData?.data?.status === 'ABORTED') return [];
+    }
+    return [];
+  } catch(e) { console.warn('[googleMaps] scrape failed:', e.message); return []; }
+}
+
+async function saveCompetitorIntelligence(localCompetitors, metaAdsData) {
+  if (!currentBizId || !currentUser || !localCompetitors?.length) return;
+  const metaAdsArr = Array.isArray(metaAdsData) ? metaAdsData : [];
+  for (const comp of localCompetitors) {
+    const firstWord = (comp.name||'').toLowerCase().split(' ')[0];
+    const compAds = metaAdsArr.filter(ad => (ad.pageName||'').toLowerCase().includes(firstWord));
+    const record = {
+      business_id: currentBizId,
+      user_id: currentUser.id,
+      competitor_name: comp.name || 'Unknown',
+      address: comp.address || null,
+      phone: comp.phone || null,
+      website: comp.website || null,
+      rating: comp.rating || null,
+      review_count: comp.reviews || 0,
+      facebook_url: comp.facebook_url || null,
+      has_active_meta_ads: compAds.length > 0,
+      meta_ad_count: compAds.length,
+      meta_ads_data: compAds.slice(0, 5),
+      google_maps_data: comp,
+      last_updated_at: new Date().toISOString()
+    };
+    await sb.from('competitor_intelligence').upsert(record, { onConflict: 'business_id,competitor_name' });
+  }
+  S.competitorIntelligence = localCompetitors;
+}
+
+async function loadCompetitorIntelligence() {
+  if (!currentBizId) return;
+  try {
+    const { data, error } = await sb.from('competitor_intelligence')
+      .select('*')
+      .eq('business_id', currentBizId)
+      .order('last_updated_at', { ascending: false });
+    if (!error && data?.length) S.competitorIntelligence = data;
+  } catch(e) { console.warn('[loadCI] failed:', e.message); }
+}
+
 async function runAutoResearch() {
   const apifyKey = KEYS.apify;
   if(!apifyKey){document.getElementById('ar-key-warning').style.display='block';return;}
@@ -3419,21 +3538,24 @@ async function runAutoResearch() {
   setSt('Auto-Research running…','run');
   const compList=competitors?competitors.split(',').map(c=>c.trim()).filter(Boolean):[];
   let compResults=[],redditResults=[],demographicData={};
-  const divEl=document.createElement('div');divEl.className='sdiv';divEl.textContent='Running 5 sources in parallel';stream.appendChild(divEl);
+  const location = document.getElementById('bp-location')?.value?.trim() || country;
+  const divEl=document.createElement('div');divEl.className='sdiv';divEl.textContent='Running 6 sources in parallel';stream.appendChild(divEl);
   const t1=compList.length?arThinking(`📘 Meta Ad Library — ${compList.join(', ')}…`):null;
   const t2=(keywords||subreddits.length)?arThinking(`🟠 Reddit — "${keywords||subreddits[0]}"…`):null;
   const t3=(doDemographics&&compList.length)?arThinking(`🟣 Your Actor — ${compList[0]}…`):null;
   const t4=keywords?arThinking(`🔍 Scraping Meta Ad Library for competitor ads…`):null;
   const t5=keywords?arThinking(`💬 Scraping Reddit for customer language…`):null;
+  const t6=keywords&&location?arThinking(`🗺️ Discovering local competitors on Google Maps…`):null;
   const kwList=keywords?keywords.split(',').map(k=>k.trim()).filter(Boolean):[];
-  const [compRes,redditRes,demoRes,metaAdsRes,redditLiteRes]=await Promise.allSettled([
+  const [compRes,redditRes,demoRes,metaAdsRes,redditLiteRes,localCompRes]=await Promise.allSettled([
     compList.length?runApifyActor('curious_coder~facebook-ads-library-scraper',{urls:compList.map(c=>({url:`https://www.facebook.com/ads/library/?active_status=active&ad_type=all&country=${country}&q=${encodeURIComponent(c)}&search_type=keyword_unordered`})),maxAds:vol==='quick'?20:vol==='deep'?100:50},apifyKey):Promise.resolve([]),
     (keywords||subreddits.length)?runApifyActor('parseforge~reddit-posts-scraper',{searches:subreddits.length>0?subreddits.slice(0,3).map(sub=>({subreddit:sub.replace('r/',''),query:keywords||sub.replace('r/',''),sort:'top',time:'year'})):[{query:keywords,sort:'top',time:'year'}],maxItems:vol==='quick'?30:vol==='deep'?300:100,proxyConfiguration:{useApifyProxy:true}},apifyKey):Promise.resolve([]),
     (doDemographics&&compList.length)?runApifyActor('xanthic_mead~meta-ads-demographics-actor',{mode:'both',pageName:compList[0],niche:S.niche||document.getElementById('ar-keywords').value.trim().split(' ')[0]||'fitness',country,maxResults:vol==='quick'?10:vol==='deep'?50:25,adType:'ALL',status:'ACTIVE',sortBy:'SORT_BY_TOTAL_IMPRESSIONS'},apifyKey):Promise.resolve(null),
     kwList.length?scrapeMetaAdLibrary(kwList,country):Promise.resolve(null),
-    kwList.length?scrapeRedditLanguage(kwList):Promise.resolve(null)
+    kwList.length?scrapeRedditLanguage(kwList):Promise.resolve(null),
+    (keywords&&location)?discoverLocalCompetitors(keywords.split(',')[0].trim(),location):Promise.resolve([])
   ]);
-  if(t1)t1.remove(); if(t2)t2.remove(); if(t3)t3.remove(); if(t4)t4.remove(); if(t5)t5.remove();
+  if(t1)t1.remove(); if(t2)t2.remove(); if(t3)t3.remove(); if(t4)t4.remove(); if(t5)t5.remove(); if(t6)t6.remove();
   const metaAds = metaAdsRes.status==='fulfilled'&&Array.isArray(metaAdsRes.value) ? metaAdsRes.value : null;
   const redditLite = redditLiteRes.status==='fulfilled'&&Array.isArray(redditLiteRes.value) ? redditLiteRes.value : null;
   // Process Meta Ad Library
@@ -3471,8 +3593,19 @@ async function runAutoResearch() {
     const postsHtml=sorted.slice(0,5).map(p=>`<div style="padding:8px;background:var(--s3);border-radius:6px;margin-bottom:6px;"><div style="font-size:12px;color:var(--t1);font-style:italic;">"${escHtml((p.title||p.body||'').slice(0,120))}"</div><div style="font-size:10px;color:var(--t2);margin-top:4px;">▲ ${p.score||0} upvotes</div></div>`).join('');
     arMsg(`<span class="source-badge sb-reddit">Reddit (Customer Voice)</span> <strong>${redditLite.length} posts</strong> analyzed<br><div style="margin-top:8px;">${postsHtml}</div>`,'res-bub');
   }else if(kwList.length){arMsg(`<span class="source-badge sb-reddit">Reddit (Customer Voice)</span> ⚠️ No customer voice data found for these keywords`,'think-bub');}
+  // Process Google Maps local competitors
+  const localCompetitors = localCompRes.status==='fulfilled'&&Array.isArray(localCompRes.value) ? localCompRes.value : [];
+  if(localCompetitors.length){
+    arMsg(`<span class="source-badge sb-audience">Google Maps</span> <strong>${localCompetitors.length} local competitors</strong> found near ${escHtml(location)}`,'res-bub');
+    const compCardsHtml=localCompetitors.slice(0,5).map(c=>`<div style="padding:8px;background:var(--s3);border-radius:6px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:flex-start;"><div><div style="font-size:11px;font-weight:700;color:var(--t1);">${escHtml(c.name||'Unknown')}</div><div style="font-size:11px;color:var(--t2);margin-top:2px;">${escHtml(c.address||'—')}</div>${c.website?`<div style="font-size:10px;color:var(--accent);margin-top:2px;">${escHtml(c.website.substring(0,40))}</div>`:''}</div><div style="text-align:right;flex-shrink:0;margin-left:8px;"><div style="font-size:11px;font-weight:600;color:${(c.rating||0)>=4?'var(--green)':'var(--t2)'};">⭐ ${c.rating||'—'}</div><div style="font-size:10px;color:var(--t2);">${c.reviews||0} reviews</div></div></div>`).join('');
+    arMsg(`<span class="source-badge sb-audience">Local Competitors</span><br><div style="margin-top:8px;">${compCardsHtml}</div>`,'res-bub');
+    const tSave=arThinking('💾 Saving competitor data to client profile…');
+    await saveCompetitorIntelligence(localCompetitors, metaAds||[]);
+    tSave.remove();
+    arMsg(`<span class="source-badge sb-collector">✓ ${localCompetitors.length} competitors saved to client profile</span>`,'res-bub');
+  }else if(keywords&&location){arMsg(`<span class="source-badge sb-audience">Google Maps</span> ⚠️ No local competitors found — try different keywords or add a location in Base Profile`,'think-bub');}
   // Claude synthesis
-  const hasData=compResults.length>0||redditResults.length>0||Object.keys(demographicData).length>0||metaAds?.length>0||redditLite?.length>0;
+  const hasData=compResults.length>0||redditResults.length>0||Object.keys(demographicData).length>0||metaAds?.length>0||redditLite?.length>0||localCompetitors.length>0;
   if(hasData){
     const tSynth=arThinking('Synthesizing all research into audience brief…');
     const actorAds=demoRes.status==='fulfilled'&&Array.isArray(demoRes.value)?demoRes.value.filter(i=>i.ad_id):[];
@@ -3489,7 +3622,7 @@ async function runAutoResearch() {
   }
   const hasActor=demoRes.status==='fulfilled'&&Array.isArray(demoRes.value)&&demoRes.value.length>0;
   const actorAdCount=hasActor?demoRes.value.filter(i=>i.ad_id).length:0;
-  arMsg(`<strong>✅ Auto-Research Complete</strong><div style="margin-top:10px;display:grid;grid-template-columns:repeat(5,1fr);gap:6px;"><div style="background:var(--s3);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:11px;font-weight:700;color:${compResults.length?'var(--accent)':'var(--t2)'};">${compResults.length} ads</div><div style="font-size:9px;color:var(--t2);">Ad Library</div></div><div style="background:var(--s3);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:11px;font-weight:700;color:${redditResults.length?'#ff6b35':'var(--t2)'};">${redditResults.length} posts</div><div style="font-size:9px;color:var(--t2);">Reddit</div></div><div style="background:var(--s3);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:11px;font-weight:700;color:${hasActor?'var(--purple)':'var(--t2)'};">${actorAdCount>0?actorAdCount+' ads':hasActor?'✓':'—'}</div><div style="font-size:9px;color:var(--t2);">Your Actor</div></div><div style="background:var(--s3);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:11px;font-weight:700;color:${metaAds?.length?'var(--accent)':'var(--t2)'};">${metaAds?.length?metaAds.length+' ads':'🎯'}</div><div style="font-size:9px;color:var(--t2);">${metaAds?.length?'Meta KW':'1st Mover'}</div></div><div style="background:var(--s3);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:11px;font-weight:700;color:${redditLite?.length?'#ff6b35':'var(--t2)'};">${redditLite?.length||0} posts</div><div style="font-size:9px;color:var(--t2);">Cust. Voice</div></div></div><div style="margin-top:8px;font-size:11px;color:var(--t2);">Go to Stage 1 → Save & Continue → ▶ Run Full Pipeline</div>`,'res-bub');
+  arMsg(`<strong>✅ Auto-Research Complete</strong><div style="margin-top:10px;display:grid;grid-template-columns:repeat(6,1fr);gap:6px;"><div style="background:var(--s3);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:11px;font-weight:700;color:${compResults.length?'var(--accent)':'var(--t2)'};">${compResults.length} ads</div><div style="font-size:9px;color:var(--t2);">Ad Library</div></div><div style="background:var(--s3);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:11px;font-weight:700;color:${redditResults.length?'#ff6b35':'var(--t2)'};">${redditResults.length} posts</div><div style="font-size:9px;color:var(--t2);">Reddit</div></div><div style="background:var(--s3);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:11px;font-weight:700;color:${hasActor?'var(--purple)':'var(--t2)'};">${actorAdCount>0?actorAdCount+' ads':hasActor?'✓':'—'}</div><div style="font-size:9px;color:var(--t2);">Your Actor</div></div><div style="background:var(--s3);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:11px;font-weight:700;color:${metaAds?.length?'var(--accent)':'var(--t2)'};">${metaAds?.length?metaAds.length+' ads':'🎯'}</div><div style="font-size:9px;color:var(--t2);">${metaAds?.length?'Meta KW':'1st Mover'}</div></div><div style="background:var(--s3);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:11px;font-weight:700;color:${redditLite?.length?'#ff6b35':'var(--t2)'};">${redditLite?.length||0} posts</div><div style="font-size:9px;color:var(--t2);">Cust. Voice</div></div><div style="background:var(--s3);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:11px;font-weight:700;color:${localCompetitors.length?'var(--green)':'var(--t2)'};">${localCompetitors.length||0}</div><div style="font-size:9px;color:var(--t2);">Local Comps</div></div></div><div style="margin-top:8px;font-size:11px;color:var(--t2);">Go to Stage 1 → Save & Continue → ▶ Run Full Pipeline</div>`,'res-bub');
   await savePipelineRun();
   updateCIDisplay();
   document.getElementById('ar-run-btn').disabled=false;
