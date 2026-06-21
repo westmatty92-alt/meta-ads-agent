@@ -32,6 +32,35 @@ CREATE POLICY "users_own_competitor_intelligence" ON competitor_intelligence
 FOR ALL TO authenticated
 USING (auth.uid() = user_id)
 WITH CHECK (auth.uid() = user_id);
+
+CREATE TABLE IF NOT EXISTS serp_intelligence (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  business_id uuid REFERENCES businesses(id) ON DELETE CASCADE,
+  user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE,
+  product_id uuid REFERENCES products(id) ON DELETE SET NULL,
+  search_keyword text,
+  search_city text,
+  search_query text,
+  organic_results jsonb DEFAULT '[]'::jsonb,
+  paid_ads jsonb DEFAULT '[]'::jsonb,
+  people_also_ask jsonb DEFAULT '[]'::jsonb,
+  review_snippets jsonb DEFAULT '[]'::jsonb,
+  businesses_found text[] DEFAULT '{}',
+  websites_found text[] DEFAULT '{}',
+  scraped_at timestamptz DEFAULT now(),
+  last_updated_at timestamptz DEFAULT now()
+);
+
+ALTER TABLE serp_intelligence
+  ADD CONSTRAINT serp_intelligence_business_keyword_city_unique
+  UNIQUE (business_id, search_keyword, search_city);
+
+ALTER TABLE serp_intelligence ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "users_own_serp_intelligence" ON serp_intelligence
+FOR ALL TO authenticated
+USING (auth.uid() = user_id)
+WITH CHECK (auth.uid() = user_id);
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -1525,8 +1554,13 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
       </div>
       <div class="ar-section">
         <h4>Google Search Keywords</h4>
-        <p style="font-size:11px;color:var(--t2);margin-bottom:6px;">What would your competitors show up as on Google? Used to find local competitors on Google Maps.</p>
-        <input type="text" id="ar-google-keywords" class="fi" placeholder="e.g. teeth whitening, mobile teeth whitening, cosmetic teeth whitening">
+        <p style="font-size:11px;color:var(--t2);margin-bottom:6px;">What would customers search to find your competitors? Used for Google SERP + competitor discovery.</p>
+        <input type="text" id="ar-google-keywords" class="fi" placeholder="e.g. teeth whitening, mobile teeth whitening">
+      </div>
+      <div class="ar-section">
+        <h4>Search City</h4>
+        <p style="font-size:11px;color:var(--t2);margin-bottom:6px;">Auto-filled from Base Profile. Change if searching a different market.</p>
+        <input type="text" id="ar-search-city" class="fi" placeholder="e.g. St. Catharines">
       </div>
       <div class="ar-section">
         <h4>Reddit Keywords</h4>
@@ -1803,6 +1837,7 @@ async function initApp(user) {
   await loadBusinesses();
   await loadBaseProfile();
   await loadCompetitorIntelligence();
+  await loadSERPIntelligence();
   renderBPBrandSnapshot();
   renderBkPalette();
   updateCIDisplay();
@@ -2278,6 +2313,12 @@ function go(name) {
     if(nav)nav.classList.add('active');
     if(name==='settings'){ populateKeyInputs(); loadKeys().then(()=>populateKeyInputs()); }
     if(name==='baseProfile'){ loadBaseProfile(); }
+    if(name==='autoResearch'){
+      const fullLoc = document.getElementById('bp-location')?.value || '';
+      const city = fullLoc.split(',')[0].trim();
+      const cityEl = document.getElementById('ar-search-city');
+      if(cityEl && !cityEl.value) cityEl.value = city;
+    }
     return;
   }
   if(document.getElementById('nav-'+name)?.classList.contains('locked'))return;
@@ -2435,10 +2476,13 @@ function getSYSResearch() {
         `- ${c.competitor_name||c.name} | Rating: ${c.rating||'—'}/5 (${c.review_count||c.reviews||0} reviews) | Has Meta Ads: ${c.has_active_meta_ads ? 'YES — '+c.meta_ad_count+' active ads' : 'NO'} | Address: ${c.address||'—'}`
       ).join('\n')
     : '';
+  const serpContext = S.serpIntelligence?.organicResults?.length
+    ? `\nGOOGLE SERP INTELLIGENCE FOR "${S.serpIntelligence.keyword}" IN ${S.serpIntelligence.city}:\nOrganics: ${S.serpIntelligence.organicResults.slice(0,8).map(r=>`${r.title}`).join(', ')}\nGoogle Ads: ${S.serpIntelligence.paidAds?.length ? S.serpIntelligence.paidAds.map(a=>a.title).join(', ') : 'none — first-mover opportunity'}\nPeople Also Ask: ${S.serpIntelligence.peopleAlsoAsk?.slice(0,5).map(q=>q.question).join(' | ')||'none'}`
+    : '';
   return `You are a market intelligence analyst for Meta Ads. Synthesize competitive data and audience psychology into a winning creative brief.
 Analyze: 1. COMPETITOR PLAYBOOK 2. AUDIENCE INTELLIGENCE 3. WINNING ANGLES 4. MARKET GAPS 5. RECOMMENDED ANGLE 6. TOP 3 HOOKS TO TEST
 Be specific. No generic advice. End with RECOMMENDED ANGLE and TOP 3 HOOKS.
-If brand snapshot is available use this tone and angles: ${S.brandSnapshot ? JSON.stringify(S.brandSnapshot) : 'not available'}${competitorContext}`;
+If brand snapshot is available use this tone and angles: ${S.brandSnapshot ? JSON.stringify(S.brandSnapshot) : 'not available'}${competitorContext}${serpContext}`;
 }
 
 async function runResearch() {
@@ -2488,7 +2532,8 @@ Visual style: ${S.brandSnapshot?.visual_style || 'not specified'}
 Proven angles: ${(S.brandSnapshot?.ad_angles || []).join(', ') || 'not specified'}
 Brand hook ideas: ${(S.brandSnapshot?.hooks || []).join(', ') || 'not specified'}
 Never use in ads: ${S.brandSnapshot?.avoid || 'not specified'}
-Competitor intelligence: ${S.competitorIntelligence?.length ? S.competitorIntelligence.slice(0,5).map(c=>`${c.competitor_name||c.name}: ${c.has_active_meta_ads?c.meta_ad_count+' active Meta ads':'no Meta ads'} | rating ${c.rating||'—'}`).join(' | ') : 'none saved — run Auto-Research first'}`;
+Competitor intelligence: ${S.competitorIntelligence?.length ? S.competitorIntelligence.slice(0,5).map(c=>`${c.competitor_name||c.name}: ${c.has_active_meta_ads?c.meta_ad_count+' active Meta ads':'no Meta ads'} | rating ${c.rating||'—'}`).join(' | ') : 'none saved — run Auto-Research first'}
+Google SERP: ${S.serpIntelligence?.organicResults?.length ? `"${S.serpIntelligence.keyword}" in ${S.serpIntelligence.city} — ${S.serpIntelligence.organicResults.length} businesses, ${S.serpIntelligence.paidAds?.length||0} Google Ads, top questions: ${S.serpIntelligence.peopleAlsoAsk?.slice(0,3).map(q=>q.question).join(' | ')||'none'}` : 'not run yet'}`;
   S.history.build=[{role:'user',content:msg}];
   const reply=await ai(SYS_BUILD,S.history.build);
   S.history.build.push({role:'assistant',content:reply});
@@ -3543,6 +3588,117 @@ async function loadCompetitorIntelligence() {
   } catch(e) { console.warn('[loadCI] failed:', e.message); }
 }
 
+async function scrapeGoogleSERP(keyword, city) {
+  const apifyKey = KEYS.apify;
+  if (!apifyKey || !keyword) return null;
+  const searchCity = city || document.getElementById('ar-search-city')?.value?.trim() || 'Ontario';
+  const queries = [
+    keyword + ' ' + searchCity + ' Ontario',
+    keyword + ' ' + searchCity + ' reviews',
+    keyword + ' near ' + searchCity
+  ].join('\n');
+  console.log('[googleSERP] searching:', queries.split('\n')[0]);
+  try {
+    const hdrs = {'Content-Type':'application/json','Authorization':'Bearer '+apifyKey};
+    const run = await fetch(`${APIFY_API}/acts/apify~google-search-scraper/runs`, {
+      method:'POST', headers:hdrs,
+      body: JSON.stringify({ queries, maxPagesPerQuery:1, resultsPerPage:10, countryCode:'CA', languageCode:'en', mobileResults:false })
+    });
+    const runData = await run.json();
+    const runId = runData?.data?.id;
+    if (!runId) { console.warn('[googleSERP] no run ID:', JSON.stringify(runData)); return null; }
+    console.log('[googleSERP] run ID:', runId);
+    for (let i = 0; i < 10; i++) {
+      await new Promise(r => setTimeout(r, 6000));
+      const statusData = await (await fetch(`${APIFY_API}/actor-runs/${runId}`, {headers:hdrs})).json();
+      const runStatus = statusData?.data?.status;
+      console.log('[googleSERP] poll', i+1, '— status:', runStatus);
+      if (runStatus === 'SUCCEEDED') {
+        const results = await (await fetch(`${APIFY_API}/actor-runs/${runId}/dataset/items?limit=30`, {headers:hdrs})).json();
+        console.log('[googleSERP] got', results?.length, 'result pages');
+        return results;
+      }
+      if (runStatus === 'FAILED' || runStatus === 'ABORTED') { console.warn('[googleSERP] failed:', runStatus); return null; }
+    }
+    console.warn('[googleSERP] timed out');
+    return null;
+  } catch(e) { console.warn('[googleSERP] error:', e.message); return null; }
+}
+
+function extractSERPIntelligence(serpResults) {
+  if (!serpResults?.length) return { organicResults:[], paidAds:[], peopleAlsoAsk:[], reviewSnippets:[], businessesFound:[], websitesFound:[] };
+  const organicResults=[], paidAds=[], peopleAlsoAsk=[], reviewSnippets=[], businessesFound=[], websitesFound=[];
+  for (const page of serpResults) {
+    if (page.organicResults) {
+      for (const r of page.organicResults) {
+        organicResults.push({ title:r.title, url:r.url, description:r.description, position:r.position });
+        if (r.title) businessesFound.push(r.title);
+        if (r.url) websitesFound.push(r.url);
+        if (r.description && (r.description.includes('★') || r.description.includes('review') || r.description.includes('rating'))) {
+          reviewSnippets.push({ source:r.title, text:r.description, url:r.url });
+        }
+      }
+    }
+    if (page.paidResults) {
+      for (const ad of page.paidResults) paidAds.push({ title:ad.title, url:ad.url, description:ad.description, displayUrl:ad.displayUrl });
+    }
+    if (page.peopleAlsoAsk) {
+      for (const q of page.peopleAlsoAsk) peopleAlsoAsk.push({ question:q.question, answer:q.answer });
+    }
+  }
+  return {
+    organicResults: organicResults.slice(0,20),
+    paidAds,
+    peopleAlsoAsk,
+    reviewSnippets,
+    businessesFound: [...new Set(businessesFound)].slice(0,15),
+    websitesFound: [...new Set(websitesFound)].slice(0,15)
+  };
+}
+
+async function saveSERPIntelligence(keyword, city, intelligence) {
+  if (!currentBizId || !currentUser?.id || !intelligence) return;
+  const { error } = await sb.from('serp_intelligence').upsert({
+    business_id: currentBizId,
+    user_id: currentUser.id,
+    product_id: S.selectedProductId || null,
+    search_keyword: keyword,
+    search_city: city,
+    search_query: keyword + ' ' + city + ' Ontario',
+    organic_results: intelligence.organicResults,
+    paid_ads: intelligence.paidAds,
+    people_also_ask: intelligence.peopleAlsoAsk,
+    review_snippets: intelligence.reviewSnippets,
+    businesses_found: intelligence.businessesFound,
+    websites_found: intelligence.websitesFound,
+    last_updated_at: new Date().toISOString()
+  }, { onConflict: 'business_id,search_keyword,search_city' });
+  if (error) console.warn('[saveSERP] failed:', error.message);
+  else { console.log('[saveSERP] saved for', keyword, 'in', city); S.serpIntelligence = { keyword, city, ...intelligence }; }
+}
+
+async function loadSERPIntelligence() {
+  if (!currentBizId || !currentUser?.id) return;
+  try {
+    const { data, error } = await sb.from('serp_intelligence').select('*').eq('business_id', currentBizId).order('last_updated_at', { ascending:false }).limit(5);
+    if (error) { console.warn('[loadSERP] failed:', error.message); return; }
+    if (data?.length) {
+      const d = data[0];
+      S.serpIntelligence = {
+        keyword: d.search_keyword,
+        city: d.search_city,
+        organicResults: Array.isArray(d.organic_results) ? d.organic_results : [],
+        paidAds: Array.isArray(d.paid_ads) ? d.paid_ads : [],
+        peopleAlsoAsk: Array.isArray(d.people_also_ask) ? d.people_also_ask : [],
+        reviewSnippets: Array.isArray(d.review_snippets) ? d.review_snippets : [],
+        businessesFound: d.businesses_found || [],
+        websitesFound: d.websites_found || []
+      };
+      console.log('[loadSERP] loaded:', S.serpIntelligence.businessesFound?.length, 'businesses found');
+    }
+  } catch(e) { console.warn('[loadSERP] error:', e.message); }
+}
+
 async function runAutoResearch() {
   const apifyKey = KEYS.apify;
   if(!apifyKey){document.getElementById('ar-key-warning').style.display='block';return;}
@@ -3577,6 +3733,36 @@ async function runAutoResearch() {
   const compList=competitors?competitors.split(',').map(c=>c.trim()).filter(Boolean):[];
   let compResults=[],redditResults=[],demographicData={};
   const location = document.getElementById('bp-location')?.value?.trim() || country;
+  const searchCity = document.getElementById('ar-search-city')?.value?.trim() || location.split(',')[0].trim();
+  // SERP intelligence — runs before parallel sources so results feed into synthesis
+  let serpIntelligence = null;
+  if (googleKeyword && searchCity) {
+    const tSerp = arThinking(`🔍 Scraping Google for "${googleKeyword}" in ${searchCity}…`);
+    const serpRaw = await scrapeGoogleSERP(googleKeyword, searchCity);
+    serpIntelligence = extractSERPIntelligence(serpRaw);
+    tSerp.remove();
+    if (serpIntelligence.organicResults.length || serpIntelligence.paidAds.length) {
+      arMsg(`<span class="source-badge sb-meta">Google SERP</span> <strong>${serpIntelligence.businessesFound.length} businesses found</strong> · ${serpIntelligence.paidAds.length} Google Ads detected · ${serpIntelligence.peopleAlsoAsk.length} questions`,'res-bub');
+      const orgsHtml = serpIntelligence.organicResults.slice(0,5).map(r=>`<div style="padding:6px 8px;background:var(--s3);border-radius:6px;margin-bottom:4px;"><div style="font-size:11px;font-weight:700;color:var(--t1);">${escHtml(r.title||'—')}</div><div style="font-size:10px;color:var(--t2);margin-top:2px;">${escHtml((r.description||'').slice(0,100))}</div></div>`).join('');
+      const paidHtml = serpIntelligence.paidAds.length
+        ? serpIntelligence.paidAds.slice(0,3).map(ad=>`<div style="padding:6px 8px;background:rgba(255,200,0,0.08);border:1px solid rgba(255,200,0,0.25);border-radius:6px;margin-bottom:4px;"><div style="font-size:10px;color:var(--yellow);font-weight:700;margin-bottom:2px;">GOOGLE AD</div><div style="font-size:11px;color:var(--t1);">${escHtml(ad.title||'—')}</div><div style="font-size:10px;color:var(--t2);">${escHtml((ad.description||'').slice(0,80))}</div></div>`).join('')
+        : `<div style="font-size:11px;color:var(--green);padding:6px 8px;background:rgba(0,212,160,0.08);border-radius:6px;">🎯 No Google Ads detected — first-mover opportunity</div>`;
+      arMsg(`<span class="source-badge sb-meta">Google SERP Results</span><br><div style="margin-top:8px;">${orgsHtml}</div><div style="margin-top:8px;font-size:10px;color:var(--t2);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Google Ads (${serpIntelligence.paidAds.length})</div>${paidHtml}`,'res-bub');
+      if (serpIntelligence.peopleAlsoAsk.length) {
+        const paHtml = serpIntelligence.peopleAlsoAsk.slice(0,5).map(q=>`<div style="padding:5px 8px;background:var(--s3);border-radius:6px;margin-bottom:4px;font-size:11px;color:var(--t1);">❓ ${escHtml(q.question||'')}</div>`).join('');
+        arMsg(`<span class="source-badge sb-reddit">People Also Ask</span> <strong>${serpIntelligence.peopleAlsoAsk.length} questions</strong><br><div style="margin-top:8px;">${paHtml}</div>`,'res-bub');
+      }
+      if (serpIntelligence.reviewSnippets.length) {
+        arMsg(`<span class="source-badge sb-audience">Review Snippets</span> <strong>${serpIntelligence.reviewSnippets.length} found</strong> — review signals detected in search results`,'res-bub');
+      }
+      const tSerpSave = arThinking('💾 Saving SERP intelligence to client profile…');
+      await saveSERPIntelligence(googleKeyword, searchCity, serpIntelligence);
+      tSerpSave.remove();
+      arMsg(`<span class="source-badge sb-collector">✓ SERP intelligence saved</span>`,'res-bub');
+    } else {
+      arMsg(`<span class="source-badge sb-meta">Google SERP</span> ⚠️ No results — check Apify key or try different keywords`,'think-bub');
+    }
+  }
   const divEl=document.createElement('div');divEl.className='sdiv';divEl.textContent='Running 6 sources in parallel';stream.appendChild(divEl);
   const t1=compList.length?arThinking(`📘 Meta Ad Library — ${compList.join(', ')}…`):null;
   const t2=(keywords||subreddits.length)?arThinking(`🟠 Reddit — "${keywords||subreddits[0]}"…`):null;
@@ -3643,7 +3829,7 @@ async function runAutoResearch() {
     arMsg(`<span class="source-badge sb-collector">✓ ${localCompetitors.length} competitors saved to client profile</span>`,'res-bub');
   }else if(keywords&&location){arMsg(`<span class="source-badge sb-audience">Google Maps</span> ⚠️ No local competitors found — try different keywords or add a location in Base Profile`,'think-bub');}
   // Claude synthesis
-  const hasData=compResults.length>0||redditResults.length>0||Object.keys(demographicData).length>0||metaAds?.length>0||redditLite?.length>0||localCompetitors.length>0;
+  const hasData=compResults.length>0||redditResults.length>0||Object.keys(demographicData).length>0||metaAds?.length>0||redditLite?.length>0||localCompetitors.length>0||(serpIntelligence?.organicResults?.length>0);
   if(hasData){
     const tSynth=arThinking('Synthesizing all research into audience brief…');
     const actorAds=demoRes.status==='fulfilled'&&Array.isArray(demoRes.value)?demoRes.value.filter(i=>i.ad_id):[];
@@ -3651,7 +3837,10 @@ async function runAutoResearch() {
     const locationCtx=S.locationLat&&S.locationLon?`LOCATION: ${document.getElementById('bp-location')?.value||'not specified'} (${S.locationLat},${S.locationLon})`:'';
     const metaAdsContext=metaAds?.length?'COMPETITOR ADS FROM META AD LIBRARY:\n'+metaAds.slice(0,8).map(ad=>`- Brand: ${ad.pageName||'Unknown'} | Headline: ${ad.title||ad.body?.slice(0,80)||'N/A'} | CTA: ${ad.callToAction||'N/A'}`).join('\n'):'No competitor ads found in Meta Ad Library for this market.';
     const redditContext=redditLite?.length?'REAL CUSTOMER LANGUAGE FROM REDDIT:\n'+redditLite.slice(0,10).map(p=>`- "${p.title||p.body?.slice(0,120)||'N/A'}" (${p.score||0} upvotes)`).join('\n'):'No Reddit customer voice data available.';
-    const synthPrompt=`Synthesize into audience intelligence brief. COMPETITOR: ${compList.join(', ')} PRODUCT: ${S.product||'not specified'} ${locationCtx} AD COPY (${compResults.length+actorAds.length} ads): ${(S.compCopy||actorCopy||'none').substring(0,2000)} REDDIT (${redditResults.length} posts): ${S.voice?S.voice.substring(0,1500):'none'} ${metaAdsContext} ${redditContext} Cover: 1. TARGET AUDIENCE PROFILE 2. TOP PAIN POINTS 3. WINNING AD ANGLES 4. MARKET GAPS 5. RECOMMENDED HOOK. Max 300 words. Be specific. ${locationCtx?'Tailor insights for the specified location/market.':''}`;
+    const serpCtx=serpIntelligence?.organicResults?.length
+      ?`GOOGLE SEARCH RESULTS FOR "${googleKeyword}" IN ${searchCity}:\nORGANIC RESULTS:\n${serpIntelligence.organicResults.slice(0,10).map(r=>`- ${r.title}: ${(r.description||'').slice(0,100)}`).join('\n')}\nGOOGLE ADS (${serpIntelligence.paidAds?.length||0}): ${serpIntelligence.paidAds?.length?serpIntelligence.paidAds.map(ad=>`${ad.title}: ${(ad.description||'').slice(0,80)}`).join(' | '):'No Google Ads found — first-mover opportunity'}\nPEOPLE ALSO ASK:\n${serpIntelligence.peopleAlsoAsk?.slice(0,5).map(q=>`- ${q.question}`).join('\n')||'none'}`
+      :'';
+    const synthPrompt=`Synthesize into audience intelligence brief. COMPETITOR: ${compList.join(', ')} PRODUCT: ${S.product||'not specified'} ${locationCtx} AD COPY (${compResults.length+actorAds.length} ads): ${(S.compCopy||actorCopy||'none').substring(0,2000)} REDDIT (${redditResults.length} posts): ${S.voice?S.voice.substring(0,1500):'none'} ${metaAdsContext} ${redditContext} ${serpCtx} Cover: 1. TARGET AUDIENCE PROFILE 2. TOP PAIN POINTS 3. WINNING AD ANGLES 4. MARKET GAPS 5. RECOMMENDED HOOK. Max 300 words. Be specific. ${locationCtx?'Tailor insights for the specified location/market.':''}`;
     const synthMsg=await ai(getSYSResearch(),[{role:'user',content:synthPrompt}]);
     tSynth.remove(); S.researchSummary=synthMsg;
     const painMatch=synthMsg.match(/PAIN POINTS[:\s]+([^\n]+)/i);
@@ -3660,7 +3849,7 @@ async function runAutoResearch() {
   }
   const hasActor=demoRes.status==='fulfilled'&&Array.isArray(demoRes.value)&&demoRes.value.length>0;
   const actorAdCount=hasActor?demoRes.value.filter(i=>i.ad_id).length:0;
-  arMsg(`<strong>✅ Auto-Research Complete</strong><div style="margin-top:10px;display:grid;grid-template-columns:repeat(6,1fr);gap:6px;"><div style="background:var(--s3);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:11px;font-weight:700;color:${compResults.length?'var(--accent)':'var(--t2)'};">${compResults.length} ads</div><div style="font-size:9px;color:var(--t2);">Ad Library</div></div><div style="background:var(--s3);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:11px;font-weight:700;color:${redditResults.length?'#ff6b35':'var(--t2)'};">${redditResults.length} posts</div><div style="font-size:9px;color:var(--t2);">Reddit</div></div><div style="background:var(--s3);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:11px;font-weight:700;color:${hasActor?'var(--purple)':'var(--t2)'};">${actorAdCount>0?actorAdCount+' ads':hasActor?'✓':'—'}</div><div style="font-size:9px;color:var(--t2);">Your Actor</div></div><div style="background:var(--s3);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:11px;font-weight:700;color:${metaAds?.length?'var(--accent)':'var(--t2)'};">${metaAds?.length?metaAds.length+' ads':'🎯'}</div><div style="font-size:9px;color:var(--t2);">${metaAds?.length?'Meta KW':'1st Mover'}</div></div><div style="background:var(--s3);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:11px;font-weight:700;color:${redditLite?.length?'#ff6b35':'var(--t2)'};">${redditLite?.length||0} posts</div><div style="font-size:9px;color:var(--t2);">Cust. Voice</div></div><div style="background:var(--s3);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:11px;font-weight:700;color:${localCompetitors.length?'var(--green)':'var(--t2)'};">${localCompetitors.length||0}</div><div style="font-size:9px;color:var(--t2);">Local Comps</div></div></div><div style="margin-top:8px;font-size:11px;color:var(--t2);">Go to Stage 1 → Save & Continue → ▶ Run Full Pipeline</div>`,'res-bub');
+  arMsg(`<strong>✅ Auto-Research Complete</strong><div style="margin-top:10px;display:grid;grid-template-columns:repeat(7,1fr);gap:6px;"><div style="background:var(--s3);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:11px;font-weight:700;color:${compResults.length?'var(--accent)':'var(--t2)'};">${compResults.length} ads</div><div style="font-size:9px;color:var(--t2);">Ad Library</div></div><div style="background:var(--s3);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:11px;font-weight:700;color:${redditResults.length?'#ff6b35':'var(--t2)'};">${redditResults.length} posts</div><div style="font-size:9px;color:var(--t2);">Reddit</div></div><div style="background:var(--s3);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:11px;font-weight:700;color:${hasActor?'var(--purple)':'var(--t2)'};">${actorAdCount>0?actorAdCount+' ads':hasActor?'✓':'—'}</div><div style="font-size:9px;color:var(--t2);">Your Actor</div></div><div style="background:var(--s3);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:11px;font-weight:700;color:${metaAds?.length?'var(--accent)':'var(--t2)'};">${metaAds?.length?metaAds.length+' ads':'🎯'}</div><div style="font-size:9px;color:var(--t2);">${metaAds?.length?'Meta KW':'1st Mover'}</div></div><div style="background:var(--s3);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:11px;font-weight:700;color:${redditLite?.length?'#ff6b35':'var(--t2)'};">${redditLite?.length||0} posts</div><div style="font-size:9px;color:var(--t2);">Cust. Voice</div></div><div style="background:var(--s3);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:11px;font-weight:700;color:${localCompetitors.length?'var(--green)':'var(--t2)'};">${localCompetitors.length||0}</div><div style="font-size:9px;color:var(--t2);">Local Comps</div></div><div style="background:var(--s3);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:11px;font-weight:700;color:${serpIntelligence?.organicResults?.length?'var(--accent)':'var(--t2)'};">${serpIntelligence?.organicResults?.length||0}</div><div style="font-size:9px;color:var(--t2);">SERP</div></div></div><div style="margin-top:8px;font-size:11px;color:var(--t2);">Go to Stage 1 → Save & Continue → ▶ Run Full Pipeline</div>`,'res-bub');
   await savePipelineRun();
   updateCIDisplay();
   document.getElementById('ar-run-btn').disabled=false;
