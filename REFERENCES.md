@@ -111,7 +111,7 @@ Auth via GHL SSO or login token per client.
 - Video: Creatomate API
 - Social Research: Apify
 - Payments: Stripe
-- Hosting: Replit / Vercel
+- Hosting: Vercel (live: https://meta-ads-agent-cyan.vercel.app/ — auto-deploys on git push)
 
 ---
 

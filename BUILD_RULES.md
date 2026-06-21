@@ -96,10 +96,10 @@ mkdir -p .claude/hooks .claude/context .claude/skills
 - [ ] Create profiles table with handle_new_user() trigger
 
 ### Step 5 — Hosting
-- [ ] Connect Replit to GitHub repo
+- [ ] Connect repo to Vercel (import project in Vercel dashboard)
 - [ ] Set up git remote: `git remote add origin [url]`
 - [ ] Set rebase strategy: `git config pull.rebase true`
-- [ ] Test deployment: push to main → verify Replit updates
+- [ ] Test deployment: push to main → verify Vercel deploys (~30 seconds)
 - [ ] Get live URL and save it
 
 ### Step 6 — API Keys
@@ -262,7 +262,7 @@ Fix: Use `getUser()` before any RLS-protected query to force token refresh
 - Enable RLS on every table immediately after creation
 - Use `to authenticated` on all RLS policies
 - Encrypt sensitive data with pgcrypto before storing
-- Use HTTPS only (Replit handles this automatically)
+- Use HTTPS only (Vercel handles this automatically)
 - Rotate API keys if they appear in any chat or commit
 
 ---
@@ -282,7 +282,7 @@ Every time you start a Claude Code session:
 
 Before ending every Claude Code session:
 - [ ] All changes committed and pushed to GitHub
-- [ ] Replit synced: `git fetch origin && git reset --hard origin/main`
+- [ ] Vercel deploy confirmed (auto-deploys ~30s after push — check https://meta-ads-agent-cyan.vercel.app/)
 - [ ] Live URL tested in browser
 - [ ] No debug console.log statements left in code
 - [ ] REFERENCES.md updated if anything changed

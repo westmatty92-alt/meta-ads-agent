@@ -30,7 +30,7 @@
 2. Use architecture-designer skill BEFORE writing any code
 3. Check JS brace balance with Node.js before every commit
 4. Every module must be iFrame-embeddable for GHL from day one
-5. Never use Replit git UI — shell only (bash sync.sh)
+5. Never use Replit for deployment — Vercel handles all deployments automatically
 6. Never hardcode API keys or tokens in source code
 7. Always add WITH CHECK to RLS policies
 8. Always add UNIQUE constraint before using onConflict in upsert
@@ -263,7 +263,7 @@ project/
 
 ├── SKILLS_GUIDE.md        ← Claude Code skills
 
-├── sync.sh                ← Replit sync command
+├── sync.sh                ← no-op placeholder (Vercel deploys automatically)
 
 ├── .gitignore             ← exclude node_modules etc
 
@@ -302,8 +302,8 @@ project/
 ## 📋 SESSION END CHECKLIST
 
 - [ ] All changes committed and pushed to GitHub
-- [ ] bash sync.sh run in Replit Shell
-- [ ] Live URL tested in browser
+- [ ] Vercel deploy confirmed (auto-deploys in ~30 seconds after push)
+- [ ] Live URL tested: https://meta-ads-agent-cyan.vercel.app/
 - [ ] No debug console.log left in code
 - [ ] REFERENCES.md updated if business context changed
 - [ ] MASTER_BUILD_GUIDE.md updated if new bug pattern found

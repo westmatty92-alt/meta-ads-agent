@@ -7,8 +7,13 @@
 
 ## Project
 Runbase Pulse — Meta Ads Agent (Tool 1 of 17 in Runbase CRM platform)
-Single file app: index.html (~3500 lines)
+Single file app: index.html (~4500 lines)
 Stack: Vanilla JS + Supabase + Claude API + Apify + GHL
+
+## Live URL
+https://meta-ads-agent-cyan.vercel.app/
+Deployed via Vercel — every git push deploys automatically in ~30 seconds.
+Never use Replit for deployment — Vercel handles all deployments automatically.
 
 ## Key files
 - index.html — entire application
