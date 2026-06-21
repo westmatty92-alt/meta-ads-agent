@@ -3441,20 +3441,22 @@ async function scrapeMetaAdLibrary(keywords, location, competitorUrls) {
   if (!apifyKey || !keywords) return [];
   try {
     const hdrs = {'Content-Type':'application/json','Authorization':'Bearer '+apifyKey};
-    const city = location?.split(',')[0]||'';
-    const baseUrl = 'https://www.facebook.com/ads/library/?active_status=active&ad_type=all&country=CA&search_type=keyword_unordered&q=';
-    const urls = [
-      baseUrl + encodeURIComponent(keywords),
-      city ? baseUrl + encodeURIComponent(keywords+' '+city) : null
-    ].filter(Boolean);
+    const keyword1 = encodeURIComponent(keywords);
+    const keyword2 = encodeURIComponent(keywords + ' ' + (location?.split(',')[0]?.trim() || ''));
+    const inputPayload = {
+      urls: [
+        'https://www.facebook.com/ads/library/?active_status=active&ad_type=all&country=CA&q=' + keyword1 + '&search_type=keyword_unordered',
+        'https://www.facebook.com/ads/library/?active_status=active&ad_type=all&country=CA&q=' + keyword2 + '&search_type=keyword_unordered'
+      ],
+      maxAds: 15
+    };
     if (competitorUrls?.length) {
       competitorUrls.forEach(pageUrl => {
         const pageIdMatch = pageUrl.match(/facebook\.com\/(?:pg\/)?([^/?#]+)/);
-        if (pageIdMatch) urls.push('https://www.facebook.com/ads/library/?active_status=all&ad_type=all&country=CA&view_all_page_id='+pageIdMatch[1]);
+        if (pageIdMatch) inputPayload.urls.push('https://www.facebook.com/ads/library/?active_status=all&ad_type=all&country=CA&view_all_page_id='+pageIdMatch[1]);
       });
     }
-    const inputPayload = { urls, maxAds:15 };
-    console.log('[metaAds] starting run — urls:', urls);
+    console.log('[metaAds] URLs:', inputPayload.urls);
     const run = await fetch(`${APIFY_API}/acts/curious_coder~facebook-ads-library-scraper/runs`, {
       method:'POST', headers:hdrs, body:JSON.stringify(inputPayload)
     });
@@ -3518,7 +3520,7 @@ async function discoverLocalCompetitors() {
     const hdrs = {'Content-Type':'application/json','Authorization':'Bearer '+apifyKey};
     const startRes = await fetch(`${APIFY_API}/acts/compass~crawler-google-places/runs`, {
       method:'POST', headers:hdrs,
-      body: JSON.stringify({ searchString:searchQuery, maxCrawledPlaces:10, language:'en', countryCode:'CA' })
+      body: JSON.stringify({ searchString:searchQuery, maxCrawledPlaces:10, language:'en', countryCode:'ca' })
     });
     if (!startRes.ok) { console.warn('[googleMaps] start failed:', startRes.status, await startRes.text()); return []; }
     const runId = (await startRes.json())?.data?.id;
@@ -3602,7 +3604,7 @@ async function scrapeGoogleSERP(keyword, city) {
     const hdrs = {'Content-Type':'application/json','Authorization':'Bearer '+apifyKey};
     const run = await fetch(`${APIFY_API}/acts/apify~google-search-scraper/runs`, {
       method:'POST', headers:hdrs,
-      body: JSON.stringify({ queries, maxPagesPerQuery:1, resultsPerPage:10, countryCode:'CA', languageCode:'en', mobileResults:false })
+      body: JSON.stringify({ queries, maxPagesPerQuery:1, resultsPerPage:10, countryCode:'ca', languageCode:'en', mobileResults:false })
     });
     const runData = await run.json();
     const runId = runData?.data?.id;
