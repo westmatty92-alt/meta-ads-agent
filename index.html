@@ -3502,6 +3502,8 @@ async function scrapeRedditLanguage(keywords) {
   } catch(e) { console.warn('[redditScraper] scrape failed:', e.message); return null; }
 }
 
+// COST: ~$0.10-0.15 per run with maxCrawledPlaces=5
+// Increase maxCrawledPlaces carefully — each place adds ~$0.03-0.05
 async function discoverLocalCompetitors() {
   const apifyKey = KEYS.apify;
   const googleKeyword = document.getElementById('ar-google-keywords')?.value?.trim()
@@ -3517,7 +3519,7 @@ async function discoverLocalCompetitors() {
     const hdrs = {'Content-Type':'application/json','Authorization':'Bearer '+apifyKey};
     const startRes = await fetch(`${APIFY_API}/acts/compass~crawler-google-places/runs`, {
       method:'POST', headers:hdrs,
-      body: JSON.stringify({ searchString:searchQuery, maxCrawledPlaces:10, language:'en', countryCode:'ca' })
+      body: JSON.stringify({ searchString:searchQuery, maxCrawledPlaces:5, language:'en', countryCode:'ca', includeReviews:false, includeImages:false, includePeopleAlsoSearch:false })
     });
     if (!startRes.ok) { console.warn('[googleMaps] start failed:', startRes.status, await startRes.text()); return []; }
     const runId = (await startRes.json())?.data?.id;
