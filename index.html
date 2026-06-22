@@ -1555,12 +1555,12 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
       <div class="ar-section">
         <h4>Google Search Keywords</h4>
         <p style="font-size:11px;color:var(--t2);margin-bottom:6px;">What would customers search to find your competitors? Used for Google SERP + competitor discovery.</p>
-        <input type="text" id="ar-google-keywords" class="fi" placeholder="e.g. teeth whitening, mobile teeth whitening">
+        <input type="text" id="ar-google-keywords" class="fi" placeholder="e.g. teeth whitening (searches in Canada by default)">
       </div>
       <div class="ar-section">
         <h4>Search City</h4>
         <p style="font-size:11px;color:var(--t2);margin-bottom:6px;">Auto-filled from Base Profile. Change if searching a different market.</p>
-        <input type="text" id="ar-search-city" class="fi" placeholder="e.g. St. Catharines">
+        <input type="text" id="ar-search-city" class="fi" placeholder="e.g. St. Catharines (auto-filled from Base Profile)">
       </div>
       <div class="ar-section">
         <h4>Reddit Keywords</h4>
@@ -1621,6 +1621,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
         <p>Meta Ad Library + Reddit + Your Apify Actor running in parallel. All data injected into the pipeline automatically.</p>
       </div>
       <div class="ar-stream" id="ar-stream" style="display:none;flex-direction:column;gap:12px;"></div>
+      <div id="ar-competitor-results" style="margin-top:16px;"></div>
     </div>
   </div>
 </div>
@@ -2317,7 +2318,7 @@ function go(name) {
       const fullLoc = document.getElementById('bp-location')?.value || '';
       const city = fullLoc.split(',')[0].trim();
       const cityEl = document.getElementById('ar-search-city');
-      if(cityEl && !cityEl.value) cityEl.value = city;
+      if(cityEl && !cityEl.value) cityEl.value = city || 'Ontario Canada';
     }
     return;
   }
@@ -2479,9 +2480,53 @@ function getSYSResearch() {
   const serpContext = S.serpIntelligence?.organicResults?.length
     ? `\nGOOGLE SERP INTELLIGENCE FOR "${S.serpIntelligence.keyword}" IN ${S.serpIntelligence.city}:\nOrganics: ${S.serpIntelligence.organicResults.slice(0,8).map(r=>`${r.title}`).join(', ')}\nGoogle Ads: ${S.serpIntelligence.paidAds?.length ? S.serpIntelligence.paidAds.map(a=>a.title).join(', ') : 'none — first-mover opportunity'}\nPeople Also Ask: ${S.serpIntelligence.peopleAlsoAsk?.slice(0,5).map(q=>q.question).join(' | ')||'none'}`
     : '';
-  return `You are a market intelligence analyst for Meta Ads. Synthesize competitive data and audience psychology into a winning creative brief.
-Analyze: 1. COMPETITOR PLAYBOOK 2. AUDIENCE INTELLIGENCE 3. WINNING ANGLES 4. MARKET GAPS 5. RECOMMENDED ANGLE 6. TOP 3 HOOKS TO TEST
-Be specific. No generic advice. End with RECOMMENDED ANGLE and TOP 3 HOOKS.
+  const mktCity = S.serpIntelligence?.city || 'the local market';
+  const mktKw = S.serpIntelligence?.keyword || 'the target niche';
+  return `You are an expert market research analyst and Meta Ads strategist.
+Produce a DETAILED competitive intelligence report with these exact sections:
+
+1. TARGET AUDIENCE PROFILE
+   - Demographics (age, gender, income, lifestyle)
+   - Psychographics (values, motivations, fears)
+   - Local market specifics for ${mktCity}
+
+2. COMPETITOR LANDSCAPE
+   - List each competitor found with their strengths and weaknesses
+   - Analyze their online presence (website quality, reviews, social media)
+   - Identify gaps and vulnerabilities in their positioning
+   - Note any running ads and what angles they use
+
+3. TOP PAIN POINTS
+   - List 5-7 specific pain points with evidence from search/Reddit data
+   - Quote actual customer language where found
+
+4. WINNING AD ANGLES
+   - List 5-6 specific angles ranked by opportunity
+   - For each angle: what it is, why it works, example hook
+
+5. MARKET GAPS & OPPORTUNITIES
+   - Specific unclaimed territory in this market
+   - First-mover opportunities (Google Ads, Meta Ads, local SEO)
+   - Positioning recommendations
+
+6. GOOGLE ADS INTELLIGENCE
+   - What competitors are spending on (or aren't)
+   - Recommended Google Ads keywords to target
+   - Estimated competition level
+
+7. META ADS STRATEGY
+   - Recommended targeting parameters
+   - Best performing ad formats for this market
+   - Creative angles that will resonate
+
+8. RECOMMENDED HOOKS (top 5)
+   - Each hook with explanation of why it works for this specific market
+
+9. AVOID
+   - What NOT to do based on competitor analysis and market signals
+
+Format each section clearly with headers. Be specific to ${mktCity} and the ${mktKw} market.
+Use all data provided — SERP results, Reddit data, competitor listings, review snippets.
 If brand snapshot is available use this tone and angles: ${S.brandSnapshot ? JSON.stringify(S.brandSnapshot) : 'not available'}${competitorContext}${serpContext}`;
 }
 
@@ -3485,7 +3530,7 @@ async function scrapeRedditLanguage(keywords) {
     const hdrs = {'Content-Type':'application/json','Authorization':'Bearer '+apifyKey};
     const startRes = await fetch(`${APIFY_API}/acts/trudax~reddit-scraper-lite/runs`, {
       method:'POST', headers:hdrs,
-      body: JSON.stringify({ searches:keywords, maxItems:15, sort:'relevance' })
+      body: JSON.stringify({ searches:keywords.map(k => k + ' Canada'), maxItems:15, sort:'relevance' })
     });
     if (!startRes.ok) return null;
     const runId = (await startRes.json())?.data?.id;
@@ -3838,16 +3883,43 @@ async function runAutoResearch() {
     const locationCtx=S.locationLat&&S.locationLon?`LOCATION: ${document.getElementById('bp-location')?.value||'not specified'} (${S.locationLat},${S.locationLon})`:'';
     const metaAdsContext=metaAds?.length?'COMPETITOR ADS FROM META AD LIBRARY:\n'+metaAds.slice(0,8).map(ad=>`- Brand: ${ad.pageName||'Unknown'} | Headline: ${ad.title||ad.body?.slice(0,80)||'N/A'} | CTA: ${ad.callToAction||'N/A'}`).join('\n'):'No competitor ads found in Meta Ad Library for this market.';
     const redditContext=redditLite?.length?'REAL CUSTOMER LANGUAGE FROM REDDIT:\n'+redditLite.slice(0,10).map(p=>`- "${p.title||p.body?.slice(0,120)||'N/A'}" (${p.score||0} upvotes)`).join('\n'):'No Reddit customer voice data available.';
-    const serpCtx=serpIntelligence?.organicResults?.length
-      ?`GOOGLE SEARCH RESULTS FOR "${googleKeyword}" IN ${searchCity}:\nORGANIC RESULTS:\n${serpIntelligence.organicResults.slice(0,10).map(r=>`- ${r.title}: ${(r.description||'').slice(0,100)}`).join('\n')}\nGOOGLE ADS (${serpIntelligence.paidAds?.length||0}): ${serpIntelligence.paidAds?.length?serpIntelligence.paidAds.map(ad=>`${ad.title}: ${(ad.description||'').slice(0,80)}`).join(' | '):'No Google Ads found — first-mover opportunity'}\nPEOPLE ALSO ASK:\n${serpIntelligence.peopleAlsoAsk?.slice(0,5).map(q=>`- ${q.question}`).join('\n')||'none'}`
+    const serpCtx=(S.serpIntelligence?.organicResults?.length||serpIntelligence?.organicResults?.length)
+      ?`GOOGLE SEARCH INTELLIGENCE FOR "${S.serpIntelligence?.keyword||googleKeyword}" IN ${S.serpIntelligence?.city||searchCity}:
+
+BUSINESSES FOUND ON GOOGLE (${(S.serpIntelligence?.organicResults||[]).length} results):
+${(S.serpIntelligence?.organicResults||[]).slice(0,10).map((r,i)=>`${i+1}. ${r.title}
+     URL: ${r.url||'N/A'}
+     Description: ${(r.description||'').slice(0,150)}`).join('\n\n')}
+
+GOOGLE ADS IN THIS MARKET (${(S.serpIntelligence?.paidAds||[]).length} active):
+${(S.serpIntelligence?.paidAds||[]).length>0
+  ?(S.serpIntelligence?.paidAds||[]).map(ad=>`- Advertiser: ${ad.title}
+     Copy: ${(ad.description||'').slice(0,100)}
+     Display URL: ${ad.displayUrl||'N/A'}`).join('\n')
+  :'ZERO Google Ads found — complete first-mover opportunity on Google paid search'}
+
+PEOPLE ALSO ASK (real customer questions):
+${(S.serpIntelligence?.peopleAlsoAsk||[]).slice(0,6).map(q=>`- ${q.question}`).join('\n')||'None captured'}
+
+REVIEW SNIPPETS FROM SEARCH:
+${(S.serpIntelligence?.reviewSnippets||[]).slice(0,5).map(r=>`- ${r.source}: "${(r.text||'').slice(0,120)}"`).join('\n')||'None captured'}
+
+GOOGLE MAPS COMPETITORS (${(S.competitorIntelligence||[]).length} found):
+${(S.competitorIntelligence||[]).slice(0,8).map(c=>`- ${c.competitor_name||c.name}
+     Address: ${c.address||'N/A'}
+     Rating: ${c.rating||'N/A'}/5 (${c.review_count||c.reviews||0} reviews)
+     Website: ${c.website||'None'}
+     Has Meta Ads: ${c.has_active_meta_ads?'YES — '+c.meta_ad_count+' active ads':'NOT DETECTED'}
+     Facebook: ${c.facebook_url||c.facebook||'Not found'}`).join('\n\n')||'No Google Maps data yet'}`
       :'';
-    const synthPrompt=`Synthesize into audience intelligence brief. COMPETITOR: ${compList.join(', ')} PRODUCT: ${S.product||'not specified'} ${locationCtx} AD COPY (${compResults.length+actorAds.length} ads): ${(S.compCopy||actorCopy||'none').substring(0,2000)} REDDIT (${redditResults.length} posts): ${S.voice?S.voice.substring(0,1500):'none'} ${metaAdsContext} ${redditContext} ${serpCtx} Cover: 1. TARGET AUDIENCE PROFILE 2. TOP PAIN POINTS 3. WINNING AD ANGLES 4. MARKET GAPS 5. RECOMMENDED HOOK. Max 300 words. Be specific. ${locationCtx?'Tailor insights for the specified location/market.':''}`;
+    const synthPrompt=`Synthesize into audience intelligence brief. COMPETITOR: ${compList.join(', ')} PRODUCT: ${S.product||'not specified'} ${locationCtx} AD COPY (${compResults.length+actorAds.length} ads): ${(S.compCopy||actorCopy||'none').substring(0,2000)} REDDIT (${redditResults.length} posts): ${S.voice?S.voice.substring(0,1500):'none'} ${metaAdsContext} ${redditContext} ${serpCtx} Be specific and thorough. Use all data provided. Structure your response with clear section headers. ${locationCtx?'Tailor all insights for the specified local market.':''}`;
     const synthMsg=await ai(getSYSResearch(),[{role:'user',content:synthPrompt}]);
     tSynth.remove(); S.researchSummary=synthMsg;
     const painMatch=synthMsg.match(/PAIN POINTS[:\s]+([^\n]+)/i);
     if(painMatch&&!document.getElementById('d-pain').value){document.getElementById('d-pain').value=painMatch[1].trim().substring(0,100);S.pain=document.getElementById('d-pain').value;}
     arMsg(`<span class="source-badge sb-collector">Research Brief</span><br><br>${fmt(synthMsg)}`,'res-bub');
   }
+  renderCompetitorResults(S.serpIntelligence, S.competitorIntelligence);
   const hasActor=demoRes.status==='fulfilled'&&Array.isArray(demoRes.value)&&demoRes.value.length>0;
   const actorAdCount=hasActor?demoRes.value.filter(i=>i.ad_id).length:0;
   arMsg(`<strong>✅ Auto-Research Complete</strong><div style="margin-top:10px;display:grid;grid-template-columns:repeat(7,1fr);gap:6px;"><div style="background:var(--s3);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:11px;font-weight:700;color:${compResults.length?'var(--accent)':'var(--t2)'};">${compResults.length} ads</div><div style="font-size:9px;color:var(--t2);">Ad Library</div></div><div style="background:var(--s3);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:11px;font-weight:700;color:${redditResults.length?'#ff6b35':'var(--t2)'};">${redditResults.length} posts</div><div style="font-size:9px;color:var(--t2);">Reddit</div></div><div style="background:var(--s3);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:11px;font-weight:700;color:${hasActor?'var(--purple)':'var(--t2)'};">${actorAdCount>0?actorAdCount+' ads':hasActor?'✓':'—'}</div><div style="font-size:9px;color:var(--t2);">Your Actor</div></div><div style="background:var(--s3);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:11px;font-weight:700;color:${metaAds?.length?'var(--accent)':'var(--t2)'};">${metaAds?.length?metaAds.length+' ads':'🎯'}</div><div style="font-size:9px;color:var(--t2);">${metaAds?.length?'Meta KW':'1st Mover'}</div></div><div style="background:var(--s3);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:11px;font-weight:700;color:${redditLite?.length?'#ff6b35':'var(--t2)'};">${redditLite?.length||0} posts</div><div style="font-size:9px;color:var(--t2);">Cust. Voice</div></div><div style="background:var(--s3);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:11px;font-weight:700;color:${localCompetitors.length?'var(--green)':'var(--t2)'};">${localCompetitors.length||0}</div><div style="font-size:9px;color:var(--t2);">Local Comps</div></div><div style="background:var(--s3);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:11px;font-weight:700;color:${serpIntelligence?.organicResults?.length?'var(--accent)':'var(--t2)'};">${serpIntelligence?.organicResults?.length||0}</div><div style="font-size:9px;color:var(--t2);">SERP</div></div></div><div style="margin-top:8px;font-size:11px;color:var(--t2);">Go to Stage 1 → Save & Continue → ▶ Run Full Pipeline</div>`,'res-bub');
@@ -3855,6 +3927,70 @@ async function runAutoResearch() {
   updateCIDisplay();
   document.getElementById('ar-run-btn').disabled=false;
   setSt('Research complete ✓','done');
+}
+
+function renderCompetitorResults(serpIntel, competitorData) {
+  const container = document.getElementById('ar-competitor-results');
+  if (!container) return;
+  const organicResults = serpIntel?.organicResults || [];
+  const paidAds = serpIntel?.paidAds || [];
+  const competitors = competitorData || [];
+  if (!organicResults.length && !competitors.length) return;
+
+  let html = '<div class="bi-section">';
+  html += '<div class="bi-section-title">🏪 LOCAL COMPETITORS FOUND</div>';
+  html += '<div style="display:grid;gap:10px;margin-top:12px;">';
+  organicResults.slice(0, 10).forEach((r, i) => {
+    html += `<div style="background:var(--bg-elevated);border:1px solid var(--border);border-radius:8px;padding:12px 16px;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">
+        <span style="color:var(--t1);font-weight:600;font-size:13px;">${escHtml(r.title||'Unknown')}</span>
+        <span style="font-size:11px;color:var(--t3);">#${i+1} on Google</span>
+      </div>
+      <p style="color:var(--t2);font-size:12px;margin:0 0 6px;">${escHtml((r.description||'').slice(0,120))}${(r.description?.length||0)>120?'…':''}</p>
+      ${r.url?`<a href="${r.url}" target="_blank" style="color:var(--volt);font-size:11px;">${escHtml(r.url.replace('https://','').slice(0,50))}</a>`:''}
+    </div>`;
+  });
+  html += '</div>';
+
+  if (paidAds.length > 0) {
+    html += `<div style="margin-top:16px;"><div style="font-size:12px;color:var(--yellow);font-weight:600;margin-bottom:8px;">📢 GOOGLE ADS RUNNING IN THIS MARKET (${paidAds.length})</div>`;
+    paidAds.forEach(ad => {
+      html += `<div style="background:rgba(245,200,66,0.05);border:1px solid rgba(245,200,66,0.2);border-radius:8px;padding:10px 14px;margin-bottom:8px;">
+        <div style="color:var(--t1);font-size:13px;font-weight:600;">${escHtml(ad.title||'Ad')}</div>
+        <div style="color:var(--t2);font-size:12px;margin-top:4px;">${escHtml((ad.description||'').slice(0,100))}</div>
+        ${ad.displayUrl?`<div style="color:var(--t3);font-size:11px;margin-top:4px;">${escHtml(ad.displayUrl)}</div>`:''}
+      </div>`;
+    });
+    html += '</div>';
+  } else if (organicResults.length > 0) {
+    html += '<div style="margin-top:12px;background:rgba(0,200,150,0.05);border:1px solid rgba(0,200,150,0.2);border-radius:8px;padding:10px 14px;">';
+    html += '<span style="color:var(--green);font-size:12px;font-weight:600;">🎯 No Google Ads found — first-mover opportunity in this market</span>';
+    html += '</div>';
+  }
+
+  if (competitors.length > 0) {
+    html += '<div style="margin-top:16px;"><div style="font-size:12px;color:var(--t2);font-weight:600;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">📍 FOUND ON GOOGLE MAPS</div>';
+    competitors.forEach(c => {
+      const name = escHtml(c.name||c.competitor_name||'Unknown');
+      const addr = escHtml(c.address||'');
+      const site = c.website||'';
+      html += `<div style="background:var(--bg-elevated);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <div style="color:var(--t1);font-size:13px;font-weight:600;">${name}</div>
+          ${addr?`<div style="color:var(--t2);font-size:11px;margin-top:2px;">${addr}</div>`:''}
+          ${site?`<a href="${site}" target="_blank" style="color:var(--volt);font-size:11px;">${escHtml(site.replace('https://','').slice(0,40))}</a>`:''}
+        </div>
+        <div style="text-align:right;flex-shrink:0;margin-left:12px;">
+          ${c.rating?`<div style="color:var(--yellow);font-size:13px;font-weight:700;">★ ${c.rating}</div>`:''}
+          ${(c.review_count||c.reviews)?`<div style="color:var(--t3);font-size:11px;">${c.review_count||c.reviews} reviews</div>`:''}
+        </div>
+      </div>`;
+    });
+    html += '</div>';
+  }
+
+  html += '</div>';
+  container.innerHTML = html;
 }
 
 // ── Stage 1 Intelligence Hub ──────────────────────────────────
