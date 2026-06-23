@@ -27,3 +27,7 @@ Never use Replit for deployment — Vercel handles all deployments automatically
 - Use debugging-wizard skill for bugs
 - Use postgres-pro skill for Supabase/SQL work
 - Every module must be iFrame-embeddable for GHL
+
+## Todo List
+Baseleap Pulse (Tool 1): https://app.notion.com/p/3886d6be0d4181c5973bc130325f7ff8
+At session start: fetch this page and suggest highest priority incomplete item.
