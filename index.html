@@ -843,6 +843,101 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
             <input type="hidden" id="new-target-roas" value="">
           </div>
 
+          <!-- Shared: Campaign Intelligence Selectors -->
+          <div style="padding:0 22px 14px;">
+            <div class="dcard">
+              <h3 style="margin-bottom:14px;">Campaign Intelligence</h3>
+              <!-- A: Campaign Type -->
+              <div class="field-group">
+                <label style="font-size:11px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;">Campaign Type</label>
+                <div id="campaign-type-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;">
+                  <div class="campaign-type-card" onclick="selectCampaignType('product')" id="ct-product" style="background:var(--bg-elevated);border:1px solid var(--border);border-radius:8px;padding:10px 12px;cursor:pointer;">
+                    <div style="font-size:12px;font-weight:600;color:var(--t1);">🛍️ Product / Service</div>
+                    <div style="font-size:11px;color:var(--t3);margin-top:2px;">Promote a specific offering</div>
+                  </div>
+                  <div class="campaign-type-card" onclick="selectCampaignType('promotion')" id="ct-promotion" style="background:var(--bg-elevated);border:1px solid var(--border);border-radius:8px;padding:10px 12px;cursor:pointer;">
+                    <div style="font-size:12px;font-weight:600;color:var(--t1);">🏷️ Special Offer</div>
+                    <div style="font-size:11px;color:var(--t3);margin-top:2px;">Discount, deal, or promo</div>
+                  </div>
+                  <div class="campaign-type-card" onclick="selectCampaignType('event')" id="ct-event" style="background:var(--bg-elevated);border:1px solid var(--border);border-radius:8px;padding:10px 12px;cursor:pointer;">
+                    <div style="font-size:12px;font-weight:600;color:var(--t1);">📅 Event</div>
+                    <div style="font-size:11px;color:var(--t3);margin-top:2px;">Drive event attendance</div>
+                  </div>
+                  <div class="campaign-type-card" onclick="selectCampaignType('awareness')" id="ct-awareness" style="background:var(--bg-elevated);border:1px solid var(--border);border-radius:8px;padding:10px 12px;cursor:pointer;">
+                    <div style="font-size:12px;font-weight:600;color:var(--t1);">📢 Brand Awareness</div>
+                    <div style="font-size:11px;color:var(--t3);margin-top:2px;">Get known in the market</div>
+                  </div>
+                </div>
+              </div>
+              <div id="promotion-details-section" style="display:none;margin-top:12px;">
+                <label style="font-size:11px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;">Promotion Details</label>
+                <textarea id="promotion-details" class="fi" rows="2" placeholder="Describe your promotion e.g. 20% off first session in July, free consultation this week..." style="margin-top:6px;width:100%;box-sizing:border-box;"></textarea>
+              </div>
+              <!-- B: Campaign Objective -->
+              <div class="field-group" style="margin-top:16px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                  <label style="font-size:11px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;">Campaign Objective</label>
+                  <span id="objective-ai-badge" style="display:none;font-size:10px;background:rgba(37,99,235,0.15);color:#60a5fa;padding:2px 8px;border-radius:10px;">🤖 AI Suggested</span>
+                </div>
+                <div style="display:grid;gap:6px;margin-top:4px;">
+                  <label onclick="selectObjective('leads')" id="obj-leads" class="objective-option" style="display:flex;align-items:flex-start;gap:10px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:8px;padding:10px 12px;cursor:pointer;">
+                    <input type="radio" name="objective" value="leads" style="margin-top:2px;accent-color:var(--volt);">
+                    <div><div style="font-size:12px;font-weight:600;color:var(--t1);">Leads</div><div style="font-size:11px;color:var(--t3);">Collect bookings and enquiries via Instant Form or website</div></div>
+                  </label>
+                  <label onclick="selectObjective('traffic')" id="obj-traffic" class="objective-option" style="display:flex;align-items:flex-start;gap:10px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:8px;padding:10px 12px;cursor:pointer;">
+                    <input type="radio" name="objective" value="traffic" style="margin-top:2px;accent-color:var(--volt);">
+                    <div><div style="font-size:12px;font-weight:600;color:var(--t1);">Traffic</div><div style="font-size:11px;color:var(--t3);">Send people to your website or booking page</div></div>
+                  </label>
+                  <label onclick="selectObjective('awareness')" id="obj-awareness" class="objective-option" style="display:flex;align-items:flex-start;gap:10px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:8px;padding:10px 12px;cursor:pointer;">
+                    <input type="radio" name="objective" value="awareness" style="margin-top:2px;accent-color:var(--volt);">
+                    <div><div style="font-size:12px;font-weight:600;color:var(--t1);">Awareness</div><div style="font-size:11px;color:var(--t3);">Get your brand seen by as many people as possible</div></div>
+                  </label>
+                  <label onclick="selectObjective('conversions')" id="obj-conversions" class="objective-option" style="display:flex;align-items:flex-start;gap:10px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:8px;padding:10px 12px;cursor:pointer;">
+                    <input type="radio" name="objective" value="conversions" style="margin-top:2px;accent-color:var(--volt);">
+                    <div><div style="font-size:12px;font-weight:600;color:var(--t1);">Conversions</div><div style="font-size:11px;color:var(--t3);">Optimise for purchases or bookings (requires pixel with 50+ events)</div></div>
+                  </label>
+                  <label onclick="selectObjective('engagement')" id="obj-engagement" class="objective-option" style="display:flex;align-items:flex-start;gap:10px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:8px;padding:10px 12px;cursor:pointer;">
+                    <input type="radio" name="objective" value="engagement" style="margin-top:2px;accent-color:var(--volt);">
+                    <div><div style="font-size:12px;font-weight:600;color:var(--t1);">Engagement</div><div style="font-size:11px;color:var(--t3);">Drive likes, comments, shares and page follows</div></div>
+                  </label>
+                </div>
+              </div>
+              <!-- C: Instant Form -->
+              <div class="field-group" style="margin-top:16px;">
+                <label style="font-size:11px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;">Use Instant Form?</label>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;">
+                  <div onclick="selectInstantForm(true)" id="form-yes" style="background:var(--bg-elevated);border:1px solid var(--border);border-radius:8px;padding:10px 12px;cursor:pointer;text-align:center;">
+                    <div style="font-size:12px;font-weight:600;color:var(--t1);">✅ Yes</div>
+                    <div style="font-size:11px;color:var(--t3);margin-top:2px;">Capture leads inside Meta</div>
+                  </div>
+                  <div onclick="selectInstantForm(false)" id="form-no" style="background:var(--bg-elevated);border:1px solid var(--border);border-radius:8px;padding:10px 12px;cursor:pointer;text-align:center;">
+                    <div style="font-size:12px;font-weight:600;color:var(--t1);">🔗 No</div>
+                    <div style="font-size:11px;color:var(--t3);margin-top:2px;">Send to website instead</div>
+                  </div>
+                </div>
+                <div id="form-type-section" style="display:none;margin-top:12px;">
+                  <label style="font-size:11px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;">Form Type</label>
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;">
+                    <div onclick="selectFormType('volume')" id="ft-volume" style="background:var(--bg-elevated);border:1px solid var(--border);border-radius:8px;padding:10px 12px;cursor:pointer;">
+                      <div style="font-size:12px;font-weight:600;color:var(--t1);">📈 More Volume</div>
+                      <div style="font-size:11px;color:var(--t3);margin-top:2px;">Lower friction, more leads, lower quality</div>
+                    </div>
+                    <div onclick="selectFormType('intent')" id="ft-intent" style="background:var(--bg-elevated);border:1px solid var(--border);border-radius:8px;padding:10px 12px;cursor:pointer;">
+                      <div style="font-size:12px;font-weight:600;color:var(--t1);">🎯 Higher Intent</div>
+                      <div style="font-size:11px;color:var(--t3);margin-top:2px;">More friction, fewer leads, higher quality</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <!-- D: AI Suggestions Button -->
+              <div style="margin-top:16px;padding:12px;background:rgba(37,99,235,0.08);border:1px solid rgba(37,99,235,0.2);border-radius:8px;">
+                <div style="font-size:12px;color:var(--t2);margin-bottom:8px;">Not sure what to choose? Let the AI recommend based on your business and research data.</div>
+                <button onclick="getAICampaignSuggestions(this)" style="background:#2563EB;color:#fff;border:none;border-radius:6px;padding:8px 16px;font-size:12px;font-weight:600;cursor:pointer;">🤖 Get AI Recommendations</button>
+                <div id="ai-suggestions-output" style="display:none;margin-top:10px;font-size:12px;color:var(--t2);line-height:1.6;"></div>
+              </div>
+            </div>
+          </div>
+
           <!-- Shared: Customer Intelligence + Brand Intelligence (always visible) -->
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:14px 22px 18px;">
             <!-- CARD 2: Customer Intelligence -->
@@ -1771,6 +1866,13 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
 //
 // ALTER TABLE generated_ads ADD COLUMN IF NOT EXISTS product_id uuid references products(id);
 // ALTER TABLE ad_performance ADD COLUMN IF NOT EXISTS product_id uuid references products(id);
+// -- Campaign Intelligence columns (run in Supabase SQL editor):
+// ALTER TABLE generated_ads ADD COLUMN IF NOT EXISTS campaign_brief text;
+// ALTER TABLE generated_ads ADD COLUMN IF NOT EXISTS campaign_type text;
+// ALTER TABLE generated_ads ADD COLUMN IF NOT EXISTS campaign_objective text;
+// ALTER TABLE generated_ads ADD COLUMN IF NOT EXISTS use_instant_form boolean;
+// ALTER TABLE generated_ads ADD COLUMN IF NOT EXISTS form_type text;
+// ALTER TABLE generated_ads ADD COLUMN IF NOT EXISTS used_at timestamptz;
 //
 // CREATE TABLE IF NOT EXISTS base_profiles (
 //   id             uuid default gen_random_uuid() primary key,
@@ -2208,7 +2310,14 @@ let S = {
   lastBuiltAd: null,
   segmentVisuals: [],
   auditContext: null,
-  lastAuditOutput: null
+  lastAuditOutput: null,
+  campaignType: null,
+  campaignObjective: null,
+  useInstantForm: null,
+  formType: null,
+  aiCampaignSuggestions: null,
+  lastCampaignBrief: null,
+  lastAdScore: null
 };
 
 async function savePipelineRun() {
@@ -2244,7 +2353,7 @@ async function savePipelineRun() {
 async function loadPipelineRun() {
   if (!currentBizId) return;
   const { data } = await sb.from('pipeline_runs').select('*').eq('business_id', currentBizId).order('updated_at', {ascending:false}).limit(1).single();
-  if (!data) { S = { adData:'', product:'', price:'', usp:'', audience:'', budget:'', goal:'purchase', pain:'', desire:'', objection:'', voice:'', competitors:'', compCopy:'', auditScore:null, auditIssues:'', auditSummary:'', researchSummary:'', adCopy:'', audienceDemographics:'', launchMode:false, adFormat:'single', niche:'fitness', brandName:'', brandColors:[{hex:'#00D4A0',label:'Primary'},{hex:'#00A878',label:'Secondary'}], brandFont:'Modern', brandLogoUrl:'', brandVibe:'', dallePrompt:'', lastImageUrl:'', visualConcept:'', lastAdId:null, adDataSaved:false, history:{ audit:[], research:[], build:[], visual:[] }, stagesDone: new Set(), targetCpa:null, targetRoas:null, currentProductId: null, products: [], brandSnapshot: null, locationLat: null, locationLon: null, brandLogos: {}, brandFonts: { headline: 'Barlow', subheadline: 'Inter', body: 'Inter' }, audienceSegments: [], selectedSegment: null, competitorAds: [], metaAdsSearchResult: null, adRecommendation: '', audienceIntelligence: null, lastBuiltAd: null, segmentVisuals: [], auditContext: null, lastAuditOutput: null }; renderBkPalette(); return; }
+  if (!data) { S = { adData:'', product:'', price:'', usp:'', audience:'', budget:'', goal:'purchase', pain:'', desire:'', objection:'', voice:'', competitors:'', compCopy:'', auditScore:null, auditIssues:'', auditSummary:'', researchSummary:'', adCopy:'', audienceDemographics:'', launchMode:false, adFormat:'single', niche:'fitness', brandName:'', brandColors:[{hex:'#00D4A0',label:'Primary'},{hex:'#00A878',label:'Secondary'}], brandFont:'Modern', brandLogoUrl:'', brandVibe:'', dallePrompt:'', lastImageUrl:'', visualConcept:'', lastAdId:null, adDataSaved:false, history:{ audit:[], research:[], build:[], visual:[] }, stagesDone: new Set(), targetCpa:null, targetRoas:null, currentProductId: null, products: [], brandSnapshot: null, locationLat: null, locationLon: null, brandLogos: {}, brandFonts: { headline: 'Barlow', subheadline: 'Inter', body: 'Inter' }, audienceSegments: [], selectedSegment: null, competitorAds: [], metaAdsSearchResult: null, adRecommendation: '', audienceIntelligence: null, lastBuiltAd: null, segmentVisuals: [], auditContext: null, lastAuditOutput: null, campaignType: null, campaignObjective: null, useInstantForm: null, formType: null, aiCampaignSuggestions: null, lastCampaignBrief: null, lastAdScore: null }; renderBkPalette(); return; }
   S.product    = data.product || '';
   S.price      = data.price || '';
   S.usp        = data.usp || '';
@@ -2688,7 +2797,7 @@ QUALITY GATES before finalizing:
 - Is there exactly ONE clear CTA?
 - Does it own what competitors are not saying?`;
 
-async function runBuild() {
+async function runBuild(skipBrief=false) {
   document.getElementById('btn-build').disabled=true;
   const segLabel = S.selectedSegment ? ` — ${S.selectedSegment.name}` : '';
   divider('build',`Building 100/100 ad from full pipeline context${segLabel}`);
@@ -2735,8 +2844,106 @@ Google SERP: ${S.serpIntelligence?.organicResults?.length ? `"${S.serpIntelligen
   let html='';
   sections.forEach(s=>{const lines=s.split('\n');const title=lines[0].trim();const body=lines.slice(1).join('\n').trim();html+=`<div class="rcard"><div class="rcard-lbl">${title}<button class="cp" onclick="var b=this.closest('.rcard').querySelector('.rcard-body');navigator.clipboard.writeText(b.innerText).then(()=>{this.textContent='Copied!';setTimeout(()=>this.textContent='Copy',1400)})">Copy</button></div><div class="rcard-body">${body}</div></div>`;});
   addMsg('build','agent',html||fmt(reply),'res-bub');
+  // Extract ad quality score from parsed sections
+  S.lastAdScore = extractAdScore(reply);
   markDone('build','✓'); await savePipelineRun();
   document.getElementById('btn-build').disabled=false;
+  // Generate campaign brief after ad copy (with rate-limit buffer)
+  if (!skipBrief) {
+    await new Promise(r => setTimeout(r, 5000));
+    await runCampaignBrief();
+  }
+}
+
+function extractAdScore(adText) {
+  const parsed = parseAdSections(adText);
+  if (parsed.scoreProj) return parsed.scoreProj;
+  // Fallback: scan for "Score: 85" or "85/100" patterns in the text
+  const m = adText.match(/(?:score[:\s]+|projected[:\s]+)(\d{2,3})(?:\/100)?/i)
+    || adText.match(/(\d{2,3})\/100/);
+  return m ? parseInt(m[1]) : null;
+}
+
+async function runCampaignBrief() {
+  const product   = S.product || 'your product/service';
+  const price     = S.price ? `$${S.price}` : 'not specified';
+  const budget    = document.getElementById('d-budget')?.value || document.getElementById('new-budget')?.value || 'not specified';
+  const audience  = S.audience || 'not specified';
+  const objective = S.campaignObjective || 'leads';
+  const campType  = S.campaignType || 'product';
+  const adFormat  = S.adFormat || 'single image';
+  const useForm   = S.useInstantForm;
+  const formType  = S.formType;
+  const segment   = S.selectedSegment;
+  const adCopySnippet = S.adCopy ? S.adCopy.substring(0, 800) : '';
+
+  divider('build', 'Generating Campaign Brief');
+  const t = thinking('build', 'Building complete campaign setup...');
+
+  const prompt = `You are an expert Meta Ads campaign strategist. Generate a complete campaign brief for this ad.
+
+BUSINESS & AD CONTEXT:
+- Product/Service: ${product}
+- Price: ${price}
+- Monthly Budget: ${budget}
+- Target Audience: ${audience}
+- Campaign Type: ${campType}
+- Campaign Objective: ${objective}
+- Ad Format: ${adFormat}
+- Use Instant Form: ${useForm === true ? 'Yes — ' + (formType === 'intent' ? 'Higher Intent' : 'More Volume') : useForm === false ? 'No — Send to website' : 'Not specified'}
+${segment ? `- Target Segment: ${segment.name} | Fear: ${segment.primary_fear} | Desire: ${segment.primary_desire}` : ''}
+${adCopySnippet ? `\nAD COPY PREVIEW:\n${adCopySnippet}` : ''}
+
+Generate a complete campaign brief with these EXACT sections:
+
+## FORMAT DECISION
+State which ad format to use (Single Image, Carousel, Video, Story) and exactly why for this campaign.
+
+## AD PLACEMENTS + SPECS
+List the recommended placements (Feed, Reels, Stories, etc.) and exact specs (dimensions, text limits, file size).
+
+## CAMPAIGN OBJECTIVE RECOMMENDATION
+Confirm the best Meta campaign objective and explain the reasoning. Include what conversion event to optimise for if applicable.
+
+## INSTANT FORM COMPLETE SETUP
+${useForm ? 'Provide complete Instant Form setup: Form type (More Volume vs Higher Intent), intro screen text, questions to include (max 3), thank you screen message and CTA.' : 'Not using Instant Form. Describe what the landing page should focus on to maximise conversion from this ad.'}
+
+## TARGETING PARAMETERS
+Provide specific Meta targeting recommendations:
+- Age range
+- Gender (if applicable)
+- Detailed targeting interests/behaviours (list 8-10 specific ones)
+- Lookalike audiences to create
+- Custom audiences to exclude
+
+## BUDGET ALLOCATION
+Break down the ${budget} monthly budget:
+- Testing phase (first 2 weeks): allocation and strategy
+- Scaling phase: criteria to scale and how much
+- Daily budget recommendation
+- Bid strategy recommendation
+
+## LAUNCH CHECKLIST
+Provide a 8-10 item checklist of everything needed before launch. Include pixel setup, creative review, audience setup, and any platform-specific requirements.`;
+
+  try {
+    const reply = await ai('You are a Meta Ads campaign strategist. Be specific, actionable, and direct.', [{role: 'user', content: prompt}]);
+    t.remove();
+    S.lastCampaignBrief = reply;
+
+    const sections = reply.split(/^## /m).filter(Boolean);
+    let html = '<div style="background:rgba(37,99,235,0.08);border:1px solid rgba(37,99,235,0.2);border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:#60a5fa;font-weight:600;">📋 Campaign Brief Generated</div>';
+    sections.forEach(s => {
+      const lines = s.split('\n');
+      const title = lines[0].trim();
+      const body  = lines.slice(1).join('\n').trim();
+      html += `<div class="rcard"><div class="rcard-lbl">${title}<button class="cp" onclick="var b=this.closest('.rcard').querySelector('.rcard-body');navigator.clipboard.writeText(b.innerText).then(()=>{this.textContent='Copied!';setTimeout(()=>this.textContent='Copy',1400)})">Copy</button></div><div class="rcard-body">${fmt(body)}</div></div>`;
+    });
+    addMsg('build', 'agent', html, 'res-bub');
+  } catch (e) {
+    t.remove();
+    addMsg('build', 'agent', `<span style="color:var(--red);">Campaign brief error: ${e.message}</span>`, 'res-bub');
+  }
 }
 
 // ── Visual ────────────────────────────────────────────────────
@@ -2924,21 +3131,26 @@ function getTopAdsForContext() {
 async function saveToAdLibrary() {
   if (!currentBizId || !currentUser || !S.adCopy) return;
   const parsed = parseAdSections(S.adCopy);
-  const score = parsed.scoreProj || S.auditScore || null;
+  const score = S.lastAdScore || parsed.scoreProj || null;
   const { data, error } = await sb.from('generated_ads').insert({
-    business_id:    currentBizId,
-    user_id:        currentUser.id,
-    hook:           parsed.hook         || '',
-    primary_text:   parsed.primaryText  || '',
-    headlines:      parsed.headlines    || '',
-    cta:            parsed.cta          || '',
-    strategy_note:  parsed.strategyNote || '',
-    score:          score,
-    visual_concept: S.visualConcept     || '',
-    dalle_prompt:   S.dallePrompt       || '',
-    image_url:      S.lastImageUrl      || null,
-    niche:          S.niche             || '',
-    product_id:     S.currentProductId  || null
+    business_id:      currentBizId,
+    user_id:          currentUser.id,
+    hook:             parsed.hook         || '',
+    primary_text:     parsed.primaryText  || '',
+    headlines:        parsed.headlines    || '',
+    cta:              parsed.cta          || '',
+    strategy_note:    parsed.strategyNote || '',
+    score:            score,
+    visual_concept:   S.visualConcept     || '',
+    dalle_prompt:     S.dallePrompt       || '',
+    image_url:        S.lastImageUrl      || null,
+    niche:            S.niche             || '',
+    product_id:       S.currentProductId  || null,
+    campaign_brief:   S.lastCampaignBrief || null,
+    campaign_type:    S.campaignType      || null,
+    campaign_objective: S.campaignObjective || null,
+    use_instant_form: S.useInstantForm    ?? null,
+    form_type:        S.formType          || null
   }).select().single();
   if (!error && data) {
     S.lastAdId = data.id;
@@ -3565,34 +3777,124 @@ function renderAdLibrary() {
   }).join('');
 }
 
+function renderAdLibraryView(ad) {
+  const sc = ad.score;
+  const scoreColor = !sc ? 'var(--t2)' : sc>=80 ? 'var(--green)' : sc>=60 ? 'var(--yellow)' : 'var(--red)';
+  const card = (lbl, body, opts={}) => {
+    if (!body) return '';
+    const copyBtn = `<button class="cp" onclick="navigator.clipboard.writeText(this.closest('.rcard').querySelector('.rcard-body').innerText).then(()=>{this.textContent='Copied!';setTimeout(()=>this.textContent='Copy',1400)})">Copy</button>`;
+    return `<div class="rcard" style="margin-bottom:8px;"><div class="rcard-lbl">${lbl}${opts.copy!==false?copyBtn:''}</div><div class="rcard-body" style="white-space:pre-wrap;">${escHtml(body)}</div></div>`;
+  };
+  const promptBox = (lbl, body) => body
+    ? `<div class="rcard" style="margin-bottom:8px;"><div class="rcard-lbl">🤖 ${lbl}</div><div class="prompt-box">${escHtml(body)}</div></div>`
+    : '';
+  const thumb = ad.image_url
+    ? `<div style="margin-bottom:14px;"><img src="${escHtml(ad.image_url)}" style="max-width:100%;border-radius:8px;border:1px solid var(--border);" onerror="this.style.display='none'" alt="Ad image"></div>`
+    : '';
+
+  const scoreRow = sc != null
+    ? `<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;padding:8px 12px;background:var(--bg-elevated);border-radius:8px;border:1px solid var(--border);">
+        <span style="font-size:22px;font-weight:800;color:${scoreColor};">${sc}</span>
+        <div style="flex:1">
+          <div style="font-size:11px;color:var(--t2);">/ 100 · ${new Date(ad.created_at).toLocaleString()}</div>
+          <div style="height:4px;background:var(--border);border-radius:2px;margin-top:4px;"><div style="height:4px;width:${sc}%;background:${scoreColor};border-radius:2px;"></div></div>
+        </div>
+        <button class="btn bg bsm" onclick="rescoreAd('${ad.id}', \`${(ad.hook||'')+(ad.primary_text||'')+(ad.headlines||'')+(ad.cta||'')}\`.replace(/\`/g,''))" style="font-size:11px;">🔄 Rescore</button>
+      </div>`
+    : `<div style="margin-bottom:12px;padding:8px 12px;background:var(--bg-elevated);border-radius:8px;border:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+        <span style="font-size:12px;color:var(--t3);">No quality score yet</span>
+        <button class="btn bg bsm" onclick="rescoreAd('${ad.id}', \`${(ad.hook||'')+(ad.primary_text||'')+(ad.headlines||'')+(ad.cta||'')}\`.replace(/\`/g,''))" style="font-size:11px;">🔄 Score Ad</button>
+      </div>`;
+
+  const metaBadges = [
+    ad.campaign_type    && `<span style="background:rgba(37,99,235,0.15);color:#60a5fa;border-radius:10px;padding:2px 8px;font-size:11px;">📋 ${ad.campaign_type}</span>`,
+    ad.campaign_objective && `<span style="background:rgba(0,200,150,0.12);color:var(--green);border-radius:10px;padding:2px 8px;font-size:11px;">🎯 ${ad.campaign_objective}</span>`,
+    ad.use_instant_form===true && `<span style="background:rgba(245,200,66,0.15);color:var(--yellow);border-radius:10px;padding:2px 8px;font-size:11px;">📝 Instant Form${ad.form_type ? ' · '+ad.form_type : ''}</span>`,
+    ad.used_at && `<span style="background:rgba(255,80,80,0.12);color:var(--red);border-radius:10px;padding:2px 8px;font-size:11px;">✅ Used</span>`
+  ].filter(Boolean).join(' ');
+
+  const campaignBriefSection = ad.campaign_brief
+    ? `<div class="rcard" style="margin-bottom:8px;margin-top:12px;">
+        <div class="rcard-lbl" style="color:#60a5fa;">📋 Campaign Brief
+          <button class="cp" onclick="navigator.clipboard.writeText(this.closest('.rcard').querySelector('.rcard-body').innerText).then(()=>{this.textContent='Copied!';setTimeout(()=>this.textContent='Copy',1400)})">Copy</button>
+        </div>
+        <div class="rcard-body" style="white-space:pre-wrap;font-size:12px;">${fmt(ad.campaign_brief)}</div>
+      </div>`
+    : '';
+
+  const actionRow = `<div style="display:flex;gap:8px;flex-wrap:wrap;padding:12px 0 4px;">
+    <button class="btn bp bsm" onclick="copyAdCopy('${ad.id}')">📋 Copy Ad Copy</button>
+    <button class="btn bg bsm" onclick="markAdAsUsed('${ad.id}')">✅ Mark as Used</button>
+    <button class="btn bg bsm" onclick="go('visual')">🎨 Go to Visual Stage</button>
+    <button class="btn bg bsm" onclick="useAdAsStartingPoint('${ad.id}');closeAdlibModal()">🔁 Use as Starting Point</button>
+  </div>`;
+
+  return `<div id="ad-view-content">
+    ${scoreRow}
+    ${metaBadges ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;">${metaBadges}</div>` : ''}
+    ${thumb}
+    ${card('Hook', ad.hook)}
+    ${card('Primary Text', ad.primary_text)}
+    ${card('Headlines', ad.headlines)}
+    ${card('CTA', ad.cta)}
+    ${card('Strategy Note', ad.strategy_note)}
+    ${card('Visual Concept', ad.visual_concept)}
+    ${promptBox('DALL-E Prompt', ad.dalle_prompt)}
+    ${campaignBriefSection}
+    ${actionRow}
+  </div>`;
+}
+
 function viewFullAd(id) {
   const ad = adLibrary.find(a=>a.id===id);
   if (!ad) return;
   viewingAdId = id;
-  const sc = ad.score;
-  const scoreColor = !sc ? 'var(--t2)' : sc>=80 ? 'var(--green)' : sc>=60 ? 'var(--yellow)' : 'var(--red)';
-  const thumb = ad.image_url
-    ? `<div style="margin-bottom:14px;"><img src="${escHtml(ad.image_url)}" style="max-width:100%;border-radius:8px;border:1px solid var(--border);" onerror="this.style.display='none'" alt="Ad image"></div>`
-    : '';
-  const scoreBar = sc!=null
-    ? `<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;padding:8px 12px;background:var(--s2);border-radius:8px;"><span style="font-size:22px;font-weight:800;color:${scoreColor};">${sc}</span><span style="font-size:11px;color:var(--t2);">/ 100 · ${new Date(ad.created_at).toLocaleString()}</span></div>`
-    : '';
-  const card = (lbl, body) => body
-    ? `<div class="rcard" style="margin-bottom:8px;"><div class="rcard-lbl">${lbl}</div><div class="rcard-body" style="white-space:pre-wrap;">${escHtml(body)}</div></div>`
-    : '';
-  const promptBox = (lbl, body) => body
-    ? `<div class="rcard" style="margin-bottom:8px;"><div class="rcard-lbl">🤖 ${lbl}</div><div class="prompt-box">${escHtml(body)}</div></div>`
-    : '';
-  document.getElementById('adlib-modal-body').innerHTML =
-    scoreBar + thumb +
-    card('Hook', ad.hook) +
-    card('Primary Text', ad.primary_text) +
-    card('Headlines', ad.headlines) +
-    card('CTA', ad.cta) +
-    card('Strategy Note', ad.strategy_note) +
-    card('Visual Concept', ad.visual_concept) +
-    promptBox('DALL-E Prompt', ad.dalle_prompt);
+  document.getElementById('adlib-modal-body').innerHTML = renderAdLibraryView(ad);
   document.getElementById('adlib-modal').classList.add('open');
+}
+
+async function rescoreAd(id, adText) {
+  const ad = adLibrary.find(a=>a.id===id);
+  if (!ad) return;
+  const targetEl = document.getElementById('adlib-modal-body');
+  const scoreBtn = targetEl?.querySelector('button[onclick*="rescoreAd"]');
+  if (scoreBtn) { scoreBtn.disabled = true; scoreBtn.textContent = '...'; }
+
+  const prompt = `Score this Meta ad copy on a scale of 0–100 based on: hook strength (25pts), emotional resonance (20pts), clarity and specificity (20pts), CTA strength (15pts), differentiation (20pts).
+
+AD COPY:
+${adText || [ad.hook, ad.primary_text, ad.headlines, ad.cta].filter(Boolean).join('\n\n')}
+
+Respond with ONLY: SCORE: [number]/100 — [one sentence explaining the main strength or weakness]`;
+
+  try {
+    const reply = await ai('You are a direct-response ad quality scorer. Be honest and concise.', [{role:'user', content: prompt}]);
+    const m = reply.match(/SCORE:\s*(\d+)/i) || reply.match(/(\d{2,3})\/100/);
+    const newScore = m ? parseInt(m[1]) : null;
+    if (newScore !== null) {
+      // Update in Supabase
+      await sb.from('generated_ads').update({ score: newScore }).eq('id', id);
+      // Update in local cache
+      const localAd = adLibrary.find(a=>a.id===id);
+      if (localAd) localAd.score = newScore;
+      // Re-render modal
+      document.getElementById('adlib-modal-body').innerHTML = renderAdLibraryView(adLibrary.find(a=>a.id===id));
+      renderAdLibrary();
+    }
+  } catch (e) {
+    if (scoreBtn) { scoreBtn.disabled = false; scoreBtn.textContent = '🔄 Rescore'; }
+  }
+}
+
+async function markAdAsUsed(id) {
+  const ad = adLibrary.find(a=>a.id===id);
+  if (!ad) return;
+  const now = new Date().toISOString();
+  await sb.from('generated_ads').update({ used_at: now }).eq('id', id);
+  const localAd = adLibrary.find(a=>a.id===id);
+  if (localAd) localAd.used_at = now;
+  document.getElementById('adlib-modal-body').innerHTML = renderAdLibraryView(adLibrary.find(a=>a.id===id));
+  renderAdLibrary();
 }
 
 function closeAdlibModal() {
@@ -3866,7 +4168,7 @@ function renderS3ResearchBrief() {
 async function selectSegmentAndBuild(index) {
   selectSegment(index);
   go('build');
-  await runBuild();
+  await runBuild(false);
 }
 
 // ── Build All Segments ─────────────────────────────────────────
@@ -3891,7 +4193,7 @@ async function runBuildAll() {
       stream.appendChild(anchor);
     }
     divider('build', `Building ad ${i + 1} of ${segments.length} — ${segments[i].name}`);
-    await runBuild();
+    await runBuild(true);
     generatedAds.push({ segment: segments[i], index: i, headline: S.adCopy?.match(/## HOOK\s*\n([^\n]+)/)?.[1] || S.adCopy?.split('\n')[0] || '' });
   }
   renderSegmentBuildTabs(generatedAds);
@@ -4647,6 +4949,138 @@ function renderCustomerIntelligence() {
 function runCustomerIntelThroughPipeline() {
   if (S.audienceSegments?.length && !S.selectedSegment) selectSegment(0);
   runAll();
+}
+
+// ── Campaign Intelligence Selectors ──────────────────────────────────────────
+
+function selectCampaignType(type) {
+  S.campaignType = type;
+  ['ct-product','ct-promotion','ct-event','ct-awareness'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const selected = id === 'ct-' + type;
+    el.style.borderColor = selected ? 'var(--volt)' : 'var(--border)';
+    el.style.background = selected ? 'rgba(0,212,160,0.08)' : 'var(--bg-elevated)';
+  });
+  const promoSection = document.getElementById('promotion-details-section');
+  if (promoSection) promoSection.style.display = type === 'promotion' ? 'block' : 'none';
+}
+
+function selectObjective(obj) {
+  S.campaignObjective = obj;
+  ['obj-leads','obj-traffic','obj-awareness','obj-conversions','obj-engagement'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const selected = id === 'obj-' + obj;
+    el.style.borderColor = selected ? 'var(--volt)' : 'var(--border)';
+    el.style.background = selected ? 'rgba(0,212,160,0.08)' : 'var(--bg-elevated)';
+    const radio = el.querySelector('input[type=radio]');
+    if (radio) radio.checked = selected;
+  });
+  // Auto-suggest Instant Form for Leads objective
+  if (obj === 'leads' && S.useInstantForm === null) {
+    selectInstantForm(true);
+  }
+}
+
+function selectInstantForm(useForm) {
+  S.useInstantForm = useForm;
+  const yesEl = document.getElementById('form-yes');
+  const noEl = document.getElementById('form-no');
+  if (yesEl) {
+    yesEl.style.borderColor = useForm ? 'var(--volt)' : 'var(--border)';
+    yesEl.style.background = useForm ? 'rgba(0,212,160,0.08)' : 'var(--bg-elevated)';
+  }
+  if (noEl) {
+    noEl.style.borderColor = !useForm ? 'var(--volt)' : 'var(--border)';
+    noEl.style.background = !useForm ? 'rgba(0,212,160,0.08)' : 'var(--bg-elevated)';
+  }
+  const formTypeSection = document.getElementById('form-type-section');
+  if (formTypeSection) formTypeSection.style.display = useForm ? 'block' : 'none';
+  if (!useForm) S.formType = null;
+}
+
+function selectFormType(type) {
+  S.formType = type;
+  ['ft-volume','ft-intent'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const selected = id === 'ft-' + type;
+    el.style.borderColor = selected ? 'var(--volt)' : 'var(--border)';
+    el.style.background = selected ? 'rgba(0,212,160,0.08)' : 'var(--bg-elevated)';
+  });
+}
+
+async function getAICampaignSuggestions(btn) {
+  const out = document.getElementById('ai-suggestions-output');
+  if (!out) return;
+  if (btn) btn.disabled = true;
+  out.style.display = 'block';
+  out.innerHTML = '<span style="color:var(--t3);">🤖 Analysing your business and goals...</span>';
+
+  const product   = S.product || document.getElementById('d-product')?.value || document.getElementById('new-product-name')?.value || 'your product';
+  const goal      = S.goal || 'purchase';
+  const budget    = document.getElementById('d-budget')?.value || document.getElementById('new-budget')?.value || '';
+  const audience  = S.audience || '';
+  const researchSnippet = S.researchSummary ? S.researchSummary.substring(0, 600) : '';
+  const auditSnippet    = S.auditContext    ? S.auditContext.substring(0, 400)    : '';
+
+  const prompt = `You are a Meta Ads strategist. Based on the business context below, recommend the best campaign setup.
+
+Business context:
+- Product/Service: ${product}
+- Primary goal: ${goal}
+- Budget: ${budget || 'Not specified'}
+- Audience: ${audience || 'Not specified'}
+${researchSnippet ? '- Research: ' + researchSnippet : ''}
+${auditSnippet ? '- Audit context: ' + auditSnippet : ''}
+
+Recommend (be specific and concise):
+1. CAMPAIGN TYPE: Which type (Product/Service, Special Offer, Event, Brand Awareness) and why
+2. CAMPAIGN OBJECTIVE: Which Meta objective (Leads, Traffic, Awareness, Conversions, Engagement) and why
+3. INSTANT FORM: Yes or No, and if Yes, which form type (More Volume or Higher Intent) and why
+4. KEY INSIGHT: One sentence on the single most important thing to get right for this campaign
+
+Format each section as: **Label:** Your recommendation — reason`;
+
+  try {
+    const reply = await ai('You are a Meta Ads campaign strategist. Give direct, opinionated recommendations.', [{role:'user', content: prompt}]);
+    S.aiCampaignSuggestions = reply;
+    out.innerHTML = fmt(reply);
+
+    // Auto-apply suggestions by parsing the response
+    const typeMatch = reply.match(/CAMPAIGN TYPE[:\s]+\*?\*?([^*\n–—-]+)/i);
+    const objMatch  = reply.match(/CAMPAIGN OBJECTIVE[:\s]+\*?\*?([^*\n–—-]+)/i);
+    const formMatch = reply.match(/INSTANT FORM[:\s]+\*?\*?(Yes|No)/i);
+    const ftMatch   = reply.match(/Higher Intent/i);
+
+    if (typeMatch) {
+      const t = typeMatch[1].toLowerCase();
+      if (t.includes('promo') || t.includes('offer') || t.includes('discount')) selectCampaignType('promotion');
+      else if (t.includes('event')) selectCampaignType('event');
+      else if (t.includes('aware')) selectCampaignType('awareness');
+      else selectCampaignType('product');
+    }
+    if (objMatch) {
+      const o = objMatch[1].toLowerCase();
+      if (o.includes('lead')) selectObjective('leads');
+      else if (o.includes('traffic') || o.includes('click')) selectObjective('traffic');
+      else if (o.includes('aware')) selectObjective('awareness');
+      else if (o.includes('conver')) selectObjective('conversions');
+      else if (o.includes('engag')) selectObjective('engagement');
+    }
+    if (formMatch) {
+      const useForm = formMatch[1].toLowerCase() === 'yes';
+      selectInstantForm(useForm);
+      if (useForm && ftMatch) selectFormType('intent');
+      else if (useForm) selectFormType('volume');
+    }
+
+    document.getElementById('objective-ai-badge').style.display = 'inline-block';
+  } catch (e) {
+    out.innerHTML = '<span style="color:var(--red);">Error: ' + e.message + '</span>';
+  }
+  if (btn) btn.disabled = false;
 }
 
 function updateGoalDesc(selectId, descId) {
