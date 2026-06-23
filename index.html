@@ -980,6 +980,34 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
         </div>
       </div>
       <div id="segment-indicator-s3" style="display:none;background:rgba(0,212,160,0.1);border:1px solid var(--volt);border-radius:20px;padding:3px 12px;font-size:11px;color:var(--volt);margin:0 22px 12px;width:fit-content;"></div>
+      <!-- Research Brief Summary Card — shown after Auto-Research runs -->
+      <div id="s3-research-brief-card" style="display:none;background:var(--bg-surface);border:1px solid var(--border);border-radius:12px;padding:16px 20px;margin:0 22px 16px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+          <div style="color:var(--t1);font-weight:700;font-size:14px;">📋 Latest Research Brief</div>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <span id="s3-research-date" style="font-size:11px;color:var(--t3);"></span>
+            <button onclick="toggleResearchBrief()" id="s3-brief-toggle" style="background:transparent;border:1px solid var(--border);border-radius:6px;padding:4px 10px;color:var(--t2);font-size:11px;cursor:pointer;">View Full Report ▼</button>
+            <button onclick="go('autoResearch')" style="background:transparent;border:1px solid var(--border);border-radius:6px;padding:4px 10px;color:var(--t2);font-size:11px;cursor:pointer;">Re-run Research</button>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;">
+          <div style="background:var(--bg-elevated);border-radius:8px;padding:8px 12px;">
+            <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;">Competitors</div>
+            <div id="s3-comp-count" style="font-size:18px;font-weight:700;color:var(--t1);">—</div>
+          </div>
+          <div style="background:var(--bg-elevated);border-radius:8px;padding:8px 12px;">
+            <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;">Google Ads</div>
+            <div id="s3-ads-status" style="font-size:13px;font-weight:700;color:var(--green);">—</div>
+          </div>
+          <div style="background:var(--bg-elevated);border-radius:8px;padding:8px 12px;">
+            <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;">Top Segment</div>
+            <div id="s3-top-segment" style="font-size:11px;font-weight:600;color:var(--volt);">—</div>
+          </div>
+        </div>
+        <div id="s3-brief-full" style="display:none;max-height:400px;overflow-y:auto;background:var(--bg-elevated);border-radius:8px;padding:16px;margin-top:8px;">
+          <div id="s3-brief-content" style="color:var(--t2);font-size:13px;line-height:1.7;white-space:pre-wrap;"></div>
+        </div>
+      </div>
       <div class="stream" id="stream-research">
         <div class="amsg"><div class="av av-s">3</div>
           <div class="abub stage-bub"><h3>Market Research Stage</h3><p>Maps the competitive landscape, identifies your strongest messaging angles, and surfaces what's working in your market.</p></div>
@@ -1857,6 +1885,7 @@ async function initApp(user) {
   renderBkPalette();
   updateCIDisplay();
   renderBrandIntelCard();
+  renderS3ResearchBrief();
   showWelcomeModal();
 }
 
@@ -2185,7 +2214,8 @@ let S = {
   selectedSegment: null,
   competitorAds: [],
   metaAdsSearchResult: null,
-  adRecommendation: ''
+  adRecommendation: '',
+  audienceIntelligence: null
 };
 
 async function savePipelineRun() {
@@ -2221,7 +2251,7 @@ async function savePipelineRun() {
 async function loadPipelineRun() {
   if (!currentBizId) return;
   const { data } = await sb.from('pipeline_runs').select('*').eq('business_id', currentBizId).order('updated_at', {ascending:false}).limit(1).single();
-  if (!data) { S = { adData:'', product:'', price:'', usp:'', audience:'', budget:'', goal:'purchase', pain:'', desire:'', objection:'', voice:'', competitors:'', compCopy:'', auditScore:null, auditIssues:'', auditSummary:'', researchSummary:'', adCopy:'', audienceDemographics:'', launchMode:false, adFormat:'single', niche:'fitness', brandName:'', brandColors:[{hex:'#00D4A0',label:'Primary'},{hex:'#00A878',label:'Secondary'}], brandFont:'Modern', brandLogoUrl:'', brandVibe:'', dallePrompt:'', lastImageUrl:'', visualConcept:'', lastAdId:null, adDataSaved:false, history:{ audit:[], research:[], build:[], visual:[] }, stagesDone: new Set(), targetCpa:null, targetRoas:null, currentProductId: null, products: [], brandSnapshot: null, locationLat: null, locationLon: null, brandLogos: {}, brandFonts: { headline: 'Barlow', subheadline: 'Inter', body: 'Inter' }, audienceSegments: [], selectedSegment: null, competitorAds: [], metaAdsSearchResult: null, adRecommendation: '' }; renderBkPalette(); return; }
+  if (!data) { S = { adData:'', product:'', price:'', usp:'', audience:'', budget:'', goal:'purchase', pain:'', desire:'', objection:'', voice:'', competitors:'', compCopy:'', auditScore:null, auditIssues:'', auditSummary:'', researchSummary:'', adCopy:'', audienceDemographics:'', launchMode:false, adFormat:'single', niche:'fitness', brandName:'', brandColors:[{hex:'#00D4A0',label:'Primary'},{hex:'#00A878',label:'Secondary'}], brandFont:'Modern', brandLogoUrl:'', brandVibe:'', dallePrompt:'', lastImageUrl:'', visualConcept:'', lastAdId:null, adDataSaved:false, history:{ audit:[], research:[], build:[], visual:[] }, stagesDone: new Set(), targetCpa:null, targetRoas:null, currentProductId: null, products: [], brandSnapshot: null, locationLat: null, locationLon: null, brandLogos: {}, brandFonts: { headline: 'Barlow', subheadline: 'Inter', body: 'Inter' }, audienceSegments: [], selectedSegment: null, competitorAds: [], metaAdsSearchResult: null, adRecommendation: '', audienceIntelligence: null }; renderBkPalette(); return; }
   S.product    = data.product || '';
   S.price      = data.price || '';
   S.usp        = data.usp || '';
@@ -2370,6 +2400,7 @@ function go(name) {
   if(name==='adLibrary'){ loadAdLibrary().then(renderAdLibrary); loadPerfData(); }
   if(name==='dashboard'){ loadPerfData().then(()=>{ renderDashboard(); updateDashTimestamp(); }); populateProductDropdowns(); }
   if(name==='data'){ populateProductSelect(); }
+  if(name==='research'){ renderS3ResearchBrief(); }
 }
 function unlockStage(name){const el=document.getElementById('nav-'+name);if(el)el.classList.remove('locked');const b=document.getElementById('badge-'+name);if(b){b.textContent='Ready';b.className='sbadge br';}}
 function markDone(name,label){const el=document.getElementById('nav-'+name);if(el)el.classList.add('done');const b=document.getElementById('badge-'+name);if(b){b.textContent=label||'✓';b.className='sbadge bd';}const connMap={data:1,audit:2,research:3,build:4,visual:5};const c=document.getElementById('conn-'+connMap[name]);if(c)c.classList.add('done');S.stagesDone.add(name);document.getElementById('ctx-stgs').textContent=S.stagesDone.size+' / 5';}
@@ -3518,7 +3549,7 @@ async function runAll() {
 async function scrapeMetaAdsViaClaudeSearch(keyword, city, competitors) {
   if (!KEYS.claude) return null;
   const competitorNames = Array.isArray(competitors)
-    ? competitors.slice(0,5).map(c=>c.title||c.competitor_name||c.name).filter(Boolean).join(', ')
+    ? competitors.slice(0,3).map(c=>c.title||c.competitor_name||c.name).filter(Boolean).join(', ')
     : '';
   const location = city || document.getElementById('ar-search-city')?.value?.trim() || 'this market';
   const searchPrompt = `Search the web and Meta Ad Library for active Facebook and Instagram ads in the ${keyword} market in ${location}.
@@ -3577,7 +3608,7 @@ async function parseAudienceSegments(researchBrief) {
         messages:[{role:'user',content:`Extract 2-4 distinct audience segments from this research brief. Return JSON ONLY — no other text.
 
 Research brief:
-${researchBrief.slice(0,3000)}
+${researchBrief.slice(0,2000)}
 
 Required JSON structure:
 {"segments":[{"name":"segment name","age_range":"25-44","gender":"primarily female","primary_fear":"main fear or pain point","primary_desire":"what they want most","motivation":"why they would buy now vs later","ad_angle":"best ad angle for this segment","hook_direction":"opening hook direction","visual_direction":"what the ad visual should show","recommended_priority":1}]}`}]
@@ -3662,6 +3693,51 @@ function updateSegmentIndicators() {
   });
 }
 
+function toggleResearchBrief() {
+  const full = document.getElementById('s3-brief-full');
+  const btn = document.getElementById('s3-brief-toggle');
+  if (!full) return;
+  const isOpen = full.style.display !== 'none';
+  full.style.display = isOpen ? 'none' : 'block';
+  if (btn) btn.textContent = isOpen ? 'View Full Report ▼' : 'Hide Report ▲';
+}
+
+function renderS3ResearchBrief() {
+  const card = document.getElementById('s3-research-brief-card');
+  if (!card) return;
+  const intel = S.audienceIntelligence;
+  const hasSerpData = S.serpIntelligence?.organicResults?.length;
+  if (!intel?.brief && !hasSerpData) return;
+  card.style.display = 'block';
+
+  const dateEl = document.getElementById('s3-research-date');
+  if (dateEl && intel?.updated_at) {
+    const d = new Date(intel.updated_at);
+    dateEl.textContent = 'Last run: ' + d.toLocaleDateString('en-CA', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+
+  const compEl = document.getElementById('s3-comp-count');
+  if (compEl) compEl.textContent = (S.serpIntelligence?.organicResults?.length || 0) + ' found';
+
+  const adsEl = document.getElementById('s3-ads-status');
+  if (adsEl) {
+    const paidCount = S.serpIntelligence?.paidAds?.length || 0;
+    if (paidCount > 0) {
+      adsEl.textContent = paidCount + ' running';
+      adsEl.style.color = 'var(--yellow)';
+    } else {
+      adsEl.textContent = '🎯 First-mover';
+      adsEl.style.color = 'var(--green)';
+    }
+  }
+
+  const segEl = document.getElementById('s3-top-segment');
+  if (segEl) segEl.textContent = S.audienceSegments?.length ? (S.audienceSegments[0]?.name || '—') : 'Run research first';
+
+  const contentEl = document.getElementById('s3-brief-content');
+  if (contentEl && intel?.brief) contentEl.textContent = intel.brief;
+}
+
 async function selectSegmentAndBuild(index) {
   selectSegment(index);
   go('build');
@@ -3739,6 +3815,8 @@ Return a ranked list with bold ## headers. Be specific and actionable.`;
 
 // ── SQL migration note (run in Supabase SQL editor) ───────────
 // ALTER TABLE audience_intelligence ADD COLUMN IF NOT EXISTS segments_data jsonb DEFAULT '[]'::jsonb;
+// ALTER TABLE audience_intelligence ADD COLUMN IF NOT EXISTS selected_segment_name text;
+// ALTER TABLE audience_intelligence ADD COLUMN IF NOT EXISTS brief text;
 
 // ── Auto-Research ─────────────────────────────────────────────
 const APIFY_API = 'https://api.apify.com/v2';
@@ -4107,6 +4185,10 @@ async function runAutoResearch() {
     const tMetaSearch = arThinking('🔎 Searching web for competitor Meta/Instagram ads…');
     metaAdsSearch = await scrapeMetaAdsViaClaudeSearch(googleKeyword, searchCity, S.serpIntelligence?.organicResults);
     tMetaSearch.remove();
+    // Rate limit protection — Claude web search uses ~8k tokens, need to cool before synthesis
+    const tRl = arThinking('⏳ Cooling down between AI calls (rate limit protection)…');
+    await new Promise(r => setTimeout(r, 8000));
+    tRl.remove();
     if (metaAdsSearch?.ads_found?.length) {
       const adsHtml = metaAdsSearch.ads_found.slice(0,5).map(ad=>`<div style="padding:8px;background:var(--s3);border-radius:6px;margin-bottom:6px;"><div style="font-size:11px;font-weight:700;color:var(--t1);">${escHtml(ad.advertiser||'Unknown')}</div><div style="font-size:12px;color:var(--t2);margin-top:2px;font-style:italic;">"${escHtml(ad.headline||ad.body?.slice(0,80)||'—')}"</div>${ad.offer?`<div style="font-size:10px;color:var(--accent);margin-top:3px;">CTA: ${escHtml(ad.offer)}</div>`:''}${ad.targets?`<div style="font-size:10px;color:var(--t3);margin-top:2px;">Targets: ${escHtml(ad.targets)}</div>`:''}</div>`).join('');
       arMsg(`<span class="source-badge sb-meta">Meta/IG Ads Search</span> <strong>${metaAdsSearch.ads_found.length} competitor ads</strong> found via Claude web search<br><div style="margin-top:8px;">${adsHtml}</div>`,'res-bub');
@@ -4154,14 +4236,14 @@ async function runAutoResearch() {
     const tSynth=arThinking('Synthesizing all research into audience brief…');
     const locationCtx=S.locationLat&&S.locationLon?`LOCATION: ${document.getElementById('bp-location')?.value||'not specified'} (${S.locationLat},${S.locationLon})`:'';
     const metaAdsContext=metaAds?.length?'COMPETITOR ADS FROM META/INSTAGRAM:\n'+metaAds.slice(0,5).map(ad=>`- Brand: ${ad.pageName||'Unknown'} | Headline: ${ad.title||ad.body?.slice(0,60)||'N/A'} | CTA: ${ad.callToAction||'N/A'}`).join('\n'):'No competitor ads found in Meta Ad Library for this market.';
-    const redditContext=redditLite?.length?'REAL CUSTOMER LANGUAGE FROM REDDIT:\n'+redditLite.slice(0,8).map(p=>`- "${p.title||p.body?.slice(0,100)||'N/A'}" (${p.score||0} upvotes)`).join('\n'):'No Reddit customer voice data available.';
+    const redditContext=redditLite?.length?'REAL CUSTOMER LANGUAGE FROM REDDIT:\n'+redditLite.slice(0,5).map(p=>`- "${p.title||p.body?.slice(0,80)||'N/A'}" (${p.score||0} upvotes)`).join('\n'):'No Reddit customer voice data available.';
     const serpCtx=(S.serpIntelligence?.organicResults?.length||serpIntelligence?.organicResults?.length)
       ?`GOOGLE SEARCH INTELLIGENCE FOR "${S.serpIntelligence?.keyword||googleKeyword}" IN ${S.serpIntelligence?.city||searchCity}:
 
 BUSINESSES FOUND ON GOOGLE (${(S.serpIntelligence?.organicResults||[]).length} results):
-${(S.serpIntelligence?.organicResults||[]).slice(0,10).map((r,i)=>`${i+1}. ${r.title}
+${(S.serpIntelligence?.organicResults||[]).slice(0,5).map((r,i)=>`${i+1}. ${r.title}
      URL: ${r.url||'N/A'}
-     Description: ${(r.description||'').slice(0,150)}`).join('\n\n')}
+     Description: ${(r.description||'').slice(0,80)}`).join('\n\n')}
 
 GOOGLE ADS IN THIS MARKET (${(S.serpIntelligence?.paidAds||[]).length} active):
 ${(S.serpIntelligence?.paidAds||[]).length>0
@@ -4177,12 +4259,7 @@ REVIEW SNIPPETS FROM SEARCH:
 ${(S.serpIntelligence?.reviewSnippets||[]).slice(0,5).map(r=>`- ${r.source}: "${(r.text||'').slice(0,120)}"`).join('\n')||'None captured'}
 
 GOOGLE MAPS COMPETITORS (${(S.competitorIntelligence||[]).length} found):
-${(S.competitorIntelligence||[]).slice(0,8).map(c=>`- ${c.competitor_name||c.name}
-     Address: ${c.address||'N/A'}
-     Rating: ${c.rating||'N/A'}/5 (${c.review_count||c.reviews||0} reviews)
-     Website: ${c.website||'None'}
-     Has Meta Ads: ${c.has_active_meta_ads?'YES — '+c.meta_ad_count+' active ads':'NOT DETECTED'}
-     Facebook: ${c.facebook_url||c.facebook||'Not found'}`).join('\n\n')||'No Google Maps data yet'}`
+${(S.competitorIntelligence||[]).slice(0,5).map(c=>`- ${c.competitor_name||c.name} | Rating: ${c.rating||'N/A'}/5 | Meta Ads: ${c.has_active_meta_ads?'YES':'NO'}`).join('\n')||'No Google Maps data yet'}`
       :'';
     const metaSearchCtx = metaAdsSearch?.ads_found?.length
       ? `COMPETITOR META/INSTAGRAM ADS (web search):\n${metaAdsSearch.ads_found.slice(0,5).map(ad=>`- ${ad.advertiser}: "${ad.headline||ad.body?.slice(0,60)||'N/A'}" | CTA: ${ad.offer||'N/A'}`).join('\n')}`
@@ -4190,9 +4267,14 @@ ${(S.competitorIntelligence||[]).slice(0,8).map(c=>`- ${c.competitor_name||c.nam
     const synthPrompt=`Synthesize into audience intelligence brief. COMPETITOR: ${compList.join(', ')||'not specified'} PRODUCT: ${S.product||'not specified'} ${locationCtx} REDDIT (${redditResults.length} posts): ${S.voice?S.voice.substring(0,800):'none'} ${metaAdsContext} ${redditContext} ${serpCtx} ${metaSearchCtx} Be specific and actionable. Structure with clear section headers: Pain Points, Customer Language, Competitor Landscape, Audience Targeting, Audience Segments (list 2-4 distinct buyer segments with age, gender, fear, desire, and ad angle for each). ${locationCtx?'Tailor all insights for the specified local market.':''}`;
     const synthMsg=await ai(getSYSResearch(),[{role:'user',content:synthPrompt}]);
     tSynth.remove(); S.researchSummary=synthMsg;
+    S.audienceIntelligence = { brief: synthMsg, updated_at: new Date().toISOString() };
     const painMatch=synthMsg.match(/PAIN POINTS[:\s]+([^\n]+)/i);
     if(painMatch&&!document.getElementById('d-pain').value){document.getElementById('d-pain').value=painMatch[1].trim().substring(0,100);S.pain=document.getElementById('d-pain').value;}
     arMsg(`<span class="source-badge sb-collector">Research Brief</span><br><br>${fmt(synthMsg)}`,'res-bub');
+    // Rate limit protection before segment parsing call
+    const tCool = arThinking('⏳ Cooling down between AI calls (rate limit protection)…');
+    await new Promise(r => setTimeout(r, 5000));
+    tCool.remove();
     // Parse audience segments from the brief
     const tSegs = arThinking('🎯 Extracting audience segments from research brief…');
     const segments = await parseAudienceSegments(S.researchSummary);
@@ -4206,6 +4288,7 @@ ${(S.competitorIntelligence||[]).slice(0,8).map(c=>`- ${c.competitor_name||c.nam
     }
   }
   renderCompetitorResults(S.serpIntelligence, S.competitorIntelligence);
+  renderS3ResearchBrief();
   arMsg(`<strong>✅ Auto-Research Complete</strong><div style="margin-top:10px;display:grid;grid-template-columns:repeat(5,1fr);gap:6px;"><div style="background:var(--s3);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:11px;font-weight:700;color:${S.serpIntelligence?.organicResults?.length?'var(--accent)':'var(--t2)'};">${S.serpIntelligence?.organicResults?.length||0}</div><div style="font-size:9px;color:var(--t2);">Competitors</div></div><div style="background:var(--s3);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:11px;font-weight:700;color:${redditResults.length?'#ff6b35':'var(--t2)'};">${redditResults.length} posts</div><div style="font-size:9px;color:var(--t2);">Reddit</div></div><div style="background:var(--s3);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:11px;font-weight:700;color:${metaAds?.length?'var(--accent)':'var(--t2)'};">${metaAds?.length?metaAds.length+' ads':'🎯'}</div><div style="font-size:9px;color:var(--t2);">${metaAds?.length?'Meta/IG':'1st Mover'}</div></div><div style="background:var(--s3);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:11px;font-weight:700;color:${redditLite?.length?'#ff6b35':'var(--t2)'};">${redditLite?.length||0} posts</div><div style="font-size:9px;color:var(--t2);">Cust. Voice</div></div><div style="background:var(--s3);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:11px;font-weight:700;color:${S.competitorAds?.length?'var(--accent)':S.metaAdsSearchResult?.first_mover_opportunity?'var(--green)':'var(--t2)'};">${S.competitorAds?.length||0}</div><div style="font-size:9px;color:var(--t2);">${S.metaAdsSearchResult?.first_mover_opportunity?'1st Mover':'Meta Ads'}</div></div></div><div style="margin-top:8px;font-size:11px;color:var(--t2);">Go to Stage 1 → view Audience Segments → Save &amp; Continue → ▶ Run Full Pipeline</div>`,'res-bub');
   await savePipelineRun();
   updateCIDisplay();
