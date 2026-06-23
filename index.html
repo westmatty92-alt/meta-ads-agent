@@ -3648,7 +3648,7 @@ async function scrapeGoogleSERP(keyword, city) {
     const hdrs = {'Content-Type':'application/json','Authorization':'Bearer '+apifyKey};
     const run = await fetch(`${APIFY_API}/acts/apify~google-search-scraper/runs`, {
       method:'POST', headers:hdrs,
-      body: JSON.stringify({ queries, maxPagesPerQuery:1, resultsPerPage:10, countryCode:'ca', languageCode:'en', mobileResults:false })
+      body: JSON.stringify({ queries, maxPagesPerQuery:3, resultsPerPage:10, countryCode:'ca', languageCode:'en', mobileResults:false })
     });
     const runData = await run.json();
     const runId = runData?.data?.id;
@@ -3660,7 +3660,7 @@ async function scrapeGoogleSERP(keyword, city) {
       const runStatus = statusData?.data?.status;
       console.log('[googleSERP] poll', i+1, '— status:', runStatus);
       if (runStatus === 'SUCCEEDED') {
-        const results = await (await fetch(`${APIFY_API}/actor-runs/${runId}/dataset/items?limit=30`, {headers:hdrs})).json();
+        const results = await (await fetch(`${APIFY_API}/actor-runs/${runId}/dataset/items?limit=90`, {headers:hdrs})).json();
         console.log('[googleSERP] got', results?.length, 'result pages');
         return results;
       }
@@ -3806,7 +3806,13 @@ async function runAutoResearch() {
       tSerpSave.remove();
       arMsg(`<span class="source-badge sb-collector">✓ SERP intelligence saved</span>`,'res-bub');
     } else {
-      arMsg(`<span class="source-badge sb-meta">Google SERP</span> ⚠️ No results — check Apify key or try different keywords`,'think-bub');
+      const serpOrganic = S.serpIntelligence?.organicResults || [];
+      const serpPaid = S.serpIntelligence?.paidAds || [];
+      if (serpOrganic.length > 0) {
+        arMsg(`<span class="source-badge sb-meta">Google SERP</span> ✓ <strong>${serpOrganic.length} businesses found</strong>${serpPaid.length > 0 ? ' · ' + serpPaid.length + ' Google Ads detected' : ' · No Google Ads (first-mover opportunity)'} (cached from last run)`,'res-bub');
+      } else {
+        arMsg(`<span class="source-badge sb-meta">Google SERP</span> ⚠️ No SERP results — check Apify key or try different keywords`,'think-bub');
+      }
     }
   }
   const divEl=document.createElement('div');divEl.className='sdiv';divEl.textContent='Running 4 sources in parallel';stream.appendChild(divEl);
@@ -3887,7 +3893,7 @@ ${(S.competitorIntelligence||[]).slice(0,8).map(c=>`- ${c.competitor_name||c.nam
     arMsg(`<span class="source-badge sb-collector">Research Brief</span><br><br>${fmt(synthMsg)}`,'res-bub');
   }
   renderCompetitorResults(S.serpIntelligence, S.competitorIntelligence);
-  arMsg(`<strong>✅ Auto-Research Complete</strong><div style="margin-top:10px;display:grid;grid-template-columns:repeat(4,1fr);gap:6px;"><div style="background:var(--s3);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:11px;font-weight:700;color:${serpIntelligence?.organicResults?.length?'var(--accent)':'var(--t2)'};">${serpIntelligence?.organicResults?.length||0}</div><div style="font-size:9px;color:var(--t2);">SERP</div></div><div style="background:var(--s3);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:11px;font-weight:700;color:${redditResults.length?'#ff6b35':'var(--t2)'};">${redditResults.length} posts</div><div style="font-size:9px;color:var(--t2);">Reddit</div></div><div style="background:var(--s3);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:11px;font-weight:700;color:${metaAds?.length?'var(--accent)':'var(--t2)'};">${metaAds?.length?metaAds.length+' ads':'🎯'}</div><div style="font-size:9px;color:var(--t2);">${metaAds?.length?'Meta/IG':'1st Mover'}</div></div><div style="background:var(--s3);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:11px;font-weight:700;color:${redditLite?.length?'#ff6b35':'var(--t2)'};">${redditLite?.length||0} posts</div><div style="font-size:9px;color:var(--t2);">Cust. Voice</div></div></div><div style="margin-top:8px;font-size:11px;color:var(--t2);">Go to Stage 1 → Save & Continue → ▶ Run Full Pipeline</div>`,'res-bub');
+  arMsg(`<strong>✅ Auto-Research Complete</strong><div style="margin-top:10px;display:grid;grid-template-columns:repeat(4,1fr);gap:6px;"><div style="background:var(--s3);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:11px;font-weight:700;color:${S.serpIntelligence?.organicResults?.length?'var(--accent)':'var(--t2)'};">${S.serpIntelligence?.organicResults?.length||0}</div><div style="font-size:9px;color:var(--t2);">Competitors</div></div><div style="background:var(--s3);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:11px;font-weight:700;color:${redditResults.length?'#ff6b35':'var(--t2)'};">${redditResults.length} posts</div><div style="font-size:9px;color:var(--t2);">Reddit</div></div><div style="background:var(--s3);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:11px;font-weight:700;color:${metaAds?.length?'var(--accent)':'var(--t2)'};">${metaAds?.length?metaAds.length+' ads':'🎯'}</div><div style="font-size:9px;color:var(--t2);">${metaAds?.length?'Meta/IG':'1st Mover'}</div></div><div style="background:var(--s3);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:11px;font-weight:700;color:${redditLite?.length?'#ff6b35':'var(--t2)'};">${redditLite?.length||0} posts</div><div style="font-size:9px;color:var(--t2);">Cust. Voice</div></div></div><div style="margin-top:8px;font-size:11px;color:var(--t2);">Go to Stage 1 → Save & Continue → ▶ Run Full Pipeline</div>`,'res-bub');
   await savePipelineRun();
   updateCIDisplay();
   document.getElementById('ar-run-btn').disabled=false;
