@@ -894,6 +894,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
               </div>
             </div>
           </div>
+          <!-- Audience Segments — populated after Auto-Research runs -->
+          <div id="s1-segments-container" style="padding:0 22px 18px;display:none;"></div>
 
         </div><!-- /s1-content-info -->
 
@@ -988,6 +990,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
         <div class="shdr-left"><h2>⚡ Stage 4 — Ad Builder</h2><p>Builds the 100/100 ad using everything from stages 1–3</p></div>
         <div class="sacts">
           <button class="btn bg bsm" onclick="go('research')">← Back</button>
+          <button class="btn bg bsm" id="btn-build-all" onclick="runBuildAll()" style="display:none;">🎯 Build All Segments</button>
           <button class="btn bp" id="btn-build" onclick="runBuild()">Build Ad</button>
         </div>
       </div>
@@ -2166,7 +2169,12 @@ let S = {
   currentProductId: null, products: [], brandSnapshot: null,
   locationLat: null, locationLon: null,
   brandLogos: {},
-  brandFonts: { headline: 'Barlow', subheadline: 'Inter', body: 'Inter' }
+  brandFonts: { headline: 'Barlow', subheadline: 'Inter', body: 'Inter' },
+  audienceSegments: [],
+  selectedSegment: null,
+  competitorAds: [],
+  metaAdsSearchResult: null,
+  adRecommendation: ''
 };
 
 async function savePipelineRun() {
@@ -2202,7 +2210,7 @@ async function savePipelineRun() {
 async function loadPipelineRun() {
   if (!currentBizId) return;
   const { data } = await sb.from('pipeline_runs').select('*').eq('business_id', currentBizId).order('updated_at', {ascending:false}).limit(1).single();
-  if (!data) { S = { adData:'', product:'', price:'', usp:'', audience:'', budget:'', goal:'purchase', pain:'', desire:'', objection:'', voice:'', competitors:'', compCopy:'', auditScore:null, auditIssues:'', auditSummary:'', researchSummary:'', adCopy:'', audienceDemographics:'', launchMode:false, adFormat:'single', niche:'fitness', brandName:'', brandColors:[{hex:'#00D4A0',label:'Primary'},{hex:'#00A878',label:'Secondary'}], brandFont:'Modern', brandLogoUrl:'', brandVibe:'', dallePrompt:'', lastImageUrl:'', visualConcept:'', lastAdId:null, adDataSaved:false, history:{ audit:[], research:[], build:[], visual:[] }, stagesDone: new Set(), targetCpa:null, targetRoas:null, currentProductId: null, products: [], brandSnapshot: null, locationLat: null, locationLon: null, brandLogos: {}, brandFonts: { headline: 'Barlow', subheadline: 'Inter', body: 'Inter' } }; renderBkPalette(); return; }
+  if (!data) { S = { adData:'', product:'', price:'', usp:'', audience:'', budget:'', goal:'purchase', pain:'', desire:'', objection:'', voice:'', competitors:'', compCopy:'', auditScore:null, auditIssues:'', auditSummary:'', researchSummary:'', adCopy:'', audienceDemographics:'', launchMode:false, adFormat:'single', niche:'fitness', brandName:'', brandColors:[{hex:'#00D4A0',label:'Primary'},{hex:'#00A878',label:'Secondary'}], brandFont:'Modern', brandLogoUrl:'', brandVibe:'', dallePrompt:'', lastImageUrl:'', visualConcept:'', lastAdId:null, adDataSaved:false, history:{ audit:[], research:[], build:[], visual:[] }, stagesDone: new Set(), targetCpa:null, targetRoas:null, currentProductId: null, products: [], brandSnapshot: null, locationLat: null, locationLon: null, brandLogos: {}, brandFonts: { headline: 'Barlow', subheadline: 'Inter', body: 'Inter' }, audienceSegments: [], selectedSegment: null, competitorAds: [], metaAdsSearchResult: null, adRecommendation: '' }; renderBkPalette(); return; }
   S.product    = data.product || '';
   S.price      = data.price || '';
   S.usp        = data.usp || '';
@@ -2562,8 +2570,19 @@ FORMAT: ## HOOK ## PRIMARY TEXT — SHORT ## PRIMARY TEXT — MEDIUM ## HEADLINE
 
 async function runBuild() {
   document.getElementById('btn-build').disabled=true;
-  divider('build','Building 100/100 ad from full pipeline context');
+  const segLabel = S.selectedSegment ? ` — ${S.selectedSegment.name}` : '';
+  divider('build',`Building 100/100 ad from full pipeline context${segLabel}`);
   const t=thinking('build','Synthesizing audit + research + customer intel…');
+  const segmentContext = S.selectedSegment ? `
+TARGET SEGMENT: ${S.selectedSegment.name}
+Age: ${S.selectedSegment.age_range} · ${S.selectedSegment.gender}
+PRIMARY FEAR: ${S.selectedSegment.primary_fear}
+PRIMARY DESIRE: ${S.selectedSegment.primary_desire}
+Motivation to buy NOW: ${S.selectedSegment.motivation}
+Recommended ad angle: ${S.selectedSegment.ad_angle}
+Hook direction: ${S.selectedSegment.hook_direction}
+COMPETITOR CONTEXT: ${S.competitorAds?.length ? 'Competitors ARE running Meta/Instagram ads. Differentiate by: ' + (S.metaAdsSearchResult?.summary||'being more specific and direct.') : 'NO competitor Meta/Instagram ads found in this market — own the space with bold direct response.'}
+INSTRUCTION: Write this ad SPECIFICALLY for ${S.selectedSegment.name}. Address their PRIMARY FEAR (${S.selectedSegment.primary_fear}) in the first line. Use the hook direction: ${S.selectedSegment.hook_direction}. Do NOT write a generic ad.` : '';
   const msg=`BUILD THE BEST META AD:
 AUDIT: ${S.auditScore||'?'}/100 · Fix: ${S.auditIssues}
 RESEARCH: ${S.researchSummary.substring(0,1000)}
@@ -2578,7 +2597,7 @@ Proven angles: ${(S.brandSnapshot?.ad_angles || []).join(', ') || 'not specified
 Brand hook ideas: ${(S.brandSnapshot?.hooks || []).join(', ') || 'not specified'}
 Never use in ads: ${S.brandSnapshot?.avoid || 'not specified'}
 Competitor intelligence: ${S.competitorIntelligence?.length ? S.competitorIntelligence.slice(0,5).map(c=>`${c.competitor_name||c.name}: ${c.has_active_meta_ads?c.meta_ad_count+' active Meta ads':'no Meta ads'} | rating ${c.rating||'—'}`).join(' | ') : 'none saved — run Auto-Research first'}
-Google SERP: ${S.serpIntelligence?.organicResults?.length ? `"${S.serpIntelligence.keyword}" in ${S.serpIntelligence.city} — ${S.serpIntelligence.organicResults.length} businesses, ${S.serpIntelligence.paidAds?.length||0} Google Ads, top questions: ${S.serpIntelligence.peopleAlsoAsk?.slice(0,3).map(q=>q.question).join(' | ')||'none'}` : 'not run yet'}`;
+Google SERP: ${S.serpIntelligence?.organicResults?.length ? `"${S.serpIntelligence.keyword}" in ${S.serpIntelligence.city} — ${S.serpIntelligence.organicResults.length} businesses, ${S.serpIntelligence.paidAds?.length||0} Google Ads, top questions: ${S.serpIntelligence.peopleAlsoAsk?.slice(0,3).map(q=>q.question).join(' | ')||'none'}` : 'not run yet'}${segmentContext}`;
   S.history.build=[{role:'user',content:msg}];
   const reply=await ai(SYS_BUILD,S.history.build);
   S.history.build.push({role:'assistant',content:reply});
@@ -2604,12 +2623,13 @@ async function runVisual() {
   const fontCtx = `Headline=${S.brandFonts?.headline||'not set'}, Subheadline=${S.brandFonts?.subheadline||'not set'}, Body=${S.brandFonts?.body||'not set'}`;
   const logoCtx = S.brandLogos?.transparent ? 'YES — available for ad overlay' : 'NO';
   const brandCtx = S.brandName ? `\nBRAND KIT: Name: ${S.brandName} · Colors: [${bkColorsStr}] · Fonts: ${fontCtx}${S.brandVibe?' · Vibe: '+S.brandVibe:''}${S.brandLogos?.primary?' · Primary logo: available':''}\nTransparent logo: ${logoCtx}` : '';
+  const segmentVisual = S.selectedSegment ? `\nVISUAL DIRECTION FOR SEGMENT: ${S.selectedSegment.name}\nVisual approach: ${S.selectedSegment.visual_direction||'not specified'}\nFear to address visually: ${S.selectedSegment.primary_fear}\nEmotion to evoke: ${S.selectedSegment.primary_desire}\nThe visual MUST speak to this specific person — generic lifestyle imagery will not work.` : '';
   const msg=`Create visual concept for: AD COPY: ${S.adCopy.substring(0,800)} PRODUCT: ${S.product} · AUDIENCE: ${S.audience} · PAIN: ${S.pain} · GOAL: ${S.goal} MARKET: ${S.researchSummary.substring(0,400)}${brandCtx}
 Visual style direction: ${S.brandSnapshot?.visual_style || 'not specified'}
 Brand voice: ${S.brandSnapshot?.voice || 'not specified'}
 Brand tone: ${S.brandSnapshot?.tone || 'not specified'}
 Target emotion: ${S.brandSnapshot?.target_emotion || 'not specified'}
-Never use in ads: ${S.brandSnapshot?.avoid || 'not specified'}`;
+Never use in ads: ${S.brandSnapshot?.avoid || 'not specified'}${segmentVisual}`;
   S.history.visual=[{role:'user',content:msg}];
   const reply=await ai(SYS_VISUAL,S.history.visual);
   S.history.visual.push({role:'assistant',content:reply});
@@ -3454,6 +3474,182 @@ async function runAll() {
   document.getElementById('run-all').disabled=false;
 }
 
+// ── Meta Ads Search via Claude Web Search ─────────────────────
+async function scrapeMetaAdsViaClaudeSearch(keyword, city, competitors) {
+  if (!KEYS.claude) return null;
+  const competitorNames = Array.isArray(competitors)
+    ? competitors.slice(0,5).map(c=>c.title||c.competitor_name||c.name).filter(Boolean).join(', ')
+    : '';
+  const location = city || document.getElementById('ar-search-city')?.value?.trim() || 'this market';
+  const searchPrompt = `Search the web and Meta Ad Library for active Facebook and Instagram ads in the ${keyword} market in ${location}.
+
+Search for:
+1. "${keyword} ${location} Facebook ads"
+2. "${keyword} ${location} Instagram ads"
+3. Any of these competitors running ads: ${competitorNames||'search broadly for this niche'}
+4. "${keyword} mobile service ads" and "${keyword} local business ads"
+
+For each ad found, extract: advertiser name, ad headline or hook, body copy key message, offer or CTA, ad format, and what fear or desire it targets.
+
+If no ads found, note that as a first-mover opportunity.
+
+Return JSON ONLY — no other text:
+{"ads_found":[{"advertiser":"","headline":"","body":"","offer":"","format":"","targets":"","url":""}],"first_mover_opportunity":true,"summary":""}`;
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':KEYS.claude,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body: JSON.stringify({ model:'claude-sonnet-4-6', max_tokens:2000, tools:[{type:'web_search_20250305',name:'web_search'}], messages:[{role:'user',content:searchPrompt}] })
+    });
+    if (!res.ok) { console.warn('[metaAdsSearch] API error:', res.status); return null; }
+    const data = await res.json();
+    const textContent = (data.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('');
+    const jsonMatch = textContent.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const result = JSON.parse(jsonMatch[0]);
+      S.competitorAds = result.ads_found || [];
+      S.metaAdsSearchResult = result;
+      if (currentBizId && currentUser?.id) {
+        await sb.from('competitor_intelligence').upsert({
+          business_id: currentBizId, user_id: currentUser.id,
+          competitor_name: '__meta_ads_search__',
+          meta_ads_data: result,
+          has_active_meta_ads: (result.ads_found?.length||0) > 0,
+          meta_ad_count: result.ads_found?.length || 0,
+          last_updated_at: new Date().toISOString()
+        }, { onConflict: 'business_id,competitor_name' });
+      }
+      return result;
+    }
+    return null;
+  } catch(e) { console.warn('[metaAdsSearch] error:', e.message); return null; }
+}
+
+// ── Audience Segment Parsing ───────────────────────────────────
+async function parseAudienceSegments(researchBrief) {
+  if (!KEYS.claude || !researchBrief) return [];
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':KEYS.claude,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body: JSON.stringify({
+        model:'claude-sonnet-4-6', max_tokens:1500,
+        messages:[{role:'user',content:`Extract 2-4 distinct audience segments from this research brief. Return JSON ONLY — no other text.
+
+Research brief:
+${researchBrief.slice(0,3000)}
+
+Required JSON structure:
+{"segments":[{"name":"segment name","age_range":"25-44","gender":"primarily female","primary_fear":"main fear or pain point","primary_desire":"what they want most","motivation":"why they would buy now vs later","ad_angle":"best ad angle for this segment","hook_direction":"opening hook direction","visual_direction":"what the ad visual should show","recommended_priority":1}]}`}]
+      })
+    });
+    if (!res.ok) { console.warn('[parseSegments] API error:', res.status); return []; }
+    const data = await res.json();
+    const text = (data.content||[]).find(b=>b.type==='text')?.text || '';
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const result = JSON.parse(jsonMatch[0]);
+      return result.segments || [];
+    }
+  } catch(e) { console.warn('[parseSegments] error:', e.message); }
+  return [];
+}
+
+// ── Audience Segment Cards (Stage 1) ──────────────────────────
+function renderSegmentCards(segments) {
+  const container = document.getElementById('s1-segments-container');
+  if (!container || !segments?.length) return;
+  container.style.display = 'block';
+  const sorted = [...segments].sort((a,b)=>(a.recommended_priority||99)-(b.recommended_priority||99));
+  let html = `<div style="margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;">
+    <h3 style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--t2);margin:0;">🎯 Audience Segments (${segments.length})</h3>
+    <button class="btn bp bsm" id="btn-build-all-s1" onclick="runBuildAll()">Build All ${segments.length} Ads</button>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px;">`;
+  sorted.forEach((seg, i) => {
+    const isSel = S.selectedSegment?.name === seg.name;
+    html += `<div class="dcard seg-card" id="seg-card-${i}" onclick="selectSegment(${i})"
+      style="cursor:pointer;border:2px solid ${isSel?'var(--volt)':'var(--border)'};transition:border-color .15s;gap:6px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <span style="font-size:12px;font-weight:700;color:var(--t1);">${escHtml(seg.name)}</span>
+        <span style="font-size:9px;color:var(--t2);background:var(--s2);padding:2px 6px;border-radius:10px;">#${i+1}</span>
+      </div>
+      <div style="font-size:10px;color:var(--t2);">${escHtml(seg.age_range||'')} · ${escHtml(seg.gender||'')}</div>
+      <div style="font-size:11px;color:var(--red);font-weight:600;">😟 ${escHtml(seg.primary_fear||'')}</div>
+      <div style="font-size:11px;color:var(--green);">✨ ${escHtml(seg.primary_desire||'')}</div>
+      <div style="font-size:10px;color:var(--accent);font-style:italic;border-top:1px solid var(--border);padding-top:6px;margin-top:2px;">${escHtml(seg.ad_angle||'')}</div>
+      <button class="btn bp bsm" onclick="event.stopPropagation();selectSegmentAndBuild(${i})" style="margin-top:4px;width:100%;">Build Ad for This Segment</button>
+    </div>`;
+  });
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+function selectSegment(index) {
+  const seg = S.audienceSegments[index];
+  if (!seg) return;
+  S.selectedSegment = seg;
+  document.querySelectorAll('.seg-card').forEach((card, i) => {
+    card.style.borderColor = i === index ? 'var(--volt)' : 'var(--border)';
+  });
+}
+
+async function selectSegmentAndBuild(index) {
+  selectSegment(index);
+  go('build');
+  await runBuild();
+}
+
+// ── Build All Segments ─────────────────────────────────────────
+async function runBuildAll() {
+  const segments = S.audienceSegments;
+  if (!segments?.length) { alert('No audience segments yet. Run Auto-Research first.'); return; }
+  ['btn-build-all','btn-build-all-s1'].forEach(id => { const b=document.getElementById(id); if(b)b.disabled=true; });
+  go('build');
+  const generatedAds = [];
+  for (let i = 0; i < segments.length; i++) {
+    S.selectedSegment = segments[i];
+    selectSegment(i);
+    await runBuild();
+    generatedAds.push({ segment: segments[i], headline: S.adCopy?.match(/## HOOK\s*\n([^\n]+)/)?.[1] || S.adCopy?.split('\n')[0] || '' });
+  }
+  if (generatedAds.length > 1) await runAdRecommendation(segments, generatedAds);
+  ['btn-build-all','btn-build-all-s1'].forEach(id => { const b=document.getElementById(id); if(b)b.disabled=false; });
+}
+
+// ── Ad Recommendation / Launch Strategy ───────────────────────
+async function runAdRecommendation(segments, generatedAds) {
+  if (!KEYS.claude || !segments?.length) return;
+  divider('build','Generating launch strategy recommendation');
+  const t = thinking('build','Ranking ads and building launch strategy…');
+  const segsCtx = segments.map((seg,i)=>`Segment ${i+1}: ${seg.name}\nFear: ${seg.primary_fear}\nDesire: ${seg.primary_desire}\nAd angle: ${seg.ad_angle}\nHook built: ${generatedAds[i]?.headline||'pending'}`).join('\n\n');
+  const recPrompt = `You are a Meta Ads strategist. We built ${generatedAds.length} ads for different audience segments. Recommend which 2-3 to launch first.
+
+SEGMENTS + ADS BUILT:
+${segsCtx}
+
+MARKET CONTEXT:
+Location: ${S.serpIntelligence?.city||document.getElementById('ar-search-city')?.value||'local market'}
+Competitor Meta/Instagram ads running: ${S.competitorAds?.length||0}
+First-mover opportunity: ${S.metaAdsSearchResult?.first_mover_opportunity?'YES':'UNKNOWN'}
+Businesses on Google: ${S.serpIntelligence?.organicResults?.length||0}
+
+For each recommended ad:
+1. Why this segment converts fastest right now
+2. Starting daily budget recommendation
+3. What to test first (hook vs offer vs visual)
+4. Expected advantage vs competitors
+
+Return a ranked list with bold ## headers. Be specific and actionable.`;
+  const reply = await ai(getSYSResearch(), [{role:'user',content:recPrompt}]);
+  t.remove();
+  S.adRecommendation = reply;
+  addMsg('build','agent',`<div style="background:rgba(37,99,235,0.08);border:1px solid rgba(37,99,235,0.25);border-radius:10px;padding:14px 16px;"><div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">🎯 LAUNCH STRATEGY</div>${fmt(reply)}</div>`,'res-bub');
+}
+
+// ── SQL migration note (run in Supabase SQL editor) ───────────
+// ALTER TABLE audience_intelligence ADD COLUMN IF NOT EXISTS segments_data jsonb DEFAULT '[]'::jsonb;
+
 // ── Auto-Research ─────────────────────────────────────────────
 const APIFY_API = 'https://api.apify.com/v2';
 let selectedNiches = new Set();
@@ -3815,6 +4011,19 @@ async function runAutoResearch() {
       }
     }
   }
+  // Claude web search for competitor Meta/Instagram ads
+  let metaAdsSearch = null;
+  if (googleKeyword && KEYS.claude) {
+    const tMetaSearch = arThinking('🔎 Searching web for competitor Meta/Instagram ads…');
+    metaAdsSearch = await scrapeMetaAdsViaClaudeSearch(googleKeyword, searchCity, S.serpIntelligence?.organicResults);
+    tMetaSearch.remove();
+    if (metaAdsSearch?.ads_found?.length) {
+      const adsHtml = metaAdsSearch.ads_found.slice(0,5).map(ad=>`<div style="padding:8px;background:var(--s3);border-radius:6px;margin-bottom:6px;"><div style="font-size:11px;font-weight:700;color:var(--t1);">${escHtml(ad.advertiser||'Unknown')}</div><div style="font-size:12px;color:var(--t2);margin-top:2px;font-style:italic;">"${escHtml(ad.headline||ad.body?.slice(0,80)||'—')}"</div>${ad.offer?`<div style="font-size:10px;color:var(--accent);margin-top:3px;">CTA: ${escHtml(ad.offer)}</div>`:''}${ad.targets?`<div style="font-size:10px;color:var(--t3);margin-top:2px;">Targets: ${escHtml(ad.targets)}</div>`:''}</div>`).join('');
+      arMsg(`<span class="source-badge sb-meta">Meta/IG Ads Search</span> <strong>${metaAdsSearch.ads_found.length} competitor ads</strong> found via Claude web search<br><div style="margin-top:8px;">${adsHtml}</div>`,'res-bub');
+    } else {
+      arMsg(`<span class="source-badge sb-meta">Meta/IG Ads Search</span> 🎯 <strong>First-mover opportunity</strong> — ${escHtml(metaAdsSearch?.summary||'no competitor Meta/Instagram ads detected in this market')}`,'res-bub');
+    }
+  }
   const divEl=document.createElement('div');divEl.className='sdiv';divEl.textContent='Running 4 sources in parallel';stream.appendChild(divEl);
   const t2=(keywords||subreddits.length)?arThinking(`🟠 Reddit — "${keywords||subreddits[0]}"…`):null;
   const t4=keywords?arThinking(`🔍 Scraping Meta/Instagram Ads for competitor ads…`):null;
@@ -3885,15 +4094,29 @@ ${(S.competitorIntelligence||[]).slice(0,8).map(c=>`- ${c.competitor_name||c.nam
      Has Meta Ads: ${c.has_active_meta_ads?'YES — '+c.meta_ad_count+' active ads':'NOT DETECTED'}
      Facebook: ${c.facebook_url||c.facebook||'Not found'}`).join('\n\n')||'No Google Maps data yet'}`
       :'';
-    const synthPrompt=`Synthesize into audience intelligence brief. COMPETITOR: ${compList.join(', ')||'not specified'} PRODUCT: ${S.product||'not specified'} ${locationCtx} REDDIT (${redditResults.length} posts): ${S.voice?S.voice.substring(0,800):'none'} ${metaAdsContext} ${redditContext} ${serpCtx} Be specific and actionable. Structure with clear section headers: Pain Points, Customer Language, Competitor Landscape, Audience Targeting. ${locationCtx?'Tailor all insights for the specified local market.':''}`;
+    const metaSearchCtx = metaAdsSearch?.ads_found?.length
+      ? `COMPETITOR META/INSTAGRAM ADS (web search):\n${metaAdsSearch.ads_found.slice(0,5).map(ad=>`- ${ad.advertiser}: "${ad.headline||ad.body?.slice(0,60)||'N/A'}" | CTA: ${ad.offer||'N/A'}`).join('\n')}`
+      : (metaAdsSearch !== null ? 'FIRST-MOVER OPPORTUNITY: No competitor Meta/Instagram ads found in this market.' : '');
+    const synthPrompt=`Synthesize into audience intelligence brief. COMPETITOR: ${compList.join(', ')||'not specified'} PRODUCT: ${S.product||'not specified'} ${locationCtx} REDDIT (${redditResults.length} posts): ${S.voice?S.voice.substring(0,800):'none'} ${metaAdsContext} ${redditContext} ${serpCtx} ${metaSearchCtx} Be specific and actionable. Structure with clear section headers: Pain Points, Customer Language, Competitor Landscape, Audience Targeting, Audience Segments (list 2-4 distinct buyer segments with age, gender, fear, desire, and ad angle for each). ${locationCtx?'Tailor all insights for the specified local market.':''}`;
     const synthMsg=await ai(getSYSResearch(),[{role:'user',content:synthPrompt}]);
     tSynth.remove(); S.researchSummary=synthMsg;
     const painMatch=synthMsg.match(/PAIN POINTS[:\s]+([^\n]+)/i);
     if(painMatch&&!document.getElementById('d-pain').value){document.getElementById('d-pain').value=painMatch[1].trim().substring(0,100);S.pain=document.getElementById('d-pain').value;}
     arMsg(`<span class="source-badge sb-collector">Research Brief</span><br><br>${fmt(synthMsg)}`,'res-bub');
+    // Parse audience segments from the brief
+    const tSegs = arThinking('🎯 Extracting audience segments from research brief…');
+    const segments = await parseAudienceSegments(S.researchSummary);
+    tSegs.remove();
+    if (segments.length) {
+      S.audienceSegments = segments;
+      renderSegmentCards(segments);
+      const btnBuildAll = document.getElementById('btn-build-all');
+      if (btnBuildAll) btnBuildAll.style.display = '';
+      arMsg(`<span class="source-badge sb-collector">🎯 Audience Segments</span> <strong>${segments.length} segments identified</strong> — ${escHtml(segments.map(s=>s.name).join(', '))}<br><div style="margin-top:6px;font-size:11px;color:var(--t2);">Go to Stage 1 to view segment cards and build targeted ads.</div>`,'res-bub');
+    }
   }
   renderCompetitorResults(S.serpIntelligence, S.competitorIntelligence);
-  arMsg(`<strong>✅ Auto-Research Complete</strong><div style="margin-top:10px;display:grid;grid-template-columns:repeat(4,1fr);gap:6px;"><div style="background:var(--s3);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:11px;font-weight:700;color:${S.serpIntelligence?.organicResults?.length?'var(--accent)':'var(--t2)'};">${S.serpIntelligence?.organicResults?.length||0}</div><div style="font-size:9px;color:var(--t2);">Competitors</div></div><div style="background:var(--s3);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:11px;font-weight:700;color:${redditResults.length?'#ff6b35':'var(--t2)'};">${redditResults.length} posts</div><div style="font-size:9px;color:var(--t2);">Reddit</div></div><div style="background:var(--s3);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:11px;font-weight:700;color:${metaAds?.length?'var(--accent)':'var(--t2)'};">${metaAds?.length?metaAds.length+' ads':'🎯'}</div><div style="font-size:9px;color:var(--t2);">${metaAds?.length?'Meta/IG':'1st Mover'}</div></div><div style="background:var(--s3);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:11px;font-weight:700;color:${redditLite?.length?'#ff6b35':'var(--t2)'};">${redditLite?.length||0} posts</div><div style="font-size:9px;color:var(--t2);">Cust. Voice</div></div></div><div style="margin-top:8px;font-size:11px;color:var(--t2);">Go to Stage 1 → Save & Continue → ▶ Run Full Pipeline</div>`,'res-bub');
+  arMsg(`<strong>✅ Auto-Research Complete</strong><div style="margin-top:10px;display:grid;grid-template-columns:repeat(5,1fr);gap:6px;"><div style="background:var(--s3);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:11px;font-weight:700;color:${S.serpIntelligence?.organicResults?.length?'var(--accent)':'var(--t2)'};">${S.serpIntelligence?.organicResults?.length||0}</div><div style="font-size:9px;color:var(--t2);">Competitors</div></div><div style="background:var(--s3);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:11px;font-weight:700;color:${redditResults.length?'#ff6b35':'var(--t2)'};">${redditResults.length} posts</div><div style="font-size:9px;color:var(--t2);">Reddit</div></div><div style="background:var(--s3);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:11px;font-weight:700;color:${metaAds?.length?'var(--accent)':'var(--t2)'};">${metaAds?.length?metaAds.length+' ads':'🎯'}</div><div style="font-size:9px;color:var(--t2);">${metaAds?.length?'Meta/IG':'1st Mover'}</div></div><div style="background:var(--s3);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:11px;font-weight:700;color:${redditLite?.length?'#ff6b35':'var(--t2)'};">${redditLite?.length||0} posts</div><div style="font-size:9px;color:var(--t2);">Cust. Voice</div></div><div style="background:var(--s3);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:11px;font-weight:700;color:${S.competitorAds?.length?'var(--accent)':S.metaAdsSearchResult?.first_mover_opportunity?'var(--green)':'var(--t2)'};">${S.competitorAds?.length||0}</div><div style="font-size:9px;color:var(--t2);">${S.metaAdsSearchResult?.first_mover_opportunity?'1st Mover':'Meta Ads'}</div></div></div><div style="margin-top:8px;font-size:11px;color:var(--t2);">Go to Stage 1 → view Audience Segments → Save &amp; Continue → ▶ Run Full Pipeline</div>`,'res-bub');
   await savePipelineRun();
   updateCIDisplay();
   document.getElementById('ar-run-btn').disabled=false;
