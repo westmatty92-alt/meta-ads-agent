@@ -894,6 +894,13 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
               </div>
             </div>
           </div>
+          <!-- Selected segment pill — shown when a segment is active -->
+          <div id="s1-segment-pill" style="display:none;padding:0 22px 8px;">
+            <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(0,212,160,0.12);border:1px solid var(--volt);border-radius:20px;padding:5px 14px;">
+              <span id="s1-segment-pill-text" style="font-size:12px;font-weight:600;color:var(--volt);"></span>
+              <button onclick="clearSelectedSegment()" style="background:none;border:none;color:var(--volt);cursor:pointer;font-size:16px;line-height:1;padding:0;opacity:0.7;" title="Clear segment">×</button>
+            </div>
+          </div>
           <!-- Audience Segments — populated after Auto-Research runs -->
           <div id="s1-segments-container" style="padding:0 22px 18px;display:none;"></div>
 
@@ -949,6 +956,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
           <button class="btn bp" id="btn-audit" onclick="runAudit()">Run Audit</button>
         </div>
       </div>
+      <div id="segment-indicator-s2" style="display:none;background:rgba(0,212,160,0.1);border:1px solid var(--volt);border-radius:20px;padding:3px 12px;font-size:11px;color:var(--volt);margin:0 22px 12px;width:fit-content;"></div>
       <div class="stream" id="stream-audit">
         <div class="amsg"><div class="av av-s">2</div>
           <div class="abub stage-bub"><h3>Audit Stage</h3><p>The agent runs 50 weighted checks and produces a Health Score (0–100). Results feed into all downstream stages automatically.</p></div>
@@ -971,6 +979,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
           <button class="btn bp" id="btn-research" onclick="runResearch()">Run Research</button>
         </div>
       </div>
+      <div id="segment-indicator-s3" style="display:none;background:rgba(0,212,160,0.1);border:1px solid var(--volt);border-radius:20px;padding:3px 12px;font-size:11px;color:var(--volt);margin:0 22px 12px;width:fit-content;"></div>
       <div class="stream" id="stream-research">
         <div class="amsg"><div class="av av-s">3</div>
           <div class="abub stage-bub"><h3>Market Research Stage</h3><p>Maps the competitive landscape, identifies your strongest messaging angles, and surfaces what's working in your market.</p></div>
@@ -994,6 +1003,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
           <button class="btn bp" id="btn-build" onclick="runBuild()">Build Ad</button>
         </div>
       </div>
+      <div id="segment-indicator-s4" style="display:none;background:rgba(0,212,160,0.1);border:1px solid var(--volt);border-radius:20px;padding:3px 12px;font-size:11px;color:var(--volt);margin:0 22px 12px;width:fit-content;"></div>
       <div class="stream" id="stream-build">
         <div class="amsg"><div class="av av-s">4</div>
           <div class="abub stage-bub"><h3>Ad Builder Stage</h3><p>Synthesizes audit findings + market research + customer voice into complete ad copy: hook, primary text, headlines, CTA, strategy.</p></div>
@@ -1016,6 +1026,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
           <button class="btn bp" id="btn-visual" onclick="runVisual()">Generate Visuals</button>
         </div>
       </div>
+      <div id="segment-indicator-s5" style="display:none;background:rgba(0,212,160,0.1);border:1px solid var(--volt);border-radius:20px;padding:3px 12px;font-size:11px;color:var(--volt);margin:0 22px 12px;width:fit-content;"></div>
       <div class="stream" id="stream-visual">
         <div class="amsg"><div class="av av-s">5</div>
           <div class="abub stage-bub"><h3>Visual + Prompt Stage</h3><p>Detailed visual brief (layout, mood, subject, text overlay) + three image generation prompts tuned to your ad copy and audience.</p></div>
@@ -2201,7 +2212,7 @@ async function savePipelineRun() {
     ad_copy:          S.adCopy.substring(0, 5000),
     launch_mode:      S.launchMode,
     stages_done:      [...S.stagesDone],
-    brand_kit:        JSON.stringify({ name:S.brandName, colors:S.brandColors, font:S.brandFont, logoUrl:S.brandLogoUrl, vibe:S.brandVibe }),
+    brand_kit:        JSON.stringify({ name:S.brandName, colors:S.brandColors, font:S.brandFont, logoUrl:S.brandLogoUrl, vibe:S.brandVibe, audienceSegments:S.audienceSegments||[], selectedSegmentName:S.selectedSegment?.name||null }),
     updated_at:       new Date().toISOString()
   };
   await sb.from('pipeline_runs').upsert(payload, { onConflict: 'business_id' });
@@ -2251,6 +2262,26 @@ async function loadPipelineRun() {
     const el_logo = document.getElementById('bk-logo'); if (el_logo) el_logo.value = S.brandLogoUrl;
     const el_vibe = document.getElementById('bk-vibe'); if (el_vibe) el_vibe.value = S.brandVibe;
     renderBkPalette();
+    // Restore audience segments and selected segment
+    if (bk.audienceSegments?.length) {
+      S.audienceSegments = bk.audienceSegments;
+      renderSegmentCards(S.audienceSegments);
+      const btnBuildAll = document.getElementById('btn-build-all');
+      if (btnBuildAll) btnBuildAll.style.display = '';
+      if (bk.selectedSegmentName) {
+        const found = S.audienceSegments.find(s => s.name === bk.selectedSegmentName);
+        if (found) {
+          S.selectedSegment = found;
+          updateSegmentIndicators();
+          const pill = document.getElementById('s1-segment-pill');
+          const pillText = document.getElementById('s1-segment-pill-text');
+          if (pill && pillText) {
+            pillText.textContent = `Building for: ${found.name} — ${found.primary_fear}`;
+            pill.style.display = 'block';
+          }
+        }
+      }
+    }
   } catch(e) {}
   // Restore form fields
   ['product','price','usp','audience','budget','pain','desire','objection','voice','competitors'].forEach(f => {
@@ -2453,9 +2484,10 @@ async function runAudit() {
   divider('audit', S.launchMode ? 'Pre-launch setup checklist' : 'Running 50-check audit');
   const t = thinking('audit', S.launchMode ? 'Building your launch checklist…' : 'Checking all 50 criteria…');
   const perfCtx = S.launchMode ? '' : await getRecentPerfContext();
+  const segmentAuditCtx = S.selectedSegment ? `\n\nTARGET SEGMENT FOR THIS AUDIT:\nWe are building ads for: ${S.selectedSegment.name}\nAge: ${S.selectedSegment.age_range} | Gender: ${S.selectedSegment.gender}\nTheir primary fear: ${S.selectedSegment.primary_fear}\nTheir primary desire: ${S.selectedSegment.primary_desire}\nTheir motivation to buy now: ${S.selectedSegment.motivation}\n\nAUDIT INSTRUCTION: When reviewing ad performance and gaps, focus on how well current ads speak to THIS specific segment. Identify what messaging is missing for this audience. What fears are unaddressed? What desires are untapped?` : '';
   const msg = S.launchMode
-    ? `New advertiser: Product: ${S.product} · Price: ${S.price} · USP: ${S.usp} · Budget: ${S.budget} · Goal: ${S.goal} · Audience: ${S.audience} · Pain: ${S.pain} · Desire: ${S.desire} · Format: ${S.adFormat} · Niche: ${S.niche}`
-    : `${S.adData?'UPLOADED DATA:\n'+S.adData.substring(0,3000):'No CSV uploaded.'}${perfCtx}\nProduct: ${S.product} · Budget: ${S.budget} · Goal: ${S.goal} · Audience: ${S.audience}`;
+    ? `New advertiser: Product: ${S.product} · Price: ${S.price} · USP: ${S.usp} · Budget: ${S.budget} · Goal: ${S.goal} · Audience: ${S.audience} · Pain: ${S.pain} · Desire: ${S.desire} · Format: ${S.adFormat} · Niche: ${S.niche}${segmentAuditCtx}`
+    : `${S.adData?'UPLOADED DATA:\n'+S.adData.substring(0,3000):'No CSV uploaded.'}${perfCtx}\nProduct: ${S.product} · Budget: ${S.budget} · Goal: ${S.goal} · Audience: ${S.audience}${segmentAuditCtx}`;
   S.history.audit = [{role:'user',content:msg}];
   const reply = await ai(S.launchMode?SYS_AUDIT_LAUNCH:SYS_AUDIT, S.history.audit);
   S.history.audit.push({role:'assistant',content:reply});
@@ -2535,7 +2567,7 @@ Produce a DETAILED competitive intelligence report with these exact sections:
 
 Format each section clearly with headers. Be specific to ${mktCity} and the ${mktKw} market.
 Use all data provided — SERP results, Reddit data, competitor listings, review snippets.
-If brand snapshot is available use this tone and angles: ${S.brandSnapshot ? JSON.stringify(S.brandSnapshot) : 'not available'}${competitorContext}${serpContext}`;
+If brand snapshot is available use this tone and angles: ${S.brandSnapshot ? JSON.stringify(S.brandSnapshot) : 'not available'}${competitorContext}${serpContext}${S.selectedSegment ? `\n\nTARGET SEGMENT FOR THIS RESEARCH:\nWe are researching for: ${S.selectedSegment.name}\nPrimary fear: ${S.selectedSegment.primary_fear}\nPrimary desire: ${S.selectedSegment.primary_desire}\nRecommended ad angle: ${S.selectedSegment.ad_angle}\nHook direction: ${S.selectedSegment.hook_direction}\n\nRESEARCH INSTRUCTION: Focus competitor analysis on how they do or do not speak to this specific segment. Find gaps where THIS segment's fears and desires are unaddressed by competitors. Surface opportunities specific to this audience.` : ''}`;
 }
 
 async function runResearch() {
@@ -3464,6 +3496,11 @@ async function runAll() {
   document.getElementById('run-all').disabled=true;
   await saveData();
   await new Promise(r=>setTimeout(r,300));
+  // Auto-select highest-priority segment if none selected
+  if (!S.selectedSegment && S.audienceSegments?.length) {
+    selectSegment(0);
+  }
+  if (S.selectedSegment) console.log('[pipeline] running for segment:', S.selectedSegment.name);
   go('audit'); await runAudit();
   await new Promise(r=>setTimeout(r,300));
   go('research'); await runResearch();
@@ -3471,6 +3508,9 @@ async function runAll() {
   go('build'); await runBuild();
   await new Promise(r=>setTimeout(r,300));
   go('visual'); await runVisual();
+  if (S.selectedSegment) {
+    addMsg('visual','agent',`<div style="background:rgba(0,212,160,0.08);border:1px solid rgba(0,212,160,0.3);border-radius:10px;padding:12px 16px;font-size:12px;color:var(--volt);font-weight:600;">✅ Full pipeline complete for ${escHtml(S.selectedSegment.name)}</div>`,'res-bub');
+  }
   document.getElementById('run-all').disabled=false;
 }
 
@@ -3592,6 +3632,34 @@ function selectSegment(index) {
   document.querySelectorAll('.seg-card').forEach((card, i) => {
     card.style.borderColor = i === index ? 'var(--volt)' : 'var(--border)';
   });
+  updateSegmentIndicators();
+  const pill = document.getElementById('s1-segment-pill');
+  const pillText = document.getElementById('s1-segment-pill-text');
+  if (pill && pillText) {
+    pillText.textContent = `Building for: ${seg.name} — ${seg.primary_fear}`;
+    pill.style.display = 'block';
+  }
+}
+
+function clearSelectedSegment() {
+  S.selectedSegment = null;
+  document.querySelectorAll('.seg-card').forEach(card => {
+    card.style.borderColor = 'var(--border)';
+  });
+  const pill = document.getElementById('s1-segment-pill');
+  if (pill) pill.style.display = 'none';
+  updateSegmentIndicators();
+}
+
+function updateSegmentIndicators() {
+  const name = S.selectedSegment?.name || '';
+  [2,3,4,5].forEach(n => {
+    const el = document.getElementById('segment-indicator-s' + n);
+    if (el) {
+      el.style.display = name ? 'block' : 'none';
+      el.textContent = name ? '🎯 Building for: ' + name : '';
+    }
+  });
 }
 
 async function selectSegmentAndBuild(index) {
@@ -3606,15 +3674,37 @@ async function runBuildAll() {
   if (!segments?.length) { alert('No audience segments yet. Run Auto-Research first.'); return; }
   ['btn-build-all','btn-build-all-s1'].forEach(id => { const b=document.getElementById(id); if(b)b.disabled=true; });
   go('build');
+  // Clear any existing segment tabs
+  document.getElementById('seg-build-tabs')?.remove();
   const generatedAds = [];
   for (let i = 0; i < segments.length; i++) {
-    S.selectedSegment = segments[i];
     selectSegment(i);
+    // Add anchor for tab navigation
+    const stream = document.getElementById('stream-build');
+    if (stream) {
+      const anchor = document.createElement('div');
+      anchor.id = `seg-build-anchor-${i}`;
+      stream.appendChild(anchor);
+    }
+    divider('build', `Building ad ${i + 1} of ${segments.length} — ${segments[i].name}`);
     await runBuild();
-    generatedAds.push({ segment: segments[i], headline: S.adCopy?.match(/## HOOK\s*\n([^\n]+)/)?.[1] || S.adCopy?.split('\n')[0] || '' });
+    generatedAds.push({ segment: segments[i], index: i, headline: S.adCopy?.match(/## HOOK\s*\n([^\n]+)/)?.[1] || S.adCopy?.split('\n')[0] || '' });
   }
+  renderSegmentBuildTabs(generatedAds);
   if (generatedAds.length > 1) await runAdRecommendation(segments, generatedAds);
   ['btn-build-all','btn-build-all-s1'].forEach(id => { const b=document.getElementById(id); if(b)b.disabled=false; });
+}
+
+function renderSegmentBuildTabs(generatedAds) {
+  const stream = document.getElementById('stream-build');
+  if (!stream || !generatedAds?.length) return;
+  document.getElementById('seg-build-tabs')?.remove();
+  const tabBar = document.createElement('div');
+  tabBar.id = 'seg-build-tabs';
+  tabBar.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;padding:12px 0 4px;border-top:1px solid var(--border);margin-top:12px;';
+  tabBar.innerHTML = '<span style="font-size:10px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.08em;align-self:center;white-space:nowrap;">Jump to segment:</span>' +
+    generatedAds.map((ad, i) => `<button onclick="document.getElementById('seg-build-anchor-${i}')?.scrollIntoView({behavior:'smooth',block:'start'})" style="background:rgba(0,212,160,0.1);border:1px solid var(--volt);border-radius:20px;padding:4px 12px;font-size:11px;font-weight:600;color:var(--volt);cursor:pointer;">${escHtml(ad.segment.name)}</button>`).join('');
+  stream.appendChild(tabBar);
 }
 
 // ── Ad Recommendation / Launch Strategy ───────────────────────
