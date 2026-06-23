@@ -2215,7 +2215,9 @@ let S = {
   competitorAds: [],
   metaAdsSearchResult: null,
   adRecommendation: '',
-  audienceIntelligence: null
+  audienceIntelligence: null,
+  lastBuiltAd: null,
+  segmentVisuals: []
 };
 
 async function savePipelineRun() {
@@ -2251,7 +2253,7 @@ async function savePipelineRun() {
 async function loadPipelineRun() {
   if (!currentBizId) return;
   const { data } = await sb.from('pipeline_runs').select('*').eq('business_id', currentBizId).order('updated_at', {ascending:false}).limit(1).single();
-  if (!data) { S = { adData:'', product:'', price:'', usp:'', audience:'', budget:'', goal:'purchase', pain:'', desire:'', objection:'', voice:'', competitors:'', compCopy:'', auditScore:null, auditIssues:'', auditSummary:'', researchSummary:'', adCopy:'', audienceDemographics:'', launchMode:false, adFormat:'single', niche:'fitness', brandName:'', brandColors:[{hex:'#00D4A0',label:'Primary'},{hex:'#00A878',label:'Secondary'}], brandFont:'Modern', brandLogoUrl:'', brandVibe:'', dallePrompt:'', lastImageUrl:'', visualConcept:'', lastAdId:null, adDataSaved:false, history:{ audit:[], research:[], build:[], visual:[] }, stagesDone: new Set(), targetCpa:null, targetRoas:null, currentProductId: null, products: [], brandSnapshot: null, locationLat: null, locationLon: null, brandLogos: {}, brandFonts: { headline: 'Barlow', subheadline: 'Inter', body: 'Inter' }, audienceSegments: [], selectedSegment: null, competitorAds: [], metaAdsSearchResult: null, adRecommendation: '', audienceIntelligence: null }; renderBkPalette(); return; }
+  if (!data) { S = { adData:'', product:'', price:'', usp:'', audience:'', budget:'', goal:'purchase', pain:'', desire:'', objection:'', voice:'', competitors:'', compCopy:'', auditScore:null, auditIssues:'', auditSummary:'', researchSummary:'', adCopy:'', audienceDemographics:'', launchMode:false, adFormat:'single', niche:'fitness', brandName:'', brandColors:[{hex:'#00D4A0',label:'Primary'},{hex:'#00A878',label:'Secondary'}], brandFont:'Modern', brandLogoUrl:'', brandVibe:'', dallePrompt:'', lastImageUrl:'', visualConcept:'', lastAdId:null, adDataSaved:false, history:{ audit:[], research:[], build:[], visual:[] }, stagesDone: new Set(), targetCpa:null, targetRoas:null, currentProductId: null, products: [], brandSnapshot: null, locationLat: null, locationLon: null, brandLogos: {}, brandFonts: { headline: 'Barlow', subheadline: 'Inter', body: 'Inter' }, audienceSegments: [], selectedSegment: null, competitorAds: [], metaAdsSearchResult: null, adRecommendation: '', audienceIntelligence: null, lastBuiltAd: null, segmentVisuals: [] }; renderBkPalette(); return; }
   S.product    = data.product || '';
   S.price      = data.price || '';
   S.usp        = data.usp || '';
@@ -2699,6 +2701,15 @@ Google SERP: ${S.serpIntelligence?.organicResults?.length ? `"${S.serpIntelligen
   const reply=await ai(SYS_BUILD,S.history.build);
   S.history.build.push({role:'assistant',content:reply});
   t.remove(); S.adCopy=reply;
+  // Extract hook and primary text to bind Stage 5 visual to this specific ad
+  const hookMatch = reply.match(/^## HOOK\s*\n([\s\S]*?)(?=\n## |\s*$)/m);
+  const ptMatch = reply.match(/^## PRIMARY TEXT[^\n]*\n([\s\S]*?)(?=\n## |\s*$)/m);
+  S.lastBuiltAd = {
+    hook: hookMatch?.[1]?.trim().split('\n')[0] || reply.split('\n').find(l=>l.trim()) || '',
+    primaryText: ptMatch?.[1]?.trim().slice(0, 300) || reply.slice(0, 300),
+    segment: S.selectedSegment?.name || null,
+    fear: S.selectedSegment?.primary_fear || null
+  };
   const sections=reply.split(/^## /m).filter(Boolean);
   let html='';
   sections.forEach(s=>{const lines=s.split('\n');const title=lines[0].trim();const body=lines.slice(1).join('\n').trim();html+=`<div class="rcard"><div class="rcard-lbl">${title}<button class="cp" onclick="var b=this.closest('.rcard').querySelector('.rcard-body');navigator.clipboard.writeText(b.innerText).then(()=>{this.textContent='Copied!';setTimeout(()=>this.textContent='Copy',1400)})">Copy</button></div><div class="rcard-body">${body}</div></div>`;});
@@ -2724,19 +2735,22 @@ QUALITY: Only suggest visuals that make the target segment say "that's me" or "I
 
 async function runVisual() {
   document.getElementById('btn-visual').disabled=true;
-  divider('visual','Generating visual concept and image prompts');
+  const visSegLabel = S.selectedSegment ? ` — ${S.selectedSegment.name}` : '';
+  divider('visual',`Generating visual concept${visSegLabel}`);
   const t=thinking('visual','Building creative brief and image prompts…');
   const bkColorsStr = S.brandColors.map(c=>`${c.label||'Color'}:${c.hex}`).join(', ');
   const fontCtx = `Headline=${S.brandFonts?.headline||'not set'}, Subheadline=${S.brandFonts?.subheadline||'not set'}, Body=${S.brandFonts?.body||'not set'}`;
   const logoCtx = S.brandLogos?.transparent ? 'YES — available for ad overlay' : 'NO';
   const brandCtx = S.brandName ? `\nBRAND KIT: Name: ${S.brandName} · Colors: [${bkColorsStr}] · Fonts: ${fontCtx}${S.brandVibe?' · Vibe: '+S.brandVibe:''}${S.brandLogos?.primary?' · Primary logo: available':''}\nTransparent logo: ${logoCtx}` : '';
   const segmentVisual = S.selectedSegment ? `\nVISUAL DIRECTION FOR SEGMENT: ${S.selectedSegment.name}\nVisual approach: ${S.selectedSegment.visual_direction||'not specified'}\nFear to address visually: ${S.selectedSegment.primary_fear}\nEmotion to evoke: ${S.selectedSegment.primary_desire}\nThe visual MUST speak to this specific person — generic lifestyle imagery will not work.` : '';
+  // Bind the visual tightly to the exact ad just built
+  const adContext = S.lastBuiltAd ? `\n\nMATCH THIS SPECIFIC AD:\nHook: ${S.lastBuiltAd.hook}\nPrimary text opening: ${S.lastBuiltAd.primaryText}\nSegment: ${S.lastBuiltAd.segment || ''}\nFear addressed: ${S.lastBuiltAd.fear || ''}\nEmotional moment: ${S.selectedSegment?.motivation || ''}\n\nVISUAL INSTRUCTION: The visual concept must be the IMAGE VERSION of this specific ad. The hook should be visually representable in the scene. The fear should be visible in the subject's expression or situation. The emotional moment should be the scene we capture. Do NOT create a generic ad visual — create the visual for THIS specific ad.` : '';
   const msg=`Create visual concept for: AD COPY: ${S.adCopy.substring(0,800)} PRODUCT: ${S.product} · AUDIENCE: ${S.audience} · PAIN: ${S.pain} · GOAL: ${S.goal} MARKET: ${S.researchSummary.substring(0,400)}${brandCtx}
 Visual style direction: ${S.brandSnapshot?.visual_style || 'not specified'}
 Brand voice: ${S.brandSnapshot?.voice || 'not specified'}
 Brand tone: ${S.brandSnapshot?.tone || 'not specified'}
 Target emotion: ${S.brandSnapshot?.target_emotion || 'not specified'}
-Never use in ads: ${S.brandSnapshot?.avoid || 'not specified'}${segmentVisual}`;
+Never use in ads: ${S.brandSnapshot?.avoid || 'not specified'}${segmentVisual}${adContext}`;
   S.history.visual=[{role:'user',content:msg}];
   const reply=await ai(SYS_VISUAL,S.history.visual);
   S.history.visual.push({role:'assistant',content:reply});
@@ -2745,6 +2759,14 @@ Never use in ads: ${S.brandSnapshot?.avoid || 'not specified'}${segmentVisual}`;
   let html='';
   S.dallePrompt=''; S.visualConcept='';
   sections.forEach(s=>{const lines=s.split('\n');const title=lines[0].trim();const body=lines.slice(1).join('\n').trim();const isPrompt=/midjourney|dalle|flux/i.test(title);if(/dalle/i.test(title))S.dallePrompt=body;if(/visual concept/i.test(title))S.visualConcept=body;html+=`<div class="rcard"><div class="rcard-lbl">${isPrompt?'🤖 ':''}${title}<button class="cp" onclick="var b=this.closest('.rcard').querySelector('.rcard-body,.prompt-box');navigator.clipboard.writeText(b.innerText).then(()=>{this.textContent='Copied!';setTimeout(()=>this.textContent='Copy',1400)})">Copy</button></div>${isPrompt?`<div class="prompt-box">${body}</div>`:`<div class="rcard-body">${body}</div>`}</div>`;});
+  // Track per-segment visuals for tabs
+  if (S.selectedSegment) {
+    const existing = S.segmentVisuals.findIndex(v => v.segment === S.selectedSegment.name);
+    const entry = { segment: S.selectedSegment.name, index: S.audienceSegments.findIndex(s=>s.name===S.selectedSegment.name), html, dallePrompt: S.dallePrompt, visualConcept: S.visualConcept };
+    if (existing >= 0) S.segmentVisuals[existing] = entry;
+    else S.segmentVisuals.push(entry);
+    if (S.segmentVisuals.length > 1) renderVisualTabs();
+  }
   addMsg('visual','agent',html||fmt(reply),'res-bub');
   // Show DALL-E generation bar now that we have a prompt
   document.getElementById('dalle-section').style.display = 'flex';
@@ -2753,6 +2775,46 @@ Never use in ads: ${S.brandSnapshot?.avoid || 'not specified'}${segmentVisual}`;
   setSt('Pipeline complete ✓','done');
   document.getElementById('btn-visual').disabled=false;
   await saveToAdLibrary();
+}
+
+function renderVisualTabs() {
+  const stream = document.getElementById('stream-visual');
+  if (!stream || S.segmentVisuals.length < 2) return;
+  document.getElementById('seg-visual-tabs')?.remove();
+  const tabBar = document.createElement('div');
+  tabBar.id = 'seg-visual-tabs';
+  tabBar.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;padding:12px 0 4px;border-top:1px solid var(--border);margin-top:12px;';
+  tabBar.innerHTML = '<span style="font-size:10px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.08em;align-self:center;white-space:nowrap;">Visual for segment:</span>' +
+    S.segmentVisuals.map((v, i) => `<button onclick="showSegmentVisual(${i})" style="background:rgba(0,212,160,0.1);border:1px solid var(--volt);border-radius:20px;padding:4px 12px;font-size:11px;font-weight:600;color:var(--volt);cursor:pointer;">${escHtml(v.segment)}</button>`).join('');
+  stream.insertBefore(tabBar, stream.querySelector('.amsg'));
+}
+
+function showSegmentVisual(tabIndex) {
+  const v = S.segmentVisuals[tabIndex];
+  if (!v) return;
+  const stream = document.getElementById('stream-visual');
+  if (!stream) return;
+  // Preserve the initial stage-bub welcome message and tab bar
+  const first = stream.querySelector('.amsg');
+  const tabs = document.getElementById('seg-visual-tabs');
+  stream.innerHTML = '';
+  if (first) stream.appendChild(first);
+  if (tabs) stream.appendChild(tabs);
+  // Re-render this segment's visual output
+  const msgEl = document.createElement('div');
+  msgEl.className = 'amsg';
+  msgEl.innerHTML = `<div class="av av-a">⚡</div><div class="abub res-bub">${v.html}</div>`;
+  stream.appendChild(msgEl);
+  // Update DALL-E prompt for generation
+  S.dallePrompt = v.dallePrompt || '';
+  S.visualConcept = v.visualConcept || '';
+  document.getElementById('dalle-section').style.display = 'flex';
+  document.getElementById('dalle-section').style.flexDirection = 'column';
+  // Highlight active tab
+  document.querySelectorAll('#seg-visual-tabs button').forEach((btn, i) => {
+    btn.style.background = i === tabIndex ? 'var(--volt)' : 'rgba(0,212,160,0.1)';
+    btn.style.color = i === tabIndex ? '#000' : 'var(--volt)';
+  });
 }
 
 // ── DALL-E 3 image generation ─────────────────────────────────
@@ -3794,6 +3856,9 @@ async function runBuildAll() {
   if (!segments?.length) { alert('No audience segments yet. Run Auto-Research first.'); return; }
   ['btn-build-all','btn-build-all-s1'].forEach(id => { const b=document.getElementById(id); if(b)b.disabled=true; });
   go('build');
+  // Reset visual tracking for fresh Build All run
+  S.segmentVisuals = [];
+  document.getElementById('seg-visual-tabs')?.remove();
   // Clear any existing segment tabs
   document.getElementById('seg-build-tabs')?.remove();
   const generatedAds = [];
