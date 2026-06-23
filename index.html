@@ -327,7 +327,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
 .ar-run-btn{margin:12px 16px;padding:10px;background:linear-gradient(135deg,var(--accent),var(--purple));color:#fff;border:none;border-radius:var(--r);font-size:12px;font-weight:700;cursor:pointer;font-family:var(--sans);transition:opacity .15s;}
 .ar-run-btn:hover{opacity:.88;}
 .ar-run-btn:disabled{opacity:.4;cursor:not-allowed;}
-.ar-stream{flex:1;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:12px;}
+.ar-stream{flex:1;min-height:0;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:12px;}
 .ar-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:var(--t2);text-align:center;padding:40px;}
 .ar-empty .big{font-size:44px;margin-bottom:4px;}
 .ar-empty h3{font-size:14px;font-weight:600;color:var(--text);}
@@ -1331,7 +1331,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
       <button class="btn bp bsm save-keys-btn" onclick="saveKeys()" style="width:100%;">Save All Keys</button>
       <div class="sub-row" style="margin-top:10px;">
         <div class="sub-card"><h4>Reddit</h4><p>parseforge/reddit-posts-scraper</p><div class="note">~$3/1k results</div></div>
-        <div class="sub-card"><h4>Your Actor</h4><p>xanthic_mead/meta-ads-demographics-actor</p><div class="note">Competitor + Discovery</div></div>
+        <div class="sub-card"><h4>Meta/Instagram</h4><p>apify/facebook-ads-scraper</p><div class="note">Keyword-based ads</div></div>
+        <div class="sub-card"><h4>Google SERP</h4><p>apify/google-search-scraper</p><div class="note">Competitor landscape</div></div>
       </div>
     </div>
     <div class="scard" style="grid-column:1/-1;">
@@ -1584,19 +1585,19 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
       <div class="ar-section">
         <h4>Volume</h4>
         <select class="fsel" id="ar-volume">
-          <option value="quick">Quick (10 ads + 30 posts) ~$0.10</option>
-          <option value="standard" selected>Standard (25 ads + 100 posts) ~$0.40</option>
+          <option value="quick" selected>Quick (10 ads + 30 posts) ~$0.10</option>
+          <option value="standard">Standard (25 ads + 100 posts) ~$0.40</option>
           <option value="deep">Deep (50 ads + 300 posts) ~$1.20</option>
         </select>
       </div>
-      <div class="ar-section">
+      <div class="ar-section" style="display:none;">
         <h4>🎯 Audience Demographics</h4>
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-          <input type="checkbox" id="ar-demographics" checked style="accent-color:var(--purple);">
+          <input type="checkbox" id="ar-demographics" style="accent-color:var(--purple);">
           <label for="ar-demographics" style="font-size:12px;cursor:pointer;">Include audience intelligence</label>
         </div>
         <select class="fsel" id="ar-demo-country">
-          <option value="US">🇺🇸 United States</option>
+          <option value="US" selected>🇺🇸 United States</option>
           <option value="GB">🇬🇧 United Kingdom</option>
           <option value="CA">🇨🇦 Canada</option>
           <option value="AU">🇦🇺 Australia</option>
@@ -1609,7 +1610,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
       </div>
       <button class="ar-run-btn" id="ar-run-btn" onclick="runAutoResearch()">🚀 Run Auto-Research</button>
       <div style="padding:0 16px 14px;font-size:10px;color:var(--t2);line-height:1.6;">
-        6 sources in parallel: Meta Ad Library · Reddit · Your Actor · Meta KW · Reddit Lite · Google Maps<br>
+        4 sources: Google SERP · Reddit · Meta/Instagram Ads (KW) · Reddit Voice<br>
         Results auto-fill Stage 1 fields.
         <div id="ar-key-warning" style="color:var(--red);display:none;margin-top:4px;">⚠️ Apify key not set — go to Settings first.</div>
       </div>
@@ -1617,11 +1618,10 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
     <div class="ar-right">
       <div id="ar-empty" class="ar-empty">
         <div class="big">🤖</div>
-        <h3>3-Source Research Engine</h3>
-        <p>Meta Ad Library + Reddit + Your Apify Actor running in parallel. All data injected into the pipeline automatically.</p>
+        <h3>4-Source Research Engine</h3>
+        <p>Google SERP + Reddit + Meta/Instagram Ads (keyword) + Reddit Voice running in parallel. All data injected into the pipeline automatically.</p>
       </div>
       <div class="ar-stream" id="ar-stream" style="display:none;flex-direction:column;gap:12px;"></div>
-      <div id="ar-competitor-results" style="margin-top:16px;"></div>
     </div>
   </div>
 </div>
@@ -2318,7 +2318,7 @@ function go(name) {
       const fullLoc = document.getElementById('bp-location')?.value || '';
       const city = fullLoc.split(',')[0].trim();
       const cityEl = document.getElementById('ar-search-city');
-      if(cityEl && !cityEl.value) cityEl.value = city || 'Ontario Canada';
+      if(cityEl && !cityEl.value) cityEl.value = city || '';
     }
     return;
   }
@@ -3530,7 +3530,7 @@ async function scrapeRedditLanguage(keywords) {
     const hdrs = {'Content-Type':'application/json','Authorization':'Bearer '+apifyKey};
     const startRes = await fetch(`${APIFY_API}/acts/trudax~reddit-scraper-lite/runs`, {
       method:'POST', headers:hdrs,
-      body: JSON.stringify({ searches:keywords.map(k => k + ' Canada'), maxItems:15, sort:'relevance' })
+      body: JSON.stringify({ searches:keywords.map(k => k), maxItems:15, sort:'relevance' })
     });
     if (!startRes.ok) return null;
     const runId = (await startRes.json())?.data?.id;
@@ -3556,8 +3556,8 @@ async function discoverLocalCompetitors() {
     || 'teeth whitening';
   const bpLocation = document.getElementById('bp-location')?.value?.trim() || '';
   const cityOnly = bpLocation.split(',')[0].trim();
-  const searchCity = document.getElementById('ar-search-city')?.value?.trim() || cityOnly || 'Ontario';
-  const searchQuery = googleKeyword + ' ' + searchCity + ' Ontario';
+  const searchCity = document.getElementById('ar-search-city')?.value?.trim() || cityOnly || '';
+  const searchQuery = googleKeyword + (searchCity ? ' ' + searchCity : '');
   if (!apifyKey || !googleKeyword) return [];
   console.log('[googleMaps] searching:', searchQuery);
   try {
@@ -3639,7 +3639,7 @@ async function scrapeGoogleSERP(keyword, city) {
   if (!apifyKey || !keyword) return null;
   const searchCity = city || document.getElementById('ar-search-city')?.value?.trim() || 'Ontario';
   const queries = [
-    keyword + ' ' + searchCity + ' Ontario',
+    keyword + ' ' + searchCity,
     keyword + ' ' + searchCity + ' reviews',
     keyword + ' near ' + searchCity
   ].join('\n');
@@ -3710,7 +3710,7 @@ async function saveSERPIntelligence(keyword, city, intelligence) {
     product_id: S.selectedProductId || null,
     search_keyword: keyword,
     search_city: city,
-    search_query: keyword + ' ' + city + ' Ontario',
+    search_query: keyword + ' ' + city,
     organic_results: intelligence.organicResults,
     paid_ads: intelligence.paidAds,
     people_also_ask: intelligence.peopleAlsoAsk,
@@ -3809,32 +3809,22 @@ async function runAutoResearch() {
       arMsg(`<span class="source-badge sb-meta">Google SERP</span> ⚠️ No results — check Apify key or try different keywords`,'think-bub');
     }
   }
-  const divEl=document.createElement('div');divEl.className='sdiv';divEl.textContent='Running 6 sources in parallel';stream.appendChild(divEl);
-  const t1=compList.length?arThinking(`📘 Meta Ad Library — ${compList.join(', ')}…`):null;
+  const divEl=document.createElement('div');divEl.className='sdiv';divEl.textContent='Running 4 sources in parallel';stream.appendChild(divEl);
   const t2=(keywords||subreddits.length)?arThinking(`🟠 Reddit — "${keywords||subreddits[0]}"…`):null;
-  const t3=(doDemographics&&compList.length)?arThinking(`🟣 Your Actor — ${compList[0]}…`):null;
-  const t4=keywords?arThinking(`🔍 Scraping Meta Ad Library for competitor ads…`):null;
+  const t4=keywords?arThinking(`🔍 Scraping Meta/Instagram Ads for competitor ads…`):null;
   const t5=keywords?arThinking(`💬 Scraping Reddit for customer language…`):null;
-  const t6=googleKeyword&&location?arThinking(`🗺️ Searching Google Maps for '${googleKeyword}' near ${location.split(',')[0]}…`):null;
   const kwList=keywords?keywords.split(',').map(k=>k.trim()).filter(Boolean):[];
   const [compRes,redditRes,demoRes,metaAdsRes,redditLiteRes,localCompRes]=await Promise.allSettled([
-    compList.length?runApifyActor('curious_coder~facebook-ads-library-scraper',{urls:compList.map(c=>({url:`https://www.facebook.com/ads/library/?active_status=active&ad_type=all&country=${country}&q=${encodeURIComponent(c)}&search_type=keyword_unordered`})),maxAds:vol==='quick'?20:vol==='deep'?100:50},apifyKey):Promise.resolve([]),
+    Promise.resolve([]),
     (keywords||subreddits.length)?runApifyActor('parseforge~reddit-posts-scraper',{searches:subreddits.length>0?subreddits.slice(0,3).map(sub=>({subreddit:sub.replace('r/',''),query:keywords||sub.replace('r/',''),sort:'top',time:'year'})):[{query:keywords,sort:'top',time:'year'}],maxItems:vol==='quick'?30:vol==='deep'?300:100,proxyConfiguration:{useApifyProxy:true}},apifyKey):Promise.resolve([]),
-    (doDemographics&&compList.length)?runApifyActor('xanthic_mead~meta-ads-demographics-actor',{mode:'both',pageName:compList[0],niche:S.niche||document.getElementById('ar-keywords').value.trim().split(' ')[0]||'fitness',country,maxResults:vol==='quick'?10:vol==='deep'?50:25,adType:'ALL',status:'ACTIVE',sortBy:'SORT_BY_TOTAL_IMPRESSIONS'},apifyKey):Promise.resolve(null),
+    Promise.resolve(null),
     googleKeyword?scrapeMetaAdLibrary(googleKeyword,location):Promise.resolve([]),
     kwList.length?scrapeRedditLanguage(kwList):Promise.resolve(null),
-    (googleKeyword&&location)?discoverLocalCompetitors():Promise.resolve([])
+    Promise.resolve([])
   ]);
-  if(t1)t1.remove(); if(t2)t2.remove(); if(t3)t3.remove(); if(t4)t4.remove(); if(t5)t5.remove(); if(t6)t6.remove();
+  if(t2)t2.remove(); if(t4)t4.remove(); if(t5)t5.remove();
   const metaAds = metaAdsRes.status==='fulfilled'&&Array.isArray(metaAdsRes.value) ? metaAdsRes.value : null;
   const redditLite = redditLiteRes.status==='fulfilled'&&Array.isArray(redditLiteRes.value) ? redditLiteRes.value : null;
-  // Process Meta Ad Library
-  if(compRes.status==='fulfilled'&&compRes.value?.length){
-    compResults=compRes.value;
-    const adTexts=compResults.slice(0,25).map(ad=>{const body=ad.snapshot?.body?.text||ad.ad_creative_bodies?.[0]||'';const title=ad.snapshot?.title||ad.ad_creative_link_titles?.[0]||'';const cta=ad.snapshot?.cta_text||'';if(!body&&!title)return null;return [title&&`Headline: ${title}`,body&&`Body: ${body}`,cta&&`CTA: ${cta}`].filter(Boolean).join('\n');}).filter(Boolean).join('\n---\n');
-    if(adTexts){document.getElementById('d-compcopy').value=adTexts;S.compCopy=adTexts;}
-    arMsg(`<span class="source-badge sb-meta">Meta Ad Library</span> <strong>${compResults.length} ads</strong> pulled · copy auto-filled`,'res-bub');
-  }else{arMsg(`<span class="source-badge sb-meta">Meta Ad Library</span> ⚠️ ${compRes.reason?.message||'No data'}`,'think-bub');}
   // Process Reddit
   if(redditRes.status==='fulfilled'&&redditRes.value?.length){
     redditResults=redditRes.value;
@@ -3842,16 +3832,6 @@ async function runAutoResearch() {
     if(voices){const existing=document.getElementById('d-voice').value;document.getElementById('d-voice').value=(existing?existing+'\n\n---\n\n':'')+voices;S.voice=document.getElementById('d-voice').value;}
     arMsg(`<span class="source-badge sb-reddit">Reddit</span> <strong>${redditResults.length} posts</strong> · customer language auto-filled`,'res-bub');
   }else{arMsg(`<span class="source-badge sb-reddit">Reddit</span> ⚠️ ${redditRes.reason?.message||'No data'}`,'think-bub');}
-  // Process Your Actor
-  if(demoRes.status==='fulfilled'&&Array.isArray(demoRes.value)&&demoRes.value.length){
-    const items=demoRes.value;
-    const summary=items.find(i=>i._type==='COMPETITOR_SUMMARY');
-    const adRecords=items.filter(i=>i.ad_id);
-    const discovery=items.find(i=>i._type==='AUDIENCE_DISCOVERY');
-    if(adRecords.length>0){const adTexts=adRecords.slice(0,20).map(ad=>{const parts=[];if(ad.headline)parts.push(`Headline: ${ad.headline}`);if(ad.body)parts.push(`Body: ${ad.body}`);if(ad.cta)parts.push(`CTA: ${ad.cta}`);return parts.length?parts.join('\n'):null;}).filter(Boolean).join('\n---\n');if(adTexts&&!document.getElementById('d-compcopy').value){document.getElementById('d-compcopy').value=adTexts;S.compCopy=adTexts;}arMsg(`<span class="source-badge sb-audience">Your Actor</span> <strong>${adRecords.length} ads</strong> from ${compList[0]} · copy auto-filled`,'res-bub');}
-    if(summary){demographicData=summary;const demo=summary.audience_demographics||{};const topAge=demo.age_breakdown?.[0]?.age_band||'Unknown';arMsg(`<span class="source-badge sb-audience">Demographics</span> ${compList[0]}: Top age ${topAge} · ${demo.gender?.primary_target||''}`,'res-bub');}
-    if(discovery){S.researchSummary=`Audience discovery:\nInterests: ${(discovery.interests?.curated_by_niche||[]).map(i=>i.name).join(', ')}\nBudget: ${JSON.stringify(discovery.budget_framework?.recommended_test_budget||{})}`;arMsg(`<span class="source-badge sb-audience">Audience Discovery</span> Full targeting brief ready — interests, behaviors, budgets loaded`,'res-bub');}
-  }else if(doDemographics&&compList.length){arMsg(`<span class="source-badge sb-audience">Your Actor</span> ⚠️ ${demoRes.reason?.message||'No data returned'}`,'think-bub');}
   // Process keyword-based Meta Ad Library
   if(metaAds?.length){
     const adsHtml=metaAds.slice(0,5).map(ad=>`<div style="padding:8px;background:var(--s3);border-radius:6px;margin-bottom:6px;"><div style="font-size:11px;font-weight:700;color:var(--t1);">${escHtml(ad.pageName||'Unknown Brand')}</div><div style="font-size:12px;color:var(--t2);margin-top:2px;">${escHtml(ad.title||ad.body?.slice(0,100)||'—')}</div>${ad.callToAction?`<div style="font-size:10px;color:var(--accent);margin-top:4px;">CTA: ${escHtml(ad.callToAction)}</div>`:''}</div>`).join('');
@@ -3863,26 +3843,13 @@ async function runAutoResearch() {
     const postsHtml=sorted.slice(0,5).map(p=>`<div style="padding:8px;background:var(--s3);border-radius:6px;margin-bottom:6px;"><div style="font-size:12px;color:var(--t1);font-style:italic;">"${escHtml((p.title||p.body||'').slice(0,120))}"</div><div style="font-size:10px;color:var(--t2);margin-top:4px;">▲ ${p.score||0} upvotes</div></div>`).join('');
     arMsg(`<span class="source-badge sb-reddit">Reddit (Customer Voice)</span> <strong>${redditLite.length} posts</strong> analyzed<br><div style="margin-top:8px;">${postsHtml}</div>`,'res-bub');
   }else if(kwList.length){arMsg(`<span class="source-badge sb-reddit">Reddit (Customer Voice)</span> ⚠️ No customer voice data found for these keywords`,'think-bub');}
-  // Process Google Maps local competitors
-  const localCompetitors = localCompRes.status==='fulfilled'&&Array.isArray(localCompRes.value) ? localCompRes.value : [];
-  if(localCompetitors.length){
-    arMsg(`<span class="source-badge sb-audience">Google Maps</span> <strong>${localCompetitors.length} local competitors</strong> found near ${escHtml(location)}`,'res-bub');
-    const compCardsHtml=localCompetitors.slice(0,5).map(c=>`<div style="padding:8px;background:var(--s3);border-radius:6px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:flex-start;"><div><div style="font-size:11px;font-weight:700;color:var(--t1);">${escHtml(c.name||'Unknown')}</div><div style="font-size:11px;color:var(--t2);margin-top:2px;">${escHtml(c.address||'—')}</div>${c.website?`<div style="font-size:10px;color:var(--accent);margin-top:2px;">${escHtml(c.website.substring(0,40))}</div>`:''}</div><div style="text-align:right;flex-shrink:0;margin-left:8px;"><div style="font-size:11px;font-weight:600;color:${(c.rating||0)>=4?'var(--green)':'var(--t2)'};">⭐ ${c.rating||'—'}</div><div style="font-size:10px;color:var(--t2);">${c.reviews||0} reviews</div></div></div>`).join('');
-    arMsg(`<span class="source-badge sb-audience">Local Competitors</span><br><div style="margin-top:8px;">${compCardsHtml}</div>`,'res-bub');
-    const tSave=arThinking('💾 Saving competitor data to client profile…');
-    await saveCompetitorIntelligence(localCompetitors, metaAds||[]);
-    tSave.remove();
-    arMsg(`<span class="source-badge sb-collector">✓ ${localCompetitors.length} competitors saved to client profile</span>`,'res-bub');
-  }else if(keywords&&location){arMsg(`<span class="source-badge sb-audience">Google Maps</span> ⚠️ No local competitors found — try different keywords or add a location in Base Profile`,'think-bub');}
   // Claude synthesis
-  const hasData=compResults.length>0||redditResults.length>0||Object.keys(demographicData).length>0||metaAds?.length>0||redditLite?.length>0||localCompetitors.length>0||(serpIntelligence?.organicResults?.length>0);
+  const hasData=redditResults.length>0||metaAds?.length>0||redditLite?.length>0||(serpIntelligence?.organicResults?.length>0);
   if(hasData){
     const tSynth=arThinking('Synthesizing all research into audience brief…');
-    const actorAds=demoRes.status==='fulfilled'&&Array.isArray(demoRes.value)?demoRes.value.filter(i=>i.ad_id):[];
-    const actorCopy=actorAds.slice(0,10).map(a=>[a.headline&&`Headline: ${a.headline}`,a.body&&`Body: ${a.body}`].filter(Boolean).join('\n')).filter(Boolean).join('\n---\n');
     const locationCtx=S.locationLat&&S.locationLon?`LOCATION: ${document.getElementById('bp-location')?.value||'not specified'} (${S.locationLat},${S.locationLon})`:'';
-    const metaAdsContext=metaAds?.length?'COMPETITOR ADS FROM META AD LIBRARY:\n'+metaAds.slice(0,8).map(ad=>`- Brand: ${ad.pageName||'Unknown'} | Headline: ${ad.title||ad.body?.slice(0,80)||'N/A'} | CTA: ${ad.callToAction||'N/A'}`).join('\n'):'No competitor ads found in Meta Ad Library for this market.';
-    const redditContext=redditLite?.length?'REAL CUSTOMER LANGUAGE FROM REDDIT:\n'+redditLite.slice(0,10).map(p=>`- "${p.title||p.body?.slice(0,120)||'N/A'}" (${p.score||0} upvotes)`).join('\n'):'No Reddit customer voice data available.';
+    const metaAdsContext=metaAds?.length?'COMPETITOR ADS FROM META/INSTAGRAM:\n'+metaAds.slice(0,5).map(ad=>`- Brand: ${ad.pageName||'Unknown'} | Headline: ${ad.title||ad.body?.slice(0,60)||'N/A'} | CTA: ${ad.callToAction||'N/A'}`).join('\n'):'No competitor ads found in Meta Ad Library for this market.';
+    const redditContext=redditLite?.length?'REAL CUSTOMER LANGUAGE FROM REDDIT:\n'+redditLite.slice(0,8).map(p=>`- "${p.title||p.body?.slice(0,100)||'N/A'}" (${p.score||0} upvotes)`).join('\n'):'No Reddit customer voice data available.';
     const serpCtx=(S.serpIntelligence?.organicResults?.length||serpIntelligence?.organicResults?.length)
       ?`GOOGLE SEARCH INTELLIGENCE FOR "${S.serpIntelligence?.keyword||googleKeyword}" IN ${S.serpIntelligence?.city||searchCity}:
 
@@ -3912,7 +3879,7 @@ ${(S.competitorIntelligence||[]).slice(0,8).map(c=>`- ${c.competitor_name||c.nam
      Has Meta Ads: ${c.has_active_meta_ads?'YES — '+c.meta_ad_count+' active ads':'NOT DETECTED'}
      Facebook: ${c.facebook_url||c.facebook||'Not found'}`).join('\n\n')||'No Google Maps data yet'}`
       :'';
-    const synthPrompt=`Synthesize into audience intelligence brief. COMPETITOR: ${compList.join(', ')} PRODUCT: ${S.product||'not specified'} ${locationCtx} AD COPY (${compResults.length+actorAds.length} ads): ${(S.compCopy||actorCopy||'none').substring(0,2000)} REDDIT (${redditResults.length} posts): ${S.voice?S.voice.substring(0,1500):'none'} ${metaAdsContext} ${redditContext} ${serpCtx} Be specific and thorough. Use all data provided. Structure your response with clear section headers. ${locationCtx?'Tailor all insights for the specified local market.':''}`;
+    const synthPrompt=`Synthesize into audience intelligence brief. COMPETITOR: ${compList.join(', ')||'not specified'} PRODUCT: ${S.product||'not specified'} ${locationCtx} REDDIT (${redditResults.length} posts): ${S.voice?S.voice.substring(0,800):'none'} ${metaAdsContext} ${redditContext} ${serpCtx} Be specific and actionable. Structure with clear section headers: Pain Points, Customer Language, Competitor Landscape, Audience Targeting. ${locationCtx?'Tailor all insights for the specified local market.':''}`;
     const synthMsg=await ai(getSYSResearch(),[{role:'user',content:synthPrompt}]);
     tSynth.remove(); S.researchSummary=synthMsg;
     const painMatch=synthMsg.match(/PAIN POINTS[:\s]+([^\n]+)/i);
@@ -3920,9 +3887,7 @@ ${(S.competitorIntelligence||[]).slice(0,8).map(c=>`- ${c.competitor_name||c.nam
     arMsg(`<span class="source-badge sb-collector">Research Brief</span><br><br>${fmt(synthMsg)}`,'res-bub');
   }
   renderCompetitorResults(S.serpIntelligence, S.competitorIntelligence);
-  const hasActor=demoRes.status==='fulfilled'&&Array.isArray(demoRes.value)&&demoRes.value.length>0;
-  const actorAdCount=hasActor?demoRes.value.filter(i=>i.ad_id).length:0;
-  arMsg(`<strong>✅ Auto-Research Complete</strong><div style="margin-top:10px;display:grid;grid-template-columns:repeat(7,1fr);gap:6px;"><div style="background:var(--s3);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:11px;font-weight:700;color:${compResults.length?'var(--accent)':'var(--t2)'};">${compResults.length} ads</div><div style="font-size:9px;color:var(--t2);">Ad Library</div></div><div style="background:var(--s3);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:11px;font-weight:700;color:${redditResults.length?'#ff6b35':'var(--t2)'};">${redditResults.length} posts</div><div style="font-size:9px;color:var(--t2);">Reddit</div></div><div style="background:var(--s3);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:11px;font-weight:700;color:${hasActor?'var(--purple)':'var(--t2)'};">${actorAdCount>0?actorAdCount+' ads':hasActor?'✓':'—'}</div><div style="font-size:9px;color:var(--t2);">Your Actor</div></div><div style="background:var(--s3);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:11px;font-weight:700;color:${metaAds?.length?'var(--accent)':'var(--t2)'};">${metaAds?.length?metaAds.length+' ads':'🎯'}</div><div style="font-size:9px;color:var(--t2);">${metaAds?.length?'Meta KW':'1st Mover'}</div></div><div style="background:var(--s3);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:11px;font-weight:700;color:${redditLite?.length?'#ff6b35':'var(--t2)'};">${redditLite?.length||0} posts</div><div style="font-size:9px;color:var(--t2);">Cust. Voice</div></div><div style="background:var(--s3);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:11px;font-weight:700;color:${localCompetitors.length?'var(--green)':'var(--t2)'};">${localCompetitors.length||0}</div><div style="font-size:9px;color:var(--t2);">Local Comps</div></div><div style="background:var(--s3);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:11px;font-weight:700;color:${serpIntelligence?.organicResults?.length?'var(--accent)':'var(--t2)'};">${serpIntelligence?.organicResults?.length||0}</div><div style="font-size:9px;color:var(--t2);">SERP</div></div></div><div style="margin-top:8px;font-size:11px;color:var(--t2);">Go to Stage 1 → Save & Continue → ▶ Run Full Pipeline</div>`,'res-bub');
+  arMsg(`<strong>✅ Auto-Research Complete</strong><div style="margin-top:10px;display:grid;grid-template-columns:repeat(4,1fr);gap:6px;"><div style="background:var(--s3);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:11px;font-weight:700;color:${serpIntelligence?.organicResults?.length?'var(--accent)':'var(--t2)'};">${serpIntelligence?.organicResults?.length||0}</div><div style="font-size:9px;color:var(--t2);">SERP</div></div><div style="background:var(--s3);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:11px;font-weight:700;color:${redditResults.length?'#ff6b35':'var(--t2)'};">${redditResults.length} posts</div><div style="font-size:9px;color:var(--t2);">Reddit</div></div><div style="background:var(--s3);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:11px;font-weight:700;color:${metaAds?.length?'var(--accent)':'var(--t2)'};">${metaAds?.length?metaAds.length+' ads':'🎯'}</div><div style="font-size:9px;color:var(--t2);">${metaAds?.length?'Meta/IG':'1st Mover'}</div></div><div style="background:var(--s3);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:11px;font-weight:700;color:${redditLite?.length?'#ff6b35':'var(--t2)'};">${redditLite?.length||0} posts</div><div style="font-size:9px;color:var(--t2);">Cust. Voice</div></div></div><div style="margin-top:8px;font-size:11px;color:var(--t2);">Go to Stage 1 → Save & Continue → ▶ Run Full Pipeline</div>`,'res-bub');
   await savePipelineRun();
   updateCIDisplay();
   document.getElementById('ar-run-btn').disabled=false;
@@ -3930,13 +3895,10 @@ ${(S.competitorIntelligence||[]).slice(0,8).map(c=>`- ${c.competitor_name||c.nam
 }
 
 function renderCompetitorResults(serpIntel, competitorData) {
-  const container = document.getElementById('ar-competitor-results');
-  if (!container) return;
   const organicResults = serpIntel?.organicResults || [];
   const paidAds = serpIntel?.paidAds || [];
   const competitors = competitorData || [];
   if (!organicResults.length && !competitors.length) return;
-
   let html = '<div class="bi-section">';
   html += '<div class="bi-section-title">🏪 LOCAL COMPETITORS FOUND</div>';
   html += '<div style="display:grid;gap:10px;margin-top:12px;">';
@@ -3990,7 +3952,7 @@ function renderCompetitorResults(serpIntel, competitorData) {
   }
 
   html += '</div>';
-  container.innerHTML = html;
+  arMsg(html, 'res-bub');
 }
 
 // ── Stage 1 Intelligence Hub ──────────────────────────────────
