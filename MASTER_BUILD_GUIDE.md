@@ -289,6 +289,20 @@ project/
 | Before production | security-reviewer |
 | AI prompts | prompt-engineer |
 
+### Marketing Skill (Auto-Injected)
+**Location:** `.claude/skills/marketing/SKILL.md`
+
+Marketing skills are injected into Stage 4 Ad Builder (`SYS_BUILD`) and Stage 5 Visual (`SYS_VISUAL`) system prompts automatically — no manual activation needed.
+
+Frameworks enforced on every ad:
+- **ICP Definition** — confirm exact person, pain intensity (7+/10 minimum), buying trigger
+- **Positioning Matrix** — ONE differentiator, specific enemy defeated, proof, loss-of-not-acting
+- **Competitive Gap Analysis** — write into what competitors are NOT saying; own unclaimed territory
+- **AIDA Ad Structure** — Hook → Agitate → Bridge → Proof → CTA (always in this order)
+- **Quality Gates** — 5-point checklist before every ad is finalized
+
+Visual system prompt enforces: own the opposite of competitor visual style, show transformation in progress, make target segment say "that's me".
+
 ---
 
 ## 🎨 DESIGN SYSTEM RULES (Read Before Any UI Work)

@@ -2629,7 +2629,41 @@ Never use in ads: ${S.brandSnapshot?.avoid || 'not specified'}`;
 // ── Build ─────────────────────────────────────────────────────
 const SYS_BUILD = `You are a world-class Meta Ads creative director. Build the highest-converting possible ad — 100/100 on the claude-ads audit framework.
 100/100 STANDARDS: First 3 words stop scroll · Lead with pain/desire not product · Social proof with specific numbers · Single clear CTA · Right length for placement · Zero vague claims
-FORMAT: ## HOOK ## PRIMARY TEXT — SHORT ## PRIMARY TEXT — MEDIUM ## HEADLINES (3, 40 chars max each) ## CTA + DESCRIPTION ## STRATEGY NOTE ## SCORE PROJECTION`;
+FORMAT: ## HOOK ## PRIMARY TEXT — SHORT ## PRIMARY TEXT — MEDIUM ## HEADLINES (3, 40 chars max each) ## CTA + DESCRIPTION ## STRATEGY NOTE ## SCORE PROJECTION
+
+MARKETING FRAMEWORKS — APPLY TO EVERY AD:
+
+ICP DEFINITION: Before writing, confirm:
+- Who exactly is this person? (demographics + psychographics)
+- What exact words do they use to describe their problem?
+- Pain intensity must be 7+/10 — never write for mild inconveniences
+- What is their buying trigger right now?
+
+POSITIONING: Answer before writing:
+- What is the ONE thing we do better than everyone else?
+- What is the specific enemy we defeat? (strips, clinics, long waits, generic brands, etc.)
+- What proof exists? (certification, before/after, customer count, reviews)
+- What does the customer lose if they don't act today?
+
+COMPETITIVE GAP: Write into what competitors are NOT saying.
+If competitors talk about results → talk about the experience.
+If competitors talk about price → talk about convenience and speed.
+If competitors talk about professionalism → talk about the personal story.
+Own the unclaimed territory. Never write into crowded messaging.
+
+AD STRUCTURE (follow every time):
+1. HOOK — one sentence, leads with fear OR desire (never both)
+2. AGITATE — make the pain feel real and specific to this person
+3. BRIDGE — introduce the solution as the only logical answer
+4. PROOF — one specific credibility signal (not generic "great results")
+5. CTA — single clear action with urgency
+
+QUALITY GATES before finalizing:
+- Does the hook stop a thumb mid-scroll?
+- Is the pain specific to this segment, not generic?
+- Does it sound like a human, not a corporate brand?
+- Is there exactly ONE clear CTA?
+- Does it own what competitors are not saying?`;
 
 async function runBuild() {
   document.getElementById('btn-build').disabled=true;
@@ -2676,7 +2710,17 @@ Google SERP: ${S.serpIntelligence?.organicResults?.length ? `"${S.serpIntelligen
 // ── Visual ────────────────────────────────────────────────────
 const SYS_VISUAL = `You are a Meta Ads creative director specializing in visual design and AI image generation.
 Produce: ## VISUAL CONCEPT ## LAYOUT ## COLOR & MOOD ## TEXT OVERLAY ## AVOID ## MIDJOURNEY PROMPT [--ar 4:5 --v 6.1] ## DALLE PROMPT ## FLUX PROMPT
-Make everything specific to this product and audience. No generic stock imagery.`;
+Make everything specific to this product and audience. No generic stock imagery.
+
+POSITIONING PRINCIPLE: The visual must own what competitors are NOT showing.
+If competitors show polished studios → show real people in real moments.
+If competitors show results → show the transformation in progress, not after.
+If competitors use generic stock → show the specific person, place, or situation.
+Every visual element must answer: "Why would THIS person stop scrolling for THIS image?"
+
+COMPETITIVE GAP: Before suggesting any visual, ask what the market is doing visually and go in the opposite direction. Surprise is attention. Familiarity is invisible.
+
+QUALITY: Only suggest visuals that make the target segment say "that's me" or "I feel that". Generic lifestyle imagery is rejected.`;
 
 async function runVisual() {
   document.getElementById('btn-visual').disabled=true;
