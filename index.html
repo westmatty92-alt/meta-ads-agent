@@ -1165,20 +1165,36 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
           <div class="abub stage-bub"><h3>Visual + Prompt Stage</h3><p>Detailed visual brief (layout, mood, subject, text overlay) + three image generation prompts tuned to your ad copy and audience.</p></div>
         </div>
       </div>
-      <!-- DALL-E 3 generation bar — shown after visual prompts are ready -->
-      <div class="dalle-bar" id="dalle-section" style="display:none;">
-        <div class="dalle-bar-row">
-          <button class="btn bp" id="btn-gen-image" onclick="generateAdImage()">🖼 Generate Ad Image with DALL-E 3</button>
-          <span style="font-size:11px;color:var(--t2);">Uses the DALL-E prompt above + your brand colors &amp; vibe</span>
-        </div>
-        <div id="dalle-output" style="display:none;">
-          <div class="dalle-img-wrap"><img id="dalle-img" src="" alt="Generated ad image"></div>
-          <div class="dalle-actions">
-            <a id="dalle-dl" href="" target="_blank" rel="noopener"><button class="btn bg">⬇ Open / Download</button></a>
-            <button class="btn bg" onclick="generateAdImage()">🔄 Regenerate</button>
+      <!-- Image generation section — shown after visual prompts are ready -->
+      <div id="dalle-section" style="display:none;padding:16px 22px;border-top:1px solid var(--border);background:var(--bg-surface);">
+        <div style="font-size:12px;font-weight:700;color:var(--t1);margin-bottom:12px;">🎨 Generate Ad Images</div>
+        <div style="margin-bottom:12px;">
+          <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Select Size</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            <button onclick="selectImageSize('4:5')" id="size-4-5"
+              style="background:rgba(0,212,160,0.15);border:1px solid var(--volt);border-radius:6px;padding:5px 10px;font-size:11px;color:var(--volt);cursor:pointer;">📱 Feed (4:5)</button>
+            <button onclick="selectImageSize('9:16')" id="size-9-16"
+              style="background:var(--bg-elevated);border:1px solid var(--border);border-radius:6px;padding:5px 10px;font-size:11px;color:var(--t2);cursor:pointer;">📲 Stories (9:16)</button>
+            <button onclick="selectImageSize('1:1')" id="size-1-1"
+              style="background:var(--bg-elevated);border:1px solid var(--border);border-radius:6px;padding:5px 10px;font-size:11px;color:var(--t2);cursor:pointer;">⬜ Square (1:1)</button>
           </div>
-          <div style="font-size:10px;color:var(--t2);margin-top:4px;">Right-click → Save Image As to download. URL expires in ~1 hour.</div>
         </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+          <button onclick="generateAdImage('dalle')"
+            style="background:var(--volt);color:#000;border:none;border-radius:8px;padding:10px;font-size:12px;font-weight:700;cursor:pointer;">
+            🎨 Generate with DALL-E 3<div style="font-size:10px;font-weight:400;margin-top:2px;opacity:0.7;">~$0.04-0.08 per image</div>
+          </button>
+          <button onclick="generateAdImage('flux')"
+            style="background:transparent;border:1px solid var(--volt);color:var(--volt);border-radius:8px;padding:10px;font-size:12px;font-weight:700;cursor:pointer;">
+            ⚡ Generate with Flux<div style="font-size:10px;font-weight:400;margin-top:2px;opacity:0.7;">~$0.003 per image</div>
+          </button>
+        </div>
+        <button onclick="generateAllSizes('dalle')"
+          style="width:100%;margin-bottom:12px;background:transparent;border:1px solid var(--border);border-radius:8px;padding:8px;font-size:11px;color:var(--t2);cursor:pointer;">
+          📐 Generate All 3 Sizes with DALL-E (~$0.15 total)
+        </button>
+        <div id="image-gen-status" style="display:none;font-size:12px;color:var(--t2);margin-bottom:10px;"></div>
+        <div id="generated-images-container" style="display:flex;flex-direction:column;gap:12px;"></div>
       </div>
       <div class="irow">
         <div class="iwrap"><textarea id="q-visual" placeholder="Request a different style, format, or mood…" rows="1"
@@ -1649,6 +1665,28 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
       </div>
       <button class="btn bp bsm save-keys-btn" onclick="saveKeys()" style="width:100%;">Save Keys</button>
     </div>
+    <div class="scard">
+      <h3>🔮 Replicate API</h3>
+      <p>Get at <strong>replicate.com → Account → API Tokens</strong></p>
+      <div style="display:flex;gap:8px;margin-bottom:8px;">
+        <input type="password" id="key-replicate" class="key-input" placeholder="r8_xxxxxxxxxxxxxxxxxxxx" style="flex:1;">
+        <span class="key-status ks-no" id="kstat-replicate">—</span>
+        <button onclick="toggleKeyVisibility('key-replicate')" class="btn bsm" style="border:1px solid var(--border);background:transparent;color:var(--t2);padding:0 8px;">👁</button>
+      </div>
+      <div style="font-size:11px;color:var(--t3);margin-bottom:8px;">For Flux image generation via Replicate.com — ~$0.003 per image</div>
+      <button class="btn bp bsm save-keys-btn" onclick="saveKeys()" style="width:100%;">Save Keys</button>
+    </div>
+    <div class="scard">
+      <h3>🐻 Bannerbear API</h3>
+      <p>Get at <strong>app.bannerbear.com → API</strong></p>
+      <div style="display:flex;gap:8px;margin-bottom:8px;">
+        <input type="password" id="key-bannerbear" class="key-input" placeholder="bb_xxxxxxxxxxxxxxxxxxxx" style="flex:1;">
+        <span class="key-status ks-no" id="kstat-bannerbear">—</span>
+        <button onclick="toggleKeyVisibility('key-bannerbear')" class="btn bsm" style="border:1px solid var(--border);background:transparent;color:var(--t2);padding:0 8px;">👁</button>
+      </div>
+      <div style="font-size:11px;color:var(--t3);margin-bottom:4px;">For branded template overlays — Phase 3 Design Studio <span style="background:rgba(245,200,66,0.15);color:var(--yellow);border-radius:4px;padding:1px 6px;font-size:10px;margin-left:4px;">Phase 3</span></div>
+      <button class="btn bp bsm save-keys-btn" onclick="saveKeys()" style="width:100%;margin-top:8px;">Save Keys</button>
+    </div>
     <div class="scard" style="grid-column:1/-1;">
       <h3>🔶 Apify API</h3>
       <p>Get at <strong>console.apify.com → Integrations</strong></p>
@@ -2080,6 +2118,12 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
 // ALTER TABLE generated_ads ADD COLUMN IF NOT EXISTS research_date timestamptz;
 // ALTER TABLE generated_ads ADD COLUMN IF NOT EXISTS segment_name text;
 // ALTER TABLE generated_ads ADD COLUMN IF NOT EXISTS chat_history jsonb DEFAULT '[]'::jsonb;
+// ALTER TABLE generated_ads ADD COLUMN IF NOT EXISTS image_url text;
+// ALTER TABLE generated_ads ADD COLUMN IF NOT EXISTS visual_prompt text;
+// ALTER TABLE generated_ads ADD COLUMN IF NOT EXISTS image_urls jsonb DEFAULT '{}'::jsonb;
+// (image_urls stores all 3 sizes: {"4:5": "url", "9:16": "url", "1:1": "url"})
+// ALTER TABLE user_keys ADD COLUMN IF NOT EXISTS replicate_key text;
+// ALTER TABLE user_keys ADD COLUMN IF NOT EXISTS bannerbear_key text;
 //
 // CREATE TABLE IF NOT EXISTS base_profiles (
 //   id             uuid default gen_random_uuid() primary key,
@@ -2251,7 +2295,7 @@ function readBkColors() {
 }
 
 // ── Keys (stored in Supabase) ─────────────────────────────────
-let KEYS = { claude:'', openai:'', apify:'', ghl:'', ghlLocation:'', provider:'claude' };
+let KEYS = { claude:'', openai:'', apify:'', ghl:'', ghlLocation:'', provider:'claude', replicate:'', bannerbear:'' };
 let dashSortCol = 'spend';
 let dashSortDir = -1;
 let dashSuggestions = [];
@@ -2275,8 +2319,10 @@ function populateKeyInputs() {
   set('key-claude',  KEYS.claude);
   set('key-openai',  KEYS.openai);
   set('key-apify',   KEYS.apify);
-  set('key-ghl',     KEYS.ghl);
-  set('key-ghl-loc', KEYS.ghlLocation);
+  set('key-ghl',        KEYS.ghl);
+  set('key-ghl-loc',    KEYS.ghlLocation);
+  set('key-replicate',  KEYS.replicate);
+  set('key-bannerbear', KEYS.bannerbear);
 }
 
 function _setKeysLoadStatus(state, msg) {
@@ -2338,6 +2384,8 @@ async function loadKeys() {
     KEYS.ghl         = data.ghl_key         || '';
     KEYS.ghlLocation = data.ghl_location_id || '';
     KEYS.provider    = data.ai_provider     || 'claude';
+    KEYS.replicate   = data.replicate_key   || '';
+    KEYS.bannerbear  = data.bannerbear_key  || '';
     updateAllKeyStatuses();
     setProvider(KEYS.provider, document.getElementById('provider-' + KEYS.provider));
     populateKeyInputs();
@@ -2351,8 +2399,10 @@ async function saveKeys() {
   KEYS.claude      = (document.getElementById('key-claude')?.value  || '').trim();
   KEYS.openai      = (document.getElementById('key-openai')?.value  || '').trim();
   KEYS.apify       = (document.getElementById('key-apify')?.value   || '').trim();
-  KEYS.ghl         = (document.getElementById('key-ghl')?.value     || '').trim();
-  KEYS.ghlLocation = (document.getElementById('key-ghl-loc')?.value || '').trim();
+  KEYS.ghl         = (document.getElementById('key-ghl')?.value        || '').trim();
+  KEYS.ghlLocation = (document.getElementById('key-ghl-loc')?.value    || '').trim();
+  KEYS.replicate   = (document.getElementById('key-replicate')?.value  || '').trim();
+  KEYS.bannerbear  = (document.getElementById('key-bannerbear')?.value || '').trim();
 
   const { error } = await sb.from('user_keys').upsert({
     user_id:         currentUser.id,
@@ -2362,6 +2412,8 @@ async function saveKeys() {
     ghl_key:         KEYS.ghl,
     ghl_location_id: KEYS.ghlLocation,
     ai_provider:     KEYS.provider,
+    replicate_key:   KEYS.replicate,
+    bannerbear_key:  KEYS.bannerbear,
     updated_at:      new Date().toISOString()
   }, { onConflict: 'user_id' });
 
@@ -2388,8 +2440,10 @@ function updateAllKeyStatuses() {
   setKStat('claude',  KEYS.claude      ? 'ok' : 'no');
   setKStat('openai',  KEYS.openai      ? 'ok' : 'no');
   setKStat('apify',   KEYS.apify       ? 'ok' : 'no');
-  setKStat('ghl',     KEYS.ghl         ? 'ok' : 'no');
-  setKStat('ghl-loc', KEYS.ghlLocation ? 'ok' : 'no');
+  setKStat('ghl',        KEYS.ghl         ? 'ok' : 'no');
+  setKStat('ghl-loc',    KEYS.ghlLocation ? 'ok' : 'no');
+  setKStat('replicate',  KEYS.replicate   ? 'ok' : 'no');
+  setKStat('bannerbear', KEYS.bannerbear  ? 'ok' : 'no');
   const el = document.getElementById('ghl-status');
   if (el) {
     el.textContent = KEYS.ghl ? '● Not Tested' : '● Not Connected';
@@ -2402,6 +2456,12 @@ function setKStat(name, state) {
   if (!el) return;
   if (state==='ok')  { el.textContent='✓ Saved'; el.className='key-status ks-ok'; }
   else               { el.textContent='Not set'; el.className='key-status ks-no'; }
+}
+
+function toggleKeyVisibility(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.type = el.type === 'password' ? 'text' : 'password';
 }
 
 async function testGHLConnection(key) {
@@ -3328,9 +3388,17 @@ Never use in ads: ${S.brandSnapshot?.avoid || 'not specified'}${segmentVisual}${
     if (S.segmentVisuals.length > 1) renderVisualTabs();
   }
   addMsg('visual','agent',html||fmt(reply),'res-bub');
-  // Show DALL-E generation bar now that we have a prompt
-  document.getElementById('dalle-section').style.display = 'flex';
-  document.getElementById('dalle-section').style.flexDirection = 'column';
+  // Extract prompts and show image generation section
+  S.lastVisualOutput = reply;
+  S.lastVisualPrompts = extractVisualPrompts(reply);
+  S.selectedImageSize = S.selectedImageSize || '4:5';
+  const _dsEl = document.getElementById('dalle-section');
+  if (_dsEl) _dsEl.style.display = 'block';
+  const _imgStatus = document.getElementById('image-gen-status');
+  if (_imgStatus) { _imgStatus.style.display = 'none'; _imgStatus.innerHTML = ''; }
+  const _imgContainer = document.getElementById('generated-images-container');
+  if (_imgContainer) _imgContainer.innerHTML = '';
+  selectImageSize(S.selectedImageSize);
   markDone('visual','✓'); await savePipelineRun();
   setSt('Pipeline complete ✓','done');
   document.getElementById('btn-visual').disabled=false;
@@ -3368,8 +3436,10 @@ function showSegmentVisual(tabIndex) {
   // Update DALL-E prompt for generation
   S.dallePrompt = v.dallePrompt || '';
   S.visualConcept = v.visualConcept || '';
-  document.getElementById('dalle-section').style.display = 'flex';
-  document.getElementById('dalle-section').style.flexDirection = 'column';
+  S.lastVisualPrompts = { dalle: v.dallePrompt || null, flux: v.dallePrompt || null, midjourney: null };
+  const _dsSegEl = document.getElementById('dalle-section');
+  if (_dsSegEl) _dsSegEl.style.display = 'block';
+  selectImageSize(S.selectedImageSize || '4:5');
   // Highlight active tab
   document.querySelectorAll('#seg-visual-tabs button').forEach((btn, i) => {
     btn.style.background = i === tabIndex ? 'var(--volt)' : 'rgba(0,212,160,0.1)';
@@ -3377,59 +3447,202 @@ function showSegmentVisual(tabIndex) {
   });
 }
 
-// ── DALL-E 3 image generation ─────────────────────────────────
-async function generateAdImage() {
-  if (!KEYS.openai) { alert('OpenAI key required for DALL-E 3 — add it in Settings ⚙️.'); return; }
-  const btn = document.getElementById('btn-gen-image');
-  btn.disabled = true; btn.textContent = '⏳ Generating…';
-  setSt('Generating image…', 'run');
+// ── Image generation ─────────────────────────────────────────
 
-  // Build enhanced prompt: base DALL-E prompt + brand context
-  let prompt = S.dallePrompt || `Professional Meta ad creative for ${S.product}, ${S.audience}, clean composition, high quality`;
-  if (S.brandColors && S.brandColors.length)
-    prompt += `. Brand color palette: ${S.brandColors.map(c=>`${c.label||'Color'} ${c.hex}`).join(', ')}`;
-  if (S.brandVibe)
-    prompt += `. Brand vibe: ${S.brandVibe}`;
-  if (S.brandFonts?.headline)
-    prompt += `. Headline font: ${S.brandFonts.headline}`;
-  if (S.brandLogos?.transparent)
-    prompt += '. Brand has transparent logo available for overlay';
-  prompt += '. Suitable for Facebook/Instagram ad, high production value, no visible watermarks.';
+function extractVisualPrompts(text) {
+  const dalle = text.match(/(?:DALL-E PROMPT|DALL·E PROMPT)[^`]*```([^`]+)```/i)?.[1]?.trim()
+    || text.match(/(?:DALL-E|DALL·E)[:\s]+([^\n#]{100,})/i)?.[1]?.trim();
+  const flux = text.match(/(?:FLUX PROMPT)[^`]*```([^`]+)```/i)?.[1]?.trim()
+    || text.match(/FLUX[:\s]+([^\n#]{100,})/i)?.[1]?.trim();
+  const midjourney = text.match(/(?:MIDJOURNEY PROMPT)[^`]*```([^`]+)```/i)?.[1]?.trim();
+  return { dalle, flux, midjourney };
+}
 
+function selectImageSize(size) {
+  S.selectedImageSize = size;
+  ['4:5', '9:16', '1:1'].forEach(s => {
+    const btn = document.getElementById('size-' + s.replace(':', '-'));
+    if (!btn) return;
+    const active = s === size;
+    btn.style.background = active ? 'rgba(0,212,160,0.15)' : 'var(--bg-elevated)';
+    btn.style.border     = active ? '1px solid var(--volt)' : '1px solid var(--border)';
+    btn.style.color      = active ? 'var(--volt)' : 'var(--t2)';
+  });
+}
+
+async function generateImageDALLE(prompt, size) {
+  if (!KEYS.openai) {
+    alert('OpenAI API key required for DALL-E generation. Add it in Settings.');
+    return null;
+  }
+  const sizeMap = { '4:5': '1024x1792', '9:16': '1024x1792', '1:1': '1024x1024', 'landscape': '1792x1024' };
+  const dalleSize = sizeMap[size] || '1024x1792';
   try {
-    const res = await fetch('https://api.openai.com/v1/images/generations', {
+    console.log('[dalle] generating', dalleSize, '— prompt length:', prompt.length);
+    const response = await fetch('https://api.openai.com/v1/images/generations', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + KEYS.openai },
-      body: JSON.stringify({ model: 'dall-e-3', prompt, n: 1, size: '1024x1024', quality: 'standard' })
+      body: JSON.stringify({
+        model: 'dall-e-3',
+        prompt: prompt.slice(0, 3900),
+        n: 1,
+        size: dalleSize,
+        quality: 'standard',
+        response_format: 'url'
+      })
     });
-    const d = await res.json();
-    if (!res.ok) {
-      setSt('Error', '');
-      btn.textContent = '⚠️ ' + (d.error?.message || 'Generation failed');
-      btn.disabled = false;
-      return;
-    }
-    const url = d.data?.[0]?.url;
-    if (url) {
-      S.lastImageUrl = url;
-      document.getElementById('dalle-img').src = url;
-      document.getElementById('dalle-dl').href = url;
-      document.getElementById('dalle-output').style.display = 'block';
-      setSt('Image ready ✓', 'done');
-      if (S.lastAdId) {
-        await sb.from('generated_ads').update({ image_url: url }).eq('id', S.lastAdId);
-        const saved = adLibrary.find(a => a.id === S.lastAdId);
-        if (saved) { saved.image_url = url; }
-      }
-    } else {
-      setSt('No image returned', '');
-    }
+    const data = await response.json();
+    if (data.error) { console.warn('[dalle] API error:', data.error.message); return null; }
+    const url = data?.data?.[0]?.url;
+    console.log('[dalle] generated:', url ? 'OK' : 'failed');
+    return url || null;
   } catch(e) {
-    setSt('Error', '');
-    btn.textContent = '⚠️ ' + e.message;
+    console.warn('[dalle] error:', e.message);
+    return null;
   }
-  btn.textContent = '🖼 Generate Ad Image with DALL-E 3';
-  btn.disabled = false;
+}
+
+async function generateImageFlux(prompt, aspectRatio) {
+  if (!KEYS.replicate) {
+    alert('Replicate API key required for Flux generation. Add it in Settings.');
+    return null;
+  }
+  const ratioMap = { '4:5': '4:5', '9:16': '9:16', '1:1': '1:1', 'landscape': '16:9' };
+  const ratio = ratioMap[aspectRatio] || '4:5';
+  try {
+    console.log('[flux] starting generation — ratio:', ratio);
+    const run = await fetch('https://api.replicate.com/v1/models/black-forest-labs/flux-1.1-pro/predictions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + KEYS.replicate, 'Prefer': 'wait' },
+      body: JSON.stringify({ input: { prompt: prompt.slice(0, 2000), aspect_ratio: ratio, output_format: 'jpg', output_quality: 90, safety_tolerance: 2 } })
+    });
+    const runData = await run.json();
+    if (runData.output) {
+      const url = Array.isArray(runData.output) ? runData.output[0] : runData.output;
+      console.log('[flux] sync response:', url ? 'OK' : 'failed');
+      return url || null;
+    }
+    const predictionId = runData?.id;
+    if (!predictionId) { console.warn('[flux] no prediction ID:', JSON.stringify(runData).slice(0, 200)); return null; }
+    console.log('[flux] polling prediction:', predictionId);
+    for (let i = 0; i < 20; i++) {
+      await new Promise(r => setTimeout(r, 3000));
+      const status = await fetch('https://api.replicate.com/v1/predictions/' + predictionId, {
+        headers: { 'Authorization': 'Bearer ' + KEYS.replicate }
+      });
+      const statusData = await status.json();
+      console.log('[flux] poll', i + 1, '— status:', statusData.status);
+      if (statusData.status === 'succeeded') {
+        const url = Array.isArray(statusData.output) ? statusData.output[0] : statusData.output;
+        return url || null;
+      }
+      if (statusData.status === 'failed' || statusData.status === 'canceled') {
+        console.warn('[flux] failed:', statusData.error);
+        return null;
+      }
+    }
+    console.warn('[flux] timed out after 60s');
+    return null;
+  } catch(e) {
+    console.warn('[flux] error:', e.message);
+    return null;
+  }
+}
+
+async function generateAdImage(provider) {
+  const prompts = S.lastVisualPrompts || {};
+  const size = S.selectedImageSize || '4:5';
+
+  // Build enriched prompt: extracted prompt + brand context
+  let basePrompt = provider === 'flux'
+    ? (prompts.flux || prompts.dalle || '')
+    : (prompts.dalle || prompts.flux || '');
+
+  if (!basePrompt) {
+    basePrompt = S.dallePrompt || `Professional Meta ad creative for ${S.product}, ${S.audience}, clean composition, high quality`;
+  }
+
+  // Enrich with brand context
+  let prompt = basePrompt;
+  if (S.brandColors?.length) prompt += `. Brand colors: ${S.brandColors.map(c => `${c.label||'Color'} ${c.hex}`).join(', ')}`;
+  if (S.brandVibe) prompt += `. Brand vibe: ${S.brandVibe}`;
+  if (S.brandLogos?.transparent) prompt += '. Brand has transparent logo available for overlay';
+  prompt += '. Suitable for Facebook/Instagram ad, high production value, no watermarks.';
+
+  const statusEl = document.getElementById('image-gen-status');
+  const container = document.getElementById('generated-images-container');
+
+  if (statusEl) {
+    statusEl.style.display = 'block';
+    statusEl.innerHTML = `⏳ Generating ${size} image with ${provider === 'dalle' ? 'DALL-E 3' : 'Flux'}…`;
+  }
+
+  const btns = document.querySelectorAll('#dalle-section button[onclick*="generateAdImage"], #dalle-section button[onclick*="generateAllSizes"]');
+  btns.forEach(b => { b.disabled = true; b.style.opacity = '0.6'; });
+
+  setSt('Generating image…', 'run');
+  let imageUrl = null;
+  try {
+    imageUrl = provider === 'dalle'
+      ? await generateImageDALLE(prompt, size)
+      : await generateImageFlux(prompt, size);
+  } catch(e) {
+    console.warn('[generateAdImage] error:', e.message);
+  }
+
+  btns.forEach(b => { b.disabled = false; b.style.opacity = '1'; });
+
+  if (imageUrl) {
+    setSt('Image ready ✓', 'done');
+    if (statusEl) statusEl.innerHTML = `✅ Image generated with ${provider === 'dalle' ? 'DALL-E 3' : 'Flux'} (${size})`;
+
+    S.lastImageUrl = imageUrl;
+    if (!S.generatedImages) S.generatedImages = [];
+    S.generatedImages.push({ url: imageUrl, size, provider, prompt });
+
+    const sizeLabels = { '4:5': '1080×1350 Feed', '9:16': '1080×1920 Stories/Reels', '1:1': '1080×1080 Square' };
+    const imgCard = document.createElement('div');
+    imgCard.style.cssText = 'background:var(--bg-surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;';
+    imgCard.innerHTML = `
+      <div style="padding:8px 12px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-size:11px;color:var(--t2);">${sizeLabels[size] || size} · ${provider === 'dalle' ? 'DALL-E 3' : 'Flux'}</span>
+        <div style="display:flex;gap:6px;">
+          <a href="${imageUrl}" download="baseleap-ad-${size.replace(':', 'x')}.jpg" target="_blank"
+            style="background:var(--volt);color:#000;border:none;border-radius:5px;padding:3px 10px;font-size:10px;font-weight:600;cursor:pointer;text-decoration:none;">⬇ Download</a>
+          <button onclick="generateAdImage('${provider}')"
+            style="background:transparent;border:1px solid var(--border);border-radius:5px;padding:3px 8px;font-size:10px;color:var(--t2);cursor:pointer;">🔄 Regenerate</button>
+        </div>
+      </div>
+      <img src="${imageUrl}" style="width:100%;display:block;max-height:500px;object-fit:contain;background:#000;" alt="Generated ad image">`;
+    container?.appendChild(imgCard);
+
+    if (S.lastAdId) {
+      await sb.from('generated_ads').update({ image_url: imageUrl, visual_prompt: prompt }).eq('id', S.lastAdId);
+      const saved = adLibrary.find(a => a.id === S.lastAdId);
+      if (saved) saved.image_url = imageUrl;
+    }
+
+    // Update Ad View panel image if open for this ad
+    const advImageZone = document.getElementById('adv-image-zone');
+    if (advImageZone && currentAdViewId === S.lastAdId) {
+      advImageZone.innerHTML = `
+        <img src="${imageUrl}" style="width:100%;border-radius:6px;border:1px solid var(--border);">
+        <a href="${imageUrl}" download target="_blank"
+          style="display:block;margin-top:6px;font-size:10px;color:var(--volt);text-decoration:none;">⬇ Download</a>`;
+    }
+  } else {
+    setSt('Image failed', '');
+    if (statusEl) statusEl.innerHTML = `❌ Image generation failed — check your API key in Settings or try again.`;
+  }
+}
+
+async function generateAllSizes(provider) {
+  const sizes = ['4:5', '9:16', '1:1'];
+  for (const size of sizes) {
+    selectImageSize(size);
+    await generateAdImage(provider);
+    await new Promise(r => setTimeout(r, 2000));
+  }
 }
 
 // ── Ad Library ───────────────────────────────────────────────
