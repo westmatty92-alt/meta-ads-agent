@@ -498,6 +498,10 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
 .dash-product-tab:hover:not(.active){color:var(--text);}
 .dash-view-all{}
 .dash-view-product{display:none;}
+@keyframes pulseRing{0%,100%{transform:scale(1);opacity:.6;}50%{transform:scale(1.15);opacity:1;}}
+@keyframes bar1{0%,100%{height:5px;}50%{height:10px;}}
+@keyframes bar2{0%,100%{height:10px;}50%{height:5px;}}
+@keyframes bar3{0%,100%{height:14px;}50%{height:7px;}}
 </style>
 </head>
 <body>
@@ -553,9 +557,23 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
 
 <header class="hdr">
   <div class="hdr-brand">
-    <div class="hdr-pulse-stack">
-      <span class="hdr-pulse-badge">PULSE</span>
-      <span class="hdr-bybaseleap">by Baseleap</span>
+    <div style="display:flex;align-items:center;gap:10px;text-decoration:none;cursor:pointer;" onclick="go('dashboard')">
+      <div style="position:relative;width:32px;height:32px;flex-shrink:0;">
+        <div style="position:absolute;top:0;right:0;bottom:0;left:0;border-radius:8px;background:rgba(0,212,160,0.15);animation:pulseRing 2s ease-in-out infinite;"></div>
+        <div style="position:absolute;top:3px;right:3px;bottom:3px;left:3px;border-radius:6px;background:linear-gradient(135deg,#00D4A0 0%,#00A878 100%);display:flex;align-items:center;justify-content:center;">
+          <div style="display:flex;align-items:center;gap:2px;height:14px;">
+            <div style="width:2px;height:5px;background:rgba(0,0,0,0.8);border-radius:1px;animation:bar1 1.2s ease-in-out infinite;"></div>
+            <div style="width:2px;height:10px;background:rgba(0,0,0,0.8);border-radius:1px;animation:bar2 1.2s ease-in-out infinite 0.2s;"></div>
+            <div style="width:2px;height:14px;background:#000;border-radius:1px;animation:bar3 1.2s ease-in-out infinite 0.1s;"></div>
+            <div style="width:2px;height:8px;background:rgba(0,0,0,0.8);border-radius:1px;animation:bar2 1.2s ease-in-out infinite 0.3s;"></div>
+            <div style="width:2px;height:4px;background:rgba(0,0,0,0.8);border-radius:1px;animation:bar1 1.2s ease-in-out infinite 0.15s;"></div>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;line-height:1;">
+        <span style="font-size:17px;font-weight:800;color:var(--t1);letter-spacing:3px;font-family:'Barlow',sans-serif;text-transform:uppercase;">PULSE</span>
+        <span style="font-size:9px;font-weight:500;color:var(--t3);letter-spacing:2px;text-transform:uppercase;font-family:'Inter',sans-serif;margin-top:1px;">by Baseleap</span>
+      </div>
     </div>
   </div>
   <div class="hdr-status">
