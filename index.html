@@ -1205,6 +1205,87 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
       </div>
     </div>
 
+    <!-- Ad View Panel (full-screen ad package + chat) -->
+    <div class="spanel" id="panel-adView">
+
+      <!-- TOP BAR -->
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 20px;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--bg-primary);">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <button onclick="closeAdView()" style="background:transparent;border:1px solid var(--border);border-radius:6px;padding:5px 10px;color:var(--t2);font-size:12px;cursor:pointer;">← Back</button>
+          <div>
+            <div id="adv-title" style="font-size:15px;font-weight:700;color:var(--t1);">Ad Package</div>
+            <div id="adv-meta" style="font-size:11px;color:var(--t3);margin-top:1px;"></div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div id="adv-score-badge" style="font-size:13px;font-weight:700;"></div>
+          <button onclick="markAdAsUsed(currentAdViewId)" style="background:transparent;border:1px solid var(--green);color:var(--green);border-radius:6px;padding:5px 12px;font-size:11px;cursor:pointer;">✓ Mark Used</button>
+          <button onclick="copyAdCopy(currentAdViewId)" style="background:var(--volt);color:#000;border:none;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer;">📋 Copy Ad</button>
+        </div>
+      </div>
+
+      <!-- MAIN SPLIT: static top + chat bottom -->
+      <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
+
+        <!-- STATIC TOP ZONE -->
+        <div id="adv-static-content" style="flex-shrink:0;overflow-y:auto;max-height:55vh;padding:20px;border-bottom:2px solid var(--border);">
+
+          <!-- ROW 1: Visuals + Visual Concept -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+            <div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:10px;padding:14px;">
+              <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">🖼️ Ad Visuals</div>
+              <div id="adv-images" style="display:flex;flex-direction:column;gap:8px;"></div>
+              <div style="margin-top:10px;">
+                <button onclick="go('visual')" style="background:transparent;border:1px solid var(--volt);color:var(--volt);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;">🎨 Generate Images →</button>
+              </div>
+            </div>
+            <div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:10px;padding:14px;overflow-y:auto;max-height:250px;">
+              <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">🎨 Visual Concept</div>
+              <div id="adv-visual-concept" style="font-size:12px;color:var(--t2);line-height:1.7;white-space:pre-wrap;"></div>
+            </div>
+          </div>
+
+          <!-- ROW 2: Ad Copy -->
+          <div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:16px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+              <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;">✍️ Ad Copy</div>
+              <button onclick="copyAdCopy(currentAdViewId)" style="background:transparent;border:1px solid var(--border);border-radius:4px;padding:2px 8px;color:var(--t2);font-size:10px;cursor:pointer;">Copy</button>
+            </div>
+            <div id="adv-copy-content" style="font-size:13px;color:var(--t1);line-height:1.8;white-space:pre-wrap;"></div>
+          </div>
+
+          <!-- ROW 3: Campaign Brief + Strategy Note -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+            <div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:10px;padding:14px;max-height:200px;overflow-y:auto;">
+              <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">📋 Campaign Brief</div>
+              <div id="adv-campaign-brief" style="font-size:12px;color:var(--t2);line-height:1.7;white-space:pre-wrap;"></div>
+            </div>
+            <div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:10px;padding:14px;max-height:200px;overflow-y:auto;">
+              <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">💡 Strategy Note</div>
+              <div id="adv-strategy-note" style="font-size:12px;color:var(--t2);line-height:1.7;white-space:pre-wrap;"></div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- CHAT ZONE (flex:1 so it takes remaining height) -->
+        <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;padding:16px 20px 0;">
+          <div style="font-size:11px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;flex-shrink:0;">💬 Ad Chat — Ask anything about this ad</div>
+          <div id="adv-chat-history" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding:12px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:10px;margin-bottom:12px;min-height:120px;">
+            <div style="color:var(--t3);font-size:12px;text-align:center;padding:8px;">Ask about this ad — get variations, explain the strategy, create follow-up ads...</div>
+          </div>
+          <div style="display:flex;gap:8px;padding-bottom:16px;flex-shrink:0;">
+            <input type="text" id="adv-chat-input"
+              placeholder="e.g. Make a version for men / Why this hook? / Create a follow-up ad..."
+              style="flex:1;background:var(--bg-elevated);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--t1);font-size:13px;"
+              onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendAdViewChat();}">
+            <button onclick="sendAdViewChat()" style="background:var(--volt);color:#000;border:none;border-radius:8px;padding:10px 18px;font-size:13px;font-weight:700;cursor:pointer;flex-shrink:0;">Send →</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
     <!-- Dashboard panel -->
     <div class="spanel" id="panel-dashboard">
       <!-- Header with product + period selectors -->
@@ -1920,6 +2001,9 @@ let currentBizId = null;
 let businesses = [];
 let adLibrary = [];
 let viewingAdId = null;
+let currentAdViewId = null;
+let currentAdViewData = null;
+let adViewChatHistory = [];
 let perfData = [];
 let currentDashProductId = null;
 let perfSortCol = 'spend';
@@ -3901,7 +3985,7 @@ function renderAdLibrary() {
       ${thumb}
       <div class="adlib-hook">${hook}${(ad.hook||'').length>120?'…':''}</div>
       <div class="adlib-actions">
-        <button class="btn bg" onclick="viewFullAd('${ad.id}')">View</button>
+        <button class="btn bg" onclick="openAdView('${ad.id}')">View</button>
         <button class="btn bg" onclick="copyAdCopy('${ad.id}')">Copy</button>
         <button class="btn bp" onclick="useAdAsStartingPoint('${ad.id}')">Use</button>
       </div>
@@ -4146,14 +4230,19 @@ Respond with ONLY: SCORE: [number]/100 — [one sentence explaining the main str
     const m = reply.match(/SCORE:\s*(\d+)/i) || reply.match(/(\d{2,3})\/100/);
     const newScore = m ? parseInt(m[1]) : null;
     if (newScore !== null) {
-      // Update in Supabase
       await sb.from('generated_ads').update({ score: newScore }).eq('id', id);
-      // Update in local cache
       const localAd = adLibrary.find(a=>a.id===id);
       if (localAd) localAd.score = newScore;
-      // Re-render modal
       document.getElementById('adlib-modal-body').innerHTML = renderAdLibraryView(adLibrary.find(a=>a.id===id));
       renderAdLibrary();
+      // Also update full-screen view badge if open for this ad
+      if (currentAdViewId === id) {
+        const scoreEl = document.getElementById('adv-score-badge');
+        if (scoreEl) {
+          const color = newScore >= 90 ? 'var(--green)' : newScore >= 70 ? 'var(--yellow)' : 'var(--red)';
+          scoreEl.innerHTML = `<span style="color:${color};">${newScore}/100</span>`;
+        }
+      }
     }
   } catch (e) {
     if (scoreBtn) { scoreBtn.disabled = false; scoreBtn.textContent = '🔄 Rescore'; }
@@ -4173,6 +4262,192 @@ async function markAdAsUsed(id) {
 
 function closeAdlibModal() {
   document.getElementById('adlib-modal').classList.remove('open');
+}
+
+// ── Full-Screen Ad View Panel ──────────────────────────────────
+
+function openAdView(adId) {
+  const ad = adLibrary.find(a => a.id === adId);
+  if (!ad) { console.warn('[openAdView] ad not found:', adId); return; }
+
+  currentAdViewId  = adId;
+  currentAdViewData = ad;
+  adViewChatHistory = Array.isArray(ad.chat_history) ? [...ad.chat_history] : [];
+
+  go('adView');
+
+  // Top bar
+  document.getElementById('adv-title').textContent = ad.hook || extractHookFromContent(ad.primary_text || '') || 'Ad Package';
+  document.getElementById('adv-meta').textContent = [
+    ad.segment_name,
+    ad.campaign_type,
+    ad.created_at ? new Date(ad.created_at).toLocaleDateString('en-CA', { month:'short', day:'numeric', year:'numeric' }) : ''
+  ].filter(Boolean).join(' · ');
+
+  // Score badge
+  const scoreEl = document.getElementById('adv-score-badge');
+  if (scoreEl) {
+    const score = ad.score != null && ad.score > 20 ? ad.score : null;
+    if (score) {
+      const color = score >= 90 ? 'var(--green)' : score >= 70 ? 'var(--yellow)' : 'var(--red)';
+      scoreEl.innerHTML = `<span style="color:${color};">${score}/100</span>`;
+    } else {
+      scoreEl.innerHTML = `<button onclick="rescoreAd('${adId}',([currentAdViewData?.hook,currentAdViewData?.primary_text,currentAdViewData?.headlines,currentAdViewData?.cta].filter(Boolean).join(' ')))" style="background:transparent;border:1px solid var(--border);border-radius:4px;padding:3px 8px;color:var(--t3);font-size:11px;cursor:pointer;">Score this ad</button>`;
+    }
+  }
+
+  // Images
+  const imagesEl = document.getElementById('adv-images');
+  if (imagesEl) {
+    imagesEl.innerHTML = ad.image_url
+      ? `<div>
+          <div style="font-size:10px;color:var(--t3);margin-bottom:4px;">Ad Image</div>
+          <img src="${escHtml(ad.image_url)}" style="width:100%;border-radius:6px;border:1px solid var(--border);" onerror="this.style.display='none'">
+          <a href="${escHtml(ad.image_url)}" download target="_blank" style="display:block;margin-top:4px;font-size:10px;color:var(--volt);text-decoration:none;">⬇ Download</a>
+        </div>`
+      : `<div style="background:var(--bg-elevated);border:1px dashed var(--border);border-radius:8px;padding:16px;text-align:center;">
+          <div style="color:var(--t3);font-size:11px;margin-bottom:4px;">No images generated yet</div>
+          <div style="font-size:10px;color:var(--t3);">Click Generate Images → to create visuals</div>
+        </div>`;
+  }
+
+  // Visual concept
+  const visualEl = document.getElementById('adv-visual-concept');
+  if (visualEl) visualEl.textContent = ad.visual_concept || extractSection(ad.campaign_brief || '', 'visual') || 'No visual concept yet — run Stage 5 Visual to generate one.';
+
+  // Ad copy assembled from structured fields
+  const copyEl = document.getElementById('adv-copy-content');
+  if (copyEl) {
+    const parts = [
+      ad.hook         && `## HOOK\n${ad.hook}`,
+      ad.primary_text && `## PRIMARY TEXT\n${ad.primary_text}`,
+      ad.headlines    && `## HEADLINES\n${ad.headlines}`,
+      ad.cta          && `## CTA\n${ad.cta}`
+    ].filter(Boolean);
+    copyEl.textContent = parts.join('\n\n') || '';
+  }
+
+  // Campaign brief
+  const briefEl = document.getElementById('adv-campaign-brief');
+  if (briefEl) briefEl.textContent = ad.campaign_brief || 'No campaign brief yet — run the pipeline to generate one.';
+
+  // Strategy note
+  const stratEl = document.getElementById('adv-strategy-note');
+  if (stratEl) stratEl.textContent = ad.strategy_note || extractSection(ad.primary_text || '', 'strategy note') || 'No strategy note yet.';
+
+  // Chat history
+  const chatEl = document.getElementById('adv-chat-history');
+  if (chatEl) {
+    chatEl.innerHTML = '';
+    if (adViewChatHistory.length === 0) {
+      chatEl.innerHTML = '<div style="color:var(--t3);font-size:12px;text-align:center;padding:8px;">Ask about this ad — get variations, explain the strategy, create follow-up ads...</div>';
+    } else {
+      adViewChatHistory.forEach(msg => appendAdViewChatMessage(msg.role, msg.content));
+    }
+  }
+}
+
+function closeAdView() { go('adLibrary'); }
+
+function extractHookFromContent(text) {
+  const m = text.match(/##\s*HOOK\s*\n+([^\n]+)/i);
+  return m ? m[1].replace(/[>*`]/g, '').trim() : text.slice(0, 60);
+}
+
+function extractSection(text, sectionName) {
+  const rx = new RegExp('##\\s*' + sectionName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '[\\s\\S]*?(?=##|$)', 'i');
+  const m = text.match(rx);
+  return m ? m[0].replace(/##[^\n]*/,'').trim().slice(0, 800) : null;
+}
+
+function appendAdViewChatMessage(role, content, id) {
+  const chatEl = document.getElementById('adv-chat-history');
+  if (!chatEl) return;
+  if (chatEl.children.length === 1 && chatEl.children[0].style.textAlign === 'center') chatEl.innerHTML = '';
+  const el = document.createElement('div');
+  if (id) el.id = id;
+  el.style.cssText = role === 'user'
+    ? 'background:rgba(0,212,160,0.1);border:1px solid rgba(0,212,160,0.2);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--t1);align-self:flex-end;max-width:80%;margin-left:auto;word-break:break-word;'
+    : 'background:var(--bg-surface);border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--t2);max-width:85%;line-height:1.7;white-space:pre-wrap;word-break:break-word;';
+  el.textContent = content;
+  chatEl.appendChild(el);
+  chatEl.scrollTo(0, chatEl.scrollHeight);
+}
+
+async function sendAdViewChat() {
+  const input = document.getElementById('adv-chat-input');
+  const message = input?.value?.trim();
+  if (!message) return;
+  if (!KEYS.claude) { alert('Claude API key required. Go to Settings ⚙️.'); return; }
+
+  const ad = currentAdViewData;
+  if (!ad) return;
+
+  if (input) input.value = '';
+  appendAdViewChatMessage('user', message);
+  adViewChatHistory.push({ role: 'user', content: message });
+
+  const loadingId = 'adv-loading-' + Date.now();
+  appendAdViewChatMessage('loading', '⏳ Thinking…', loadingId);
+
+  const systemPrompt = `You are a Meta Ads expert consultant with full context of this specific ad.
+
+AD CONTEXT:
+Hook: ${ad.hook || ''}
+Ad copy: ${(ad.primary_text || '').slice(0, 800)}
+Headlines: ${ad.headlines || ''}
+CTA: ${ad.cta || ''}
+Segment targeted: ${ad.segment_name || 'not specified'}
+Campaign type: ${ad.campaign_type || 'not specified'}
+Campaign objective: ${ad.campaign_objective || 'not specified'}
+Ad score: ${ad.score != null && ad.score > 20 ? ad.score + '/100' : 'not yet scored'}
+Research brief: ${(ad.research_brief || '').slice(0, 400)}
+Campaign brief: ${(ad.campaign_brief || '').slice(0, 400)}
+Budget recommendation: ${(ad.budget_recommendation || '').slice(0, 200)}
+
+Answer questions about this specific ad. Be concise and actionable. Reference the actual content. If asked for a variation or new ad, write the full copy.`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': KEYS.claude,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1500,
+        system: systemPrompt,
+        messages: adViewChatHistory.filter(m => m.role !== 'loading')
+      })
+    });
+    const data = await res.json();
+    const reply = data.content?.find(b => b.type === 'text')?.text
+      || (data.error ? '⚠️ ' + data.error.message : '⚠️ No response');
+
+    adViewChatHistory.push({ role: 'assistant', content: reply });
+
+    const loadingEl = document.getElementById(loadingId);
+    if (loadingEl) {
+      loadingEl.style.cssText = 'background:var(--bg-surface);border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--t2);max-width:85%;line-height:1.7;white-space:pre-wrap;word-break:break-word;';
+      loadingEl.textContent = reply;
+    }
+
+    if (currentAdViewId) {
+      await sb.from('generated_ads').update({ chat_history: adViewChatHistory }).eq('id', currentAdViewId);
+      const localAd = adLibrary.find(a => a.id === currentAdViewId);
+      if (localAd) localAd.chat_history = adViewChatHistory;
+    }
+
+    document.getElementById('adv-chat-history')?.scrollTo(0, document.getElementById('adv-chat-history')?.scrollHeight);
+
+  } catch(e) {
+    const loadingEl = document.getElementById(loadingId);
+    if (loadingEl) loadingEl.textContent = '⚠️ Error: ' + e.message;
+    console.warn('[sendAdViewChat] error:', e.message);
+  }
 }
 
 function copyAdCopy(id) {
@@ -5711,7 +5986,7 @@ async function loadProductDashboard(productId) {
           const hook = escHtml((ad.hook || '').substring(0, 120));
           const date = ad.created_at ? new Date(ad.created_at).toLocaleDateString() : '';
           const sc   = ad.score;
-          return `<div class="adlib-card"><div class="adlib-card-top"><span class="adlib-score" style="color:${scoreColor(sc)};">${sc != null ? sc + '/100' : '—'}</span><span class="adlib-date">${date}</span></div><div class="adlib-hook">${hook}${(ad.hook||'').length > 120 ? '…' : ''}</div><div class="adlib-actions"><button class="btn bg" onclick="viewFullAd('${escHtml(ad.id)}')">View</button><button class="btn bg" onclick="copyAdCopy('${escHtml(ad.id)}')">Copy</button><button class="btn bp" onclick="useAdAsStartingPoint('${escHtml(ad.id)}')">Use</button></div></div>`;
+          return `<div class="adlib-card"><div class="adlib-card-top"><span class="adlib-score" style="color:${scoreColor(sc)};">${sc != null ? sc + '/100' : '—'}</span><span class="adlib-date">${date}</span></div><div class="adlib-hook">${hook}${(ad.hook||'').length > 120 ? '…' : ''}</div><div class="adlib-actions"><button class="btn bg" onclick="openAdView('${escHtml(ad.id)}')">View</button><button class="btn bg" onclick="copyAdCopy('${escHtml(ad.id)}')">Copy</button><button class="btn bp" onclick="useAdAsStartingPoint('${escHtml(ad.id)}')">Use</button></div></div>`;
         }).join('');
       }
     }
