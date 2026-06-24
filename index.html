@@ -6355,6 +6355,16 @@ sb.auth.onAuthStateChange((event, session) => {
     document.getElementById('auth-screen').style.display = 'flex';
   }
 });
+
+// Debounced sync for promotion-details textarea — prevents per-keystroke
+// work that was causing ~200ms INP blocks
+let _promoDetailsTimer = null;
+document.getElementById('promotion-details')?.addEventListener('input', function() {
+  clearTimeout(_promoDetailsTimer);
+  _promoDetailsTimer = setTimeout(() => {
+    S.promotionDetails = this.value?.trim();
+  }, 300);
+});
 </script>
 
 <!-- Welcome Modal -->
