@@ -5516,9 +5516,26 @@ function renderCustomerIntelligence() {
         <div style="color:var(--t1);font-size:11px;font-weight:600;">${escHtml(topHook.slice(0,80))}</div>
       </div>` : ''}
 
+      ${intel?.brief ? `
+      <div style="margin-bottom:12px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+          <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;">Research Summary</div>
+          <span onclick="toggleCustomerIntelBrief()" id="s1-brief-toggle-btn"
+            style="font-size:10px;color:var(--volt);cursor:pointer;">View Full ▼</span>
+        </div>
+        <div id="s1-brief-preview" style="color:var(--t2);font-size:11px;line-height:1.6;">
+          ${escHtml((intel.brief).slice(0, 150).trim())}${intel.brief.length > 150 ? '...' : ''}
+        </div>
+        <div id="s1-brief-full" style="display:none;max-height:220px;overflow-y:auto;margin-top:8px;
+          background:var(--bg-elevated);border-radius:6px;padding:10px;
+          color:var(--t2);font-size:11px;line-height:1.7;white-space:pre-wrap;">
+          ${escHtml(intel.brief)}
+        </div>
+      </div>` : ''}
+
       <div style="display:flex;gap:6px;">
         <button onclick="runResearchThroughPipeline()"
-          style="flex:1;background:var(--volt);color:#000;border:none;border-radius:6px;padding:7px 8px;font-size:11px;font-weight:700;cursor:pointer;">
+          style="flex:1;background:var(--volt);color:#000;border:none;border-radius:6px;padding:8px 12px;font-size:12px;font-weight:700;cursor:pointer;">
           🚀 Run Pipeline
         </button>
         <button onclick="go('autoResearch')"
@@ -5540,6 +5557,17 @@ function runResearchThroughPipeline() {
   if (!S.selectedSegment && S.audienceSegments?.length) selectSegment(0);
   go('data');
   setTimeout(() => runAll(), 400);
+}
+
+function toggleCustomerIntelBrief() {
+  const full = document.getElementById('s1-brief-full');
+  const preview = document.getElementById('s1-brief-preview');
+  const btn = document.getElementById('s1-brief-toggle-btn');
+  if (!full) return;
+  const isOpen = full.style.display !== 'none';
+  full.style.display = isOpen ? 'none' : 'block';
+  if (preview) preview.style.display = isOpen ? 'block' : 'none';
+  if (btn) btn.textContent = isOpen ? 'View Full ▼' : 'Hide ▲';
 }
 
 // ── Campaign Intelligence Selectors ──────────────────────────────────────────
