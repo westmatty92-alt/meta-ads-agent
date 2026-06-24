@@ -1874,6 +1874,9 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
 // ALTER TABLE generated_ads ADD COLUMN IF NOT EXISTS form_type text;
 // ALTER TABLE generated_ads ADD COLUMN IF NOT EXISTS used_at timestamptz;
 // ALTER TABLE generated_ads ADD COLUMN IF NOT EXISTS budget_recommendation text;
+// ALTER TABLE generated_ads ADD COLUMN IF NOT EXISTS research_brief text;
+// ALTER TABLE generated_ads ADD COLUMN IF NOT EXISTS research_date timestamptz;
+// ALTER TABLE generated_ads ADD COLUMN IF NOT EXISTS segment_name text;
 //
 // CREATE TABLE IF NOT EXISTS base_profiles (
 //   id             uuid default gen_random_uuid() primary key,
@@ -3274,7 +3277,10 @@ async function saveToAdLibrary() {
     campaign_objective: S.campaignObjective || null,
     use_instant_form: S.useInstantForm    ?? null,
     form_type:        S.formType          || null,
-    budget_recommendation: S.lastBudgetRecommendation || null
+    budget_recommendation: S.lastBudgetRecommendation || null,
+    research_brief:   S.audienceIntelligence?.brief?.slice(0, 3000) || null,
+    research_date:    S.audienceIntelligence?.updated_at || null,
+    segment_name:     S.selectedSegment?.name || null
   }).select().single();
   if (!error && data) {
     S.lastAdId = data.id;
@@ -3970,8 +3976,33 @@ function renderAdLibraryView(ad) {
   <div style="font-size:11px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">💰 Budget Recommendation</div>
   <div style="background:var(--bg-elevated);border-radius:8px;padding:14px;font-size:13px;color:var(--t2);line-height:1.8;white-space:pre-wrap;">${escHtml(ad.budget_recommendation)}</div>
 </div>` : ''}
+    ${ad.research_brief ? `
+<div style="margin-bottom:16px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+    <div style="font-size:11px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;">📋 Research Brief</div>
+    <span style="font-size:10px;color:var(--t3);">
+      ${ad.research_date ? new Date(ad.research_date).toLocaleDateString('en-CA', {month:'short',day:'numeric',year:'numeric'}) : ''}
+    </span>
+  </div>
+  <div id="ad-research-brief-${ad.id}" style="display:none;background:var(--bg-elevated);border-radius:8px;padding:12px;font-size:12px;color:var(--t2);line-height:1.7;white-space:pre-wrap;max-height:300px;overflow-y:auto;">
+    ${escHtml(ad.research_brief)}
+  </div>
+  <button onclick="toggleAdResearchBrief('${ad.id}')"
+    style="background:transparent;border:1px solid var(--border);border-radius:6px;padding:4px 10px;color:var(--t2);font-size:11px;cursor:pointer;margin-top:6px;">
+    View Research ▼
+  </button>
+</div>` : ''}
     ${actionRow}
   </div>`;
+}
+
+function toggleAdResearchBrief(adId) {
+  const el = document.getElementById('ad-research-brief-' + adId);
+  const btn = el?.nextElementSibling;
+  if (!el) return;
+  const isOpen = el.style.display !== 'none';
+  el.style.display = isOpen ? 'none' : 'block';
+  if (btn) btn.textContent = isOpen ? 'View Research ▼' : 'Hide Research ▲';
 }
 
 function viewFullAd(id) {
@@ -5011,8 +5042,8 @@ function updateCIDisplay() { renderCustomerIntelligence(); }
 
 function renderCustomerIntelligence() {
   const container = document.getElementById('s1-customer-intel-container');
-  const badgeEl = document.getElementById('ci-badge');
   if (!container) return;
+  const badgeEl = document.getElementById('ci-badge');
 
   const syncHiddenInputs = () => {
     ['audience','pain','desire','objection'].forEach(f => {
@@ -5022,62 +5053,104 @@ function renderCustomerIntelligence() {
     const vh = document.getElementById('d-voice'); if (vh) vh.value = S.voice || '';
   };
 
-  const hasAI = !!(S.audienceIntelligence?.brief);
-  const hasBasic = !!(S.audience || S.pain || S.voice);
+  const intel = S.audienceIntelligence;
+  const segments = S.audienceSegments || [];
+  const serp = S.serpIntelligence;
+  const hasData = intel?.brief || segments.length > 0 || serp?.organicResults?.length > 0;
 
-  if (hasAI) {
-    if (badgeEl) badgeEl.style.display = '';
-    const brief = S.audienceIntelligence.brief || '';
-    const painMatch = brief.match(/(?:top pain point|pain point)[^:\n]*[:\n]\s*([^\n]+)/i);
-    const topPain = painMatch ? painMatch[1].trim().slice(0, 80) : (S.pain || '—');
-    const topSeg = S.audienceSegments?.[0];
-    const compCount = S.competitorIntelligence?.length || 0;
-    const hasMetaAds = S.competitorAds?.length > 0 || (S.metaAdsSearchResult?.ads_found?.length > 0);
-    const hook = topSeg?.hook_direction || '';
+  if (!hasData) {
+    if (badgeEl) badgeEl.style.display = 'none';
     container.innerHTML = `
+      <div style="text-align:center;padding:16px 8px;">
+        <div style="font-size:28px;margin-bottom:8px;">🤖</div>
+        <div style="color:var(--t2);font-size:12px;margin-bottom:12px;">No research yet.</div>
+        <button onclick="go('autoResearch')"
+          style="background:var(--volt);color:#000;border:none;border-radius:6px;padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer;">
+          Run Auto-Research →
+        </button>
+      </div>`;
+    return;
+  }
+
+  if (badgeEl) badgeEl.style.display = '';
+
+  const researchDate = intel?.updated_at
+    ? new Date(intel.updated_at).toLocaleDateString('en-CA', { month: 'short', day: 'numeric', year: 'numeric' })
+    : 'Recent';
+
+  const topSeg = segments[0];
+  const compCount = serp?.organicResults?.length || 0;
+  const metaStatus = S.competitorAds?.length > 0
+    ? S.competitorAds.length + ' ads found'
+    : '🎯 First-mover';
+  const metaColor = S.competitorAds?.length > 0 ? 'var(--yellow)' : 'var(--green)';
+
+  const topPain = topSeg?.primary_fear ||
+    (intel?.brief || '').match(/(?:fear|pain|anxiety)[^\n.]{0,80}/i)?.[0] ||
+    'Run research to identify';
+
+  const topHook = topSeg?.hook_direction || topSeg?.ad_angle || 'Run research to generate';
+
+  container.innerHTML = `
+    <div>
+      <div style="font-size:10px;color:var(--t3);margin-bottom:10px;">
+        Most recent: ${researchDate}
+      </div>
+
+      ${topSeg ? `
+      <div style="margin-bottom:10px;">
+        <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;">Top Segment</div>
+        <div style="color:var(--volt);font-weight:600;font-size:12px;">${escHtml(topSeg.name)}</div>
+        <div style="color:var(--t2);font-size:11px;margin-top:2px;">${escHtml(topSeg.primary_fear || '')}</div>
+      </div>` : ''}
+
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px;">
-        <div style="background:var(--bg-elevated);border-radius:8px;padding:8px 10px;">
-          <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">Competitors</div>
-          <div style="font-size:18px;font-weight:700;color:var(--t1);">${compCount || '—'}</div>
+        <div style="background:var(--bg-elevated);border-radius:6px;padding:7px 9px;">
+          <div style="font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;">Competitors</div>
+          <div style="font-size:15px;font-weight:700;color:var(--t1);">${compCount}</div>
         </div>
-        <div style="background:var(--bg-elevated);border-radius:8px;padding:8px 10px;">
-          <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">Meta Ads</div>
-          <div style="font-size:12px;font-weight:700;color:${hasMetaAds ? 'var(--yellow)' : 'var(--green)'};">${hasMetaAds ? 'Competitors Active' : 'Open Market'}</div>
+        <div style="background:var(--bg-elevated);border-radius:6px;padding:7px 9px;">
+          <div style="font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;">Meta Ads</div>
+          <div style="font-size:11px;font-weight:600;color:${metaColor};">${metaStatus}</div>
         </div>
       </div>
-      ${topSeg ? `<div class="ci-row"><div class="ci-label">Top Segment</div><div class="ci-value" style="color:var(--volt);">${escHtml(topSeg.name)}</div></div>
-      <div class="ci-row"><div class="ci-label">Primary Fear</div><div class="ci-value">${escHtml(topSeg.primary_fear||'—')}</div></div>` : ''}
-      <div class="ci-row"><div class="ci-label">Top Pain</div><div class="ci-value">${escHtml(topPain)}</div></div>
-      ${hook ? `<div class="ci-row"><div class="ci-label">Hook Direction</div><div class="ci-value" style="font-style:italic;">${escHtml(hook)}</div></div>` : ''}
-      <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap;">
-        <button class="btn bp bsm" onclick="runCustomerIntelThroughPipeline()" style="flex:1;">Run Through Pipeline →</button>
-        <button class="btn bg bsm" onclick="go('autoResearch')">Re-run Research</button>
-      </div>`;
-    syncHiddenInputs();
-  } else if (hasBasic) {
-    if (badgeEl) badgeEl.style.display = 'none';
-    container.innerHTML = `
-      <div class="ci-row"><div class="ci-label">Audience</div><div class="ci-value">${escHtml(S.audience||'—')}</div></div>
-      <div class="ci-row"><div class="ci-label">Pain Point</div><div class="ci-value">${escHtml(S.pain||'—')}</div></div>
-      <div class="ci-row"><div class="ci-label">Desire</div><div class="ci-value">${escHtml(S.desire||'—')}</div></div>
-      <div style="margin-top:8px;display:flex;justify-content:flex-end;gap:6px;">
-        <button class="btn bp bsm" onclick="go('autoResearch')">🤖 Enhance with AI</button>
-      </div>`;
-    syncHiddenInputs();
-  } else {
-    if (badgeEl) badgeEl.style.display = 'none';
-    container.innerHTML = `
-      <div style="text-align:center;padding:16px 10px;">
-        <div style="font-size:28px;margin-bottom:8px;">🤖</div>
-        <div style="font-size:12px;color:var(--t2);line-height:1.6;margin-bottom:12px;">No customer intelligence yet.<br>Run Auto-Research to generate it.</div>
-        <button class="btn bp bsm" onclick="go('autoResearch')">🤖 Run Auto-Research</button>
-      </div>`;
-  }
+
+      ${topPain ? `
+      <div style="margin-bottom:10px;">
+        <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;">Top Pain</div>
+        <div style="color:var(--t2);font-size:11px;font-style:italic;">"${escHtml(topPain.slice(0,80))}"</div>
+      </div>` : ''}
+
+      ${topHook ? `
+      <div style="margin-bottom:12px;">
+        <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;">Hook Direction</div>
+        <div style="color:var(--t1);font-size:11px;font-weight:600;">${escHtml(topHook.slice(0,80))}</div>
+      </div>` : ''}
+
+      <div style="display:flex;gap:6px;">
+        <button onclick="runResearchThroughPipeline()"
+          style="flex:1;background:var(--volt);color:#000;border:none;border-radius:6px;padding:7px 8px;font-size:11px;font-weight:700;cursor:pointer;">
+          🚀 Run Pipeline
+        </button>
+        <button onclick="go('autoResearch')"
+          style="background:transparent;border:1px solid var(--border);border-radius:6px;padding:7px 10px;font-size:11px;color:var(--t2);cursor:pointer;">
+          🔄 New Research
+        </button>
+      </div>
+    </div>`;
+
+  syncHiddenInputs();
 }
 
 function runCustomerIntelThroughPipeline() {
   if (S.audienceSegments?.length && !S.selectedSegment) selectSegment(0);
   runAll();
+}
+
+function runResearchThroughPipeline() {
+  if (!S.selectedSegment && S.audienceSegments?.length) selectSegment(0);
+  go('data');
+  setTimeout(() => runAll(), 400);
 }
 
 // ── Campaign Intelligence Selectors ──────────────────────────────────────────
