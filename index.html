@@ -660,7 +660,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
           </div>
         </div>
         <div class="sacts">
-          <button class="btn bp" onclick="saveData()">Save &amp; Continue →</button>
+          <button class="btn bp" onclick="saveAndContinue(this)">Save &amp; Continue →</button>
         </div>
       </div>
       <div class="stage1-body" style="display:flex;flex-direction:column;overflow-y:auto;flex:1;">
@@ -2514,6 +2514,42 @@ function handleDrop(e){e.preventDefault();document.getElementById('dropzone').cl
 function handleFile(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=async ev=>{S.adData=ev.target.result;S.adDataSaved=false;document.getElementById('file-ok').style.display='block';document.getElementById('fname').textContent=f.name+' · '+S.adData.split('\n').length+' rows';document.getElementById('dropzone').style.display='none';const count=await savePerformanceData(S.adData);S.adDataSaved=count>0;const msg=document.getElementById('perf-save-msg');if(msg){msg.textContent=count>0?`✅ ${count} rows saved to performance history`:'';msg.style.display=count>0?'block':'none';}};r.readAsText(f);}
 
 // ── Save data ─────────────────────────────────────────────────
+
+function saveAndContinue(btn) {
+  const originalText = btn.textContent;
+  btn.textContent = '⏳ Saving...';
+  btn.disabled = true;
+
+  // Yield to browser first so the button state paints before heavy work starts
+  requestAnimationFrame(() => {
+    setTimeout(async () => {
+      try {
+        await saveData();
+        // Detect success: saveData() calls go('research') on success, removing
+        // the 'active' class from panel-data
+        const navigatedAway = !document.getElementById('panel-data')?.classList.contains('active');
+        if (navigatedAway) {
+          btn.textContent = '✓ Saved';
+          btn.style.background = 'var(--green)';
+          setTimeout(() => {
+            btn.textContent = originalText;
+            btn.style.background = '';
+            btn.disabled = false;
+          }, 1500);
+        } else {
+          // Validation failed — restore immediately
+          btn.textContent = originalText;
+          btn.disabled = false;
+        }
+      } catch (e) {
+        console.error('[saveAndContinue]', e);
+        btn.textContent = originalText;
+        btn.disabled = false;
+      }
+    }, 0);
+  });
+}
+
 async function saveData() {
   if (dataMode === 'new') {
     S.product    = document.getElementById('new-product').value.trim();
