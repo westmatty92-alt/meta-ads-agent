@@ -475,10 +475,10 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
 .hdr-brand{display:flex;flex-direction:row;align-items:center;gap:8px;line-height:1;flex-shrink:0;}
 .hdr-rb-main{font-family:var(--display);font-weight:800;font-size:16px;color:#fff;letter-spacing:.05em;line-height:1;}
 .hdr-pulse-stack{display:flex;flex-direction:column;gap:3px;justify-content:center;}
-.hdr-pulse-badge{font-family:var(--sans);font-size:9px;font-weight:600;letter-spacing:.3em;color:#8A9BAB;border:1px solid rgba(138,155,171,.3);padding:2px 7px;border-radius:4px;line-height:1.4;text-transform:uppercase;}
-.hdr-bybaseleap{font-family:var(--sans);font-size:7px;color:#8A9BAB;letter-spacing:.1em;}
+.hdr-pulse-badge{font-family:var(--display);font-size:16px;font-weight:800;color:var(--t1);line-height:1;letter-spacing:.02em;}
+.hdr-bybaseleap{font-family:var(--sans);font-size:11px;color:var(--t3);letter-spacing:.05em;}
 .rb-auth-main{font-family:var(--display);font-weight:800;font-size:34px;color:#fff;letter-spacing:.05em;line-height:1;}
-.rb-auth-pulse{font-family:var(--display);font-weight:800;font-size:28px;color:#F4F5F0;letter-spacing:.05em;line-height:1;margin-top:0;}
+.rb-auth-pulse{font-family:var(--display);font-weight:800;font-size:32px;color:#F4F5F0;letter-spacing:.05em;line-height:1;margin-top:0;}
 .rb-auth-bybaseleap{font-family:var(--sans);font-size:12px;color:#8A9BAB;letter-spacing:.15em;margin-top:6px;}
 .s1-hc-score-num{font-family:var(--display);font-weight:800;}
 .auth-logo-text{font-family:var(--display);font-weight:800;font-size:17px;letter-spacing:.04em;color:#fff;}
@@ -505,11 +505,12 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
 <!-- ── AUTH SCREEN ── -->
 <div class="auth-screen" id="auth-screen">
   <div class="auth-card">
-    <div class="auth-logo" style="flex-direction:column;align-items:center;gap:0;">
-      <img class="rb-logo-img" alt="Baseleap" style="height:52px;display:block;margin-bottom:12px;">
+    <div class="auth-logo" style="flex-direction:column;align-items:center;gap:0;margin-bottom:24px;">
+      <img class="rb-logo-img" alt="Baseleap" style="height:80px;display:block;margin-left:auto;margin-right:auto;margin-bottom:12px;">
       <div class="rb-auth-pulse">PULSE</div>
       <div class="rb-auth-bybaseleap">by Baseleap</div>
     </div>
+    <div style="font-size:13px;color:var(--t3);text-align:center;margin-bottom:32px;">Business infrastructure for Canadian SMBs</div>
     <div class="auth-tabs">
       <div class="auth-tab active" id="tab-signin" onclick="switchAuthTab('signin')">Sign In</div>
       <div class="auth-tab" id="tab-signup" onclick="switchAuthTab('signup')">Create Account</div>
@@ -552,7 +553,6 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
 
 <header class="hdr">
   <div class="hdr-brand">
-    <img class="rb-logo-img" alt="Baseleap" style="height:28px;display:block;flex-shrink:0;">
     <div class="hdr-pulse-stack">
       <span class="hdr-pulse-badge">PULSE</span>
       <span class="hdr-bybaseleap">by Baseleap</span>
