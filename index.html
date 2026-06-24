@@ -1877,6 +1877,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
 // ALTER TABLE generated_ads ADD COLUMN IF NOT EXISTS research_brief text;
 // ALTER TABLE generated_ads ADD COLUMN IF NOT EXISTS research_date timestamptz;
 // ALTER TABLE generated_ads ADD COLUMN IF NOT EXISTS segment_name text;
+// ALTER TABLE generated_ads ADD COLUMN IF NOT EXISTS chat_history jsonb DEFAULT '[]'::jsonb;
 //
 // CREATE TABLE IF NOT EXISTS base_profiles (
 //   id             uuid default gen_random_uuid() primary key,
@@ -3861,6 +3862,7 @@ async function loadAdLibrary() {
     .order('created_at', {ascending: false})
     .limit(50);
   adLibrary = data || [];
+  adLibrary.forEach(ad => { if (ad.score != null && ad.score <= 20) ad.score = null; });
   updateAdLibBadge();
   populateProductDropdowns();
 }
@@ -3889,7 +3891,7 @@ function renderAdLibrary() {
     const thumb = ad.image_url
       ? `<img class="adlib-thumb" src="${escHtml(ad.image_url)}" onerror="this.style.display='none'" alt="Ad image">`
       : '';
-    const sc = ad.score;
+    const sc = (ad.score != null && ad.score > 20) ? ad.score : null;
     return `<div class="adlib-card" data-product-id="${ad.product_id||''}">
       <div class="adlib-card-top">
         <span class="adlib-score" style="color:${scoreColor(sc)};">${sc!=null?sc+'/100':'—'}</span>
@@ -3908,7 +3910,9 @@ function renderAdLibrary() {
 }
 
 function renderAdLibraryView(ad) {
-  const sc = ad.score;
+  window._adContexts = window._adContexts || {};
+  window._adContexts[ad.id] = ad;
+  const sc = (ad.score != null && ad.score > 20) ? ad.score : null;
   const scoreColor = !sc ? 'var(--t2)' : sc>=80 ? 'var(--green)' : sc>=60 ? 'var(--yellow)' : 'var(--red)';
   const card = (lbl, body, opts={}) => {
     if (!body) return '';
@@ -3932,7 +3936,7 @@ function renderAdLibraryView(ad) {
         <button class="btn bg bsm" onclick="rescoreAd('${ad.id}', \`${(ad.hook||'')+(ad.primary_text||'')+(ad.headlines||'')+(ad.cta||'')}\`.replace(/\`/g,''))" style="font-size:11px;">🔄 Rescore</button>
       </div>`
     : `<div style="margin-bottom:12px;padding:8px 12px;background:var(--bg-elevated);border-radius:8px;border:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
-        <span style="font-size:12px;color:var(--t3);">No quality score yet</span>
+        <span style="font-size:12px;color:var(--t3);">Not yet scored</span>
         <button class="btn bg bsm" onclick="rescoreAd('${ad.id}', \`${(ad.hook||'')+(ad.primary_text||'')+(ad.headlines||'')+(ad.cta||'')}\`.replace(/\`/g,''))" style="font-size:11px;">🔄 Score Ad</button>
       </div>`;
 
@@ -3993,6 +3997,23 @@ function renderAdLibraryView(ad) {
   </button>
 </div>` : ''}
     ${actionRow}
+    <div style="margin-top:16px;border-top:1px solid var(--border);padding-top:16px;">
+      <div style="font-size:11px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">💬 Ad Chat — Ask anything about this ad</div>
+      <div id="ad-chat-history-${ad.id}"
+        style="max-height:300px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;margin-bottom:10px;">
+      </div>
+      <div style="display:flex;gap:8px;">
+        <input type="text"
+          id="ad-chat-input-${ad.id}"
+          placeholder="e.g. Make a version for men / Why did you choose this hook / Create a follow-up ad..."
+          style="flex:1;background:var(--bg-elevated);border:1px solid var(--border);border-radius:6px;padding:8px 12px;color:var(--t1);font-size:12px;"
+          onkeydown="if(event.key==='Enter')sendAdChat('${ad.id}',this.value)">
+        <button onclick="sendAdChat('${ad.id}',document.getElementById('ad-chat-input-${ad.id}').value)"
+          style="background:var(--volt);color:#000;border:none;border-radius:6px;padding:8px 14px;font-size:12px;font-weight:600;cursor:pointer;">
+          Send
+        </button>
+      </div>
+    </div>
   </div>`;
 }
 
@@ -4005,12 +4026,105 @@ function toggleAdResearchBrief(adId) {
   if (btn) btn.textContent = isOpen ? 'View Research ▼' : 'Hide Research ▲';
 }
 
+async function sendAdChat(adId, message) {
+  if (!message?.trim()) return;
+  if (!KEYS.claude) { alert('Claude API key required. Go to Settings ⚙️.'); return; }
+
+  const historyEl = document.getElementById('ad-chat-history-' + adId);
+  const inputEl   = document.getElementById('ad-chat-input-' + adId);
+  if (inputEl) inputEl.value = '';
+
+  const userBubble = document.createElement('div');
+  userBubble.style.cssText = 'background:rgba(0,212,160,0.1);border:1px solid rgba(0,212,160,0.2);border-radius:8px;padding:8px 12px;font-size:12px;color:var(--t1);align-self:flex-end;max-width:85%;word-break:break-word;';
+  userBubble.textContent = message;
+  historyEl?.appendChild(userBubble);
+
+  const loadingBubble = document.createElement('div');
+  loadingBubble.style.cssText = 'background:var(--bg-elevated);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:12px;color:var(--t2);max-width:85%;';
+  loadingBubble.innerHTML = '⏳ Thinking…';
+  historyEl?.appendChild(loadingBubble);
+  historyEl?.scrollTo(0, historyEl.scrollHeight);
+
+  window._adChatHistories = window._adChatHistories || {};
+  if (!window._adChatHistories[adId]) window._adChatHistories[adId] = [];
+  window._adChatHistories[adId].push({ role: 'user', content: message });
+
+  const ad = window._adContexts?.[adId] || {};
+  const systemPrompt = `You are a Meta Ads expert consultant reviewing a specific ad.
+
+AD CONTEXT:
+Hook: ${ad.hook || ''}
+Primary text: ${(ad.primary_text || '').slice(0, 500)}
+Headlines: ${ad.headlines || ''}
+CTA: ${ad.cta || ''}
+Segment: ${ad.segment_name || ''}
+Score: ${ad.score != null && ad.score > 20 ? ad.score + '/100' : 'not yet scored'}
+Campaign type: ${ad.campaign_type || ''}
+Campaign objective: ${ad.campaign_objective || ''}
+Research brief: ${(ad.research_brief || '').slice(0, 500)}
+Campaign brief: ${(ad.campaign_brief || '').slice(0, 500)}
+Budget recommendation: ${(ad.budget_recommendation || '').slice(0, 300)}
+
+Answer questions about this ad, suggest improvements, create variations, explain strategic decisions, or generate new ad ideas based on it. Be specific and actionable — reference the actual ad content. Keep responses concise (3-5 sentences) unless a full variation is requested.`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': KEYS.claude,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1000,
+        system: systemPrompt,
+        messages: window._adChatHistories[adId]
+      })
+    });
+    const data = await res.json();
+    const reply = data.content?.find(b => b.type === 'text')?.text
+      || (data.error ? '⚠️ ' + data.error.message : '⚠️ No response');
+
+    window._adChatHistories[adId].push({ role: 'assistant', content: reply });
+
+    loadingBubble.style.cssText = 'background:var(--bg-elevated);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:12px;color:var(--t2);max-width:85%;line-height:1.6;white-space:pre-wrap;word-break:break-word;';
+    loadingBubble.textContent = reply;
+    historyEl?.scrollTo(0, historyEl.scrollHeight);
+
+    await sb.from('generated_ads').update({ chat_history: window._adChatHistories[adId] }).eq('id', adId);
+    const localAd = adLibrary.find(a => a.id === adId);
+    if (localAd) localAd.chat_history = window._adChatHistories[adId];
+
+  } catch(e) {
+    loadingBubble.textContent = '⚠️ Error: ' + e.message;
+    console.warn('[adChat] error:', e.message);
+  }
+}
+
 function viewFullAd(id) {
   const ad = adLibrary.find(a=>a.id===id);
   if (!ad) return;
   viewingAdId = id;
   document.getElementById('adlib-modal-body').innerHTML = renderAdLibraryView(ad);
   document.getElementById('adlib-modal').classList.add('open');
+  window._adChatHistories = window._adChatHistories || {};
+  if (ad.chat_history?.length) {
+    window._adChatHistories[id] = ad.chat_history;
+    const historyEl = document.getElementById('ad-chat-history-' + id);
+    if (historyEl) {
+      ad.chat_history.forEach(msg => {
+        const el = document.createElement('div');
+        el.style.cssText = msg.role === 'user'
+          ? 'background:rgba(0,212,160,0.1);border:1px solid rgba(0,212,160,0.2);border-radius:8px;padding:8px 12px;font-size:12px;color:var(--t1);align-self:flex-end;max-width:85%;'
+          : 'background:var(--bg-elevated);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:12px;color:var(--t2);max-width:85%;line-height:1.6;white-space:pre-wrap;';
+        el.textContent = msg.content;
+        historyEl.appendChild(el);
+      });
+      historyEl.scrollTo(0, historyEl.scrollHeight);
+    }
+  }
 }
 
 async function rescoreAd(id, adText) {
