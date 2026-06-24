@@ -1873,6 +1873,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
 // ALTER TABLE generated_ads ADD COLUMN IF NOT EXISTS use_instant_form boolean;
 // ALTER TABLE generated_ads ADD COLUMN IF NOT EXISTS form_type text;
 // ALTER TABLE generated_ads ADD COLUMN IF NOT EXISTS used_at timestamptz;
+// ALTER TABLE generated_ads ADD COLUMN IF NOT EXISTS budget_recommendation text;
 //
 // CREATE TABLE IF NOT EXISTS base_profiles (
 //   id             uuid default gen_random_uuid() primary key,
@@ -2354,7 +2355,7 @@ async function savePipelineRun() {
 async function loadPipelineRun() {
   if (!currentBizId) return;
   const { data } = await sb.from('pipeline_runs').select('*').eq('business_id', currentBizId).order('updated_at', {ascending:false}).limit(1).single();
-  if (!data) { S = { adData:'', product:'', price:'', usp:'', audience:'', budget:'', goal:'purchase', pain:'', desire:'', objection:'', voice:'', competitors:'', compCopy:'', auditScore:null, auditIssues:'', auditSummary:'', researchSummary:'', adCopy:'', audienceDemographics:'', launchMode:false, adFormat:'single', niche:'fitness', brandName:'', brandColors:[{hex:'#00D4A0',label:'Primary'},{hex:'#00A878',label:'Secondary'}], brandFont:'Modern', brandLogoUrl:'', brandVibe:'', dallePrompt:'', lastImageUrl:'', visualConcept:'', lastAdId:null, adDataSaved:false, history:{ audit:[], research:[], build:[], visual:[] }, stagesDone: new Set(), targetCpa:null, targetRoas:null, currentProductId: null, products: [], brandSnapshot: null, locationLat: null, locationLon: null, brandLogos: {}, brandFonts: { headline: 'Barlow', subheadline: 'Inter', body: 'Inter' }, audienceSegments: [], selectedSegment: null, competitorAds: [], metaAdsSearchResult: null, adRecommendation: '', audienceIntelligence: null, lastBuiltAd: null, segmentVisuals: [], auditContext: null, lastAuditOutput: null, campaignType: null, campaignObjective: null, useInstantForm: null, formType: null, aiCampaignSuggestions: null, lastCampaignBrief: null, lastAdScore: null, promotionContext: '' }; renderBkPalette(); return; }
+  if (!data) { S = { adData:'', product:'', price:'', usp:'', audience:'', budget:'', goal:'purchase', pain:'', desire:'', objection:'', voice:'', competitors:'', compCopy:'', auditScore:null, auditIssues:'', auditSummary:'', researchSummary:'', adCopy:'', audienceDemographics:'', launchMode:false, adFormat:'single', niche:'fitness', brandName:'', brandColors:[{hex:'#00D4A0',label:'Primary'},{hex:'#00A878',label:'Secondary'}], brandFont:'Modern', brandLogoUrl:'', brandVibe:'', dallePrompt:'', lastImageUrl:'', visualConcept:'', lastAdId:null, adDataSaved:false, history:{ audit:[], research:[], build:[], visual:[] }, stagesDone: new Set(), targetCpa:null, targetRoas:null, currentProductId: null, products: [], brandSnapshot: null, locationLat: null, locationLon: null, brandLogos: {}, brandFonts: { headline: 'Barlow', subheadline: 'Inter', body: 'Inter' }, audienceSegments: [], selectedSegment: null, competitorAds: [], metaAdsSearchResult: null, adRecommendation: '', audienceIntelligence: null, lastBuiltAd: null, segmentVisuals: [], auditContext: null, lastAuditOutput: null, campaignType: null, campaignObjective: null, useInstantForm: null, formType: null, aiCampaignSuggestions: null, lastCampaignBrief: null, lastAdScore: null, promotionContext: '', lastBudgetRecommendation: null }; renderBkPalette(); return; }
   S.product    = data.product || '';
   S.price      = data.price || '';
   S.usp        = data.usp || '';
@@ -2597,6 +2598,8 @@ async function saveData() {
       if (_ct === 'promotion' && !_pd) { alert('Please describe your promotion in the Promotion Details field.'); return; }
     }
   }
+  if (!S.budget) S.budget = document.getElementById('s1-budget')?.value?.trim() ||
+                             document.getElementById('d-budget')?.value?.trim() || '';
   // Build promotion context for pipeline injection
   {
     const _promoDetails = document.getElementById('promotion-details')?.value?.trim() || '';
@@ -2817,7 +2820,7 @@ Never use in ads: ${S.brandSnapshot?.avoid || 'not specified'}`;
 // ── Build ─────────────────────────────────────────────────────
 const SYS_BUILD = `You are a world-class Meta Ads creative director. Build the highest-converting possible ad — 100/100 on the claude-ads audit framework.
 100/100 STANDARDS: First 3 words stop scroll · Lead with pain/desire not product · Social proof with specific numbers · Single clear CTA · Right length for placement · Zero vague claims
-FORMAT: ## HOOK ## PRIMARY TEXT — SHORT ## PRIMARY TEXT — MEDIUM ## HEADLINES (3, 40 chars max each) ## CTA + DESCRIPTION ## STRATEGY NOTE ## SCORE PROJECTION
+FORMAT: ## HOOK ## PRIMARY TEXT — SHORT ## PRIMARY TEXT — MEDIUM ## HEADLINES (3, 40 chars max each) ## CTA + DESCRIPTION ## STRATEGY NOTE ## SCORE PROJECTION ## BUDGET RECOMMENDATION
 
 MARKETING FRAMEWORKS — APPLY TO EVERY AD:
 
@@ -2851,7 +2854,39 @@ QUALITY GATES before finalizing:
 - Is the pain specific to this segment, not generic?
 - Does it sound like a human, not a corporate brand?
 - Is there exactly ONE clear CTA?
-- Does it own what competitors are not saying?`;
+- Does it own what competitors are not saying?
+
+BUDGET RECOMMENDATION section (required — include after SCORE PROJECTION):
+Use the monthly budget provided to calculate specific daily amounts for each phase. Show real numbers, not placeholders.
+
+PHASE 1 — TESTING (Week 1-2): $X/day
+- Run [short/medium] copy version
+- Test 2 audiences simultaneously
+- Goal: find winning hook and audience
+- Stop if: CTR below 0.8% after 500 impressions
+
+PHASE 2 — SCALING (Week 3-4): $X/day
+- Double budget on winning ad/audience
+- Kill anything below 1% CTR
+- Goal: drive [X] bookings at $X CAD each
+
+PHASE 3 — RETARGETING (Ongoing): $X/day
+- Target website visitors + lead form openers
+- Use winning creative
+- Expected cost per retargeting booking: $X CAD
+
+EXPECTED RESULTS AT $[budget]/month:
+- Estimated reach: X-X people
+- Estimated impressions: X-X
+- Estimated clicks: X-X
+- Estimated leads: X-X
+- Estimated bookings: X-X
+- Estimated cost per booking: $X-X CAD
+
+SCALE TRIGGER: When cost per booking drops below $X CAD for 3 consecutive days → increase daily budget by 20%
+
+If budget < $450/month, add: "⚠️ $15/day minimum needed to exit Meta's learning phase. Below this, the algorithm cannot optimise effectively."`;
+
 
 async function runBuild(skipBrief=false) {
   document.getElementById('btn-build').disabled=true;
@@ -2868,6 +2903,31 @@ Recommended ad angle: ${S.selectedSegment.ad_angle}
 Hook direction: ${S.selectedSegment.hook_direction}
 COMPETITOR CONTEXT: ${S.competitorAds?.length ? 'Competitors ARE running Meta/Instagram ads. Differentiate by: ' + (S.metaAdsSearchResult?.summary||'being more specific and direct.') : 'NO competitor Meta/Instagram ads found in this market — own the space with bold direct response.'}
 INSTRUCTION: Write this ad SPECIFICALLY for ${S.selectedSegment.name}. Address their PRIMARY FEAR (${S.selectedSegment.primary_fear}) in the first line. Use the hook direction: ${S.selectedSegment.hook_direction}. Do NOT write a generic ad.` : '';
+  const budgetCtx = `
+
+BUDGET & SPEND RECOMMENDATION:
+Monthly budget: ${S.budget || document.getElementById('s1-budget')?.value || document.getElementById('d-budget')?.value || 'not specified'}
+Market: ${S.brandSnapshot?.location || 'Canada'}
+Competition level: ${(S.serpIntelligence?.paidAds?.length || 0) > 0 ? 'COMPETITIVE — ' + S.serpIntelligence.paidAds.length + ' Google Ads running' : 'LOW — no Google Ads found, first-mover opportunity'}
+Competitor Meta ads: ${S.competitorAds?.length > 0 ? S.competitorAds.length + ' active' : 'none detected'}
+Campaign objective: ${S.campaignObjective || 'leads'}
+Industry: ${S.brandSnapshot?.industry || 'service business'}
+
+Canadian Meta Ads benchmarks (2026):
+- Beauty/wellness CPM: $8-15 CAD
+- Beauty/wellness CPC: $0.80-1.50 CAD
+- Beauty/wellness CTR: 1.2-2.5%
+- Lead form conversion rate: 3-8%
+- Cost per lead: $25-80 CAD (beauty/wellness)
+- Cost per booking: $80-200 CAD
+
+Include a BUDGET RECOMMENDATION section in your ad output with:
+1. Weekly spend allocation (testing → scaling → retargeting)
+2. Expected results at this budget (reach, clicks, leads, bookings)
+3. Cost per booking estimate
+4. A/B test budget split recommendation
+5. When to scale (what metric triggers scaling)
+6. Warning if budget is too low to exit learning phase ($15/day minimum)`;
   const msg=`BUILD THE BEST META AD:
 AUDIT: ${S.auditScore||'?'}/100 · Fix: ${S.auditIssues}${S.auditContext ? '\nAUDIT OPTIMIZATION CONTEXT: '+S.auditContext.substring(0,500) : ''}
 RESEARCH: ${S.researchSummary.substring(0,1000)}
@@ -2882,11 +2942,12 @@ Proven angles: ${(S.brandSnapshot?.ad_angles || []).join(', ') || 'not specified
 Brand hook ideas: ${(S.brandSnapshot?.hooks || []).join(', ') || 'not specified'}
 Never use in ads: ${S.brandSnapshot?.avoid || 'not specified'}
 Competitor intelligence: ${S.competitorIntelligence?.length ? S.competitorIntelligence.slice(0,5).map(c=>`${c.competitor_name||c.name}: ${c.has_active_meta_ads?c.meta_ad_count+' active Meta ads':'no Meta ads'} | rating ${c.rating||'—'}`).join(' | ') : 'none saved — run Auto-Research first'}
-Google SERP: ${S.serpIntelligence?.organicResults?.length ? `"${S.serpIntelligence.keyword}" in ${S.serpIntelligence.city} — ${S.serpIntelligence.organicResults.length} businesses, ${S.serpIntelligence.paidAds?.length||0} Google Ads, top questions: ${S.serpIntelligence.peopleAlsoAsk?.slice(0,3).map(q=>q.question).join(' | ')||'none'}` : 'not run yet'}${segmentContext}`;
+Google SERP: ${S.serpIntelligence?.organicResults?.length ? `"${S.serpIntelligence.keyword}" in ${S.serpIntelligence.city} — ${S.serpIntelligence.organicResults.length} businesses, ${S.serpIntelligence.paidAds?.length||0} Google Ads, top questions: ${S.serpIntelligence.peopleAlsoAsk?.slice(0,3).map(q=>q.question).join(' | ')||'none'}` : 'not run yet'}${budgetCtx}${segmentContext}`;
   S.history.build=[{role:'user',content:msg}];
   const reply=await ai(SYS_BUILD,S.history.build);
   S.history.build.push({role:'assistant',content:reply});
   t.remove(); S.adCopy=reply;
+  S.lastBudgetRecommendation = extractBudgetRecommendation(reply);
   // Extract hook and primary text to bind Stage 5 visual to this specific ad
   const hookMatch = reply.match(/^## HOOK\s*\n([\s\S]*?)(?=\n## |\s*$)/m);
   const ptMatch = reply.match(/^## PRIMARY TEXT[^\n]*\n([\s\S]*?)(?=\n## |\s*$)/m);
@@ -2918,6 +2979,11 @@ function extractAdScore(adText) {
   const m = adText.match(/(?:score[:\s]+|projected[:\s]+)(\d{2,3})(?:\/100)?/i)
     || adText.match(/(\d{2,3})\/100/);
   return m ? parseInt(m[1]) : null;
+}
+
+function extractBudgetRecommendation(text) {
+  const match = text.match(/## BUDGET RECOMMENDATION[\s\S]*?(?=\n## |\s*$)/i);
+  return match ? match[0].trim() : null;
 }
 
 async function runCampaignBrief() {
@@ -3207,7 +3273,8 @@ async function saveToAdLibrary() {
     campaign_type:    S.campaignType      || null,
     campaign_objective: S.campaignObjective || null,
     use_instant_form: S.useInstantForm    ?? null,
-    form_type:        S.formType          || null
+    form_type:        S.formType          || null,
+    budget_recommendation: S.lastBudgetRecommendation || null
   }).select().single();
   if (!error && data) {
     S.lastAdId = data.id;
@@ -3898,6 +3965,11 @@ function renderAdLibraryView(ad) {
     ${card('Visual Concept', ad.visual_concept)}
     ${promptBox('DALL-E Prompt', ad.dalle_prompt)}
     ${campaignBriefSection}
+    ${ad.budget_recommendation ? `
+<div style="margin-bottom:16px;">
+  <div style="font-size:11px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">💰 Budget Recommendation</div>
+  <div style="background:var(--bg-elevated);border-radius:8px;padding:14px;font-size:13px;color:var(--t2);line-height:1.8;white-space:pre-wrap;">${escHtml(ad.budget_recommendation)}</div>
+</div>` : ''}
     ${actionRow}
   </div>`;
 }
