@@ -740,7 +740,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
             <div style="padding:18px 22px 0;">
               <div class="dcard">
                 <h3>Product &amp; Goal</h3>
-                <div class="flbl">Product / Service</div>
+                <div class="flbl" id="d-product-label">Product / Service</div>
                 <select class="fsel" id="d-product" onchange="onProductSelected(this.value)">
                   <option value="">— Select a product or service —</option>
                 </select>
@@ -794,7 +794,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
             <div style="padding:14px 22px 0;">
               <div class="dcard">
                 <h3>Product &amp; Goal</h3>
-                <div class="flbl">Product / Service</div>
+                <div class="flbl" id="new-product-label">Product / Service</div>
                 <select class="fsel" id="new-product-select" onchange="onNewProductSelected(this.value)">
                   <option value="">— Select a product or service —</option>
                 </select>
@@ -2317,7 +2317,8 @@ let S = {
   formType: null,
   aiCampaignSuggestions: null,
   lastCampaignBrief: null,
-  lastAdScore: null
+  lastAdScore: null,
+  promotionContext: ''
 };
 
 async function savePipelineRun() {
@@ -2353,7 +2354,7 @@ async function savePipelineRun() {
 async function loadPipelineRun() {
   if (!currentBizId) return;
   const { data } = await sb.from('pipeline_runs').select('*').eq('business_id', currentBizId).order('updated_at', {ascending:false}).limit(1).single();
-  if (!data) { S = { adData:'', product:'', price:'', usp:'', audience:'', budget:'', goal:'purchase', pain:'', desire:'', objection:'', voice:'', competitors:'', compCopy:'', auditScore:null, auditIssues:'', auditSummary:'', researchSummary:'', adCopy:'', audienceDemographics:'', launchMode:false, adFormat:'single', niche:'fitness', brandName:'', brandColors:[{hex:'#00D4A0',label:'Primary'},{hex:'#00A878',label:'Secondary'}], brandFont:'Modern', brandLogoUrl:'', brandVibe:'', dallePrompt:'', lastImageUrl:'', visualConcept:'', lastAdId:null, adDataSaved:false, history:{ audit:[], research:[], build:[], visual:[] }, stagesDone: new Set(), targetCpa:null, targetRoas:null, currentProductId: null, products: [], brandSnapshot: null, locationLat: null, locationLon: null, brandLogos: {}, brandFonts: { headline: 'Barlow', subheadline: 'Inter', body: 'Inter' }, audienceSegments: [], selectedSegment: null, competitorAds: [], metaAdsSearchResult: null, adRecommendation: '', audienceIntelligence: null, lastBuiltAd: null, segmentVisuals: [], auditContext: null, lastAuditOutput: null, campaignType: null, campaignObjective: null, useInstantForm: null, formType: null, aiCampaignSuggestions: null, lastCampaignBrief: null, lastAdScore: null }; renderBkPalette(); return; }
+  if (!data) { S = { adData:'', product:'', price:'', usp:'', audience:'', budget:'', goal:'purchase', pain:'', desire:'', objection:'', voice:'', competitors:'', compCopy:'', auditScore:null, auditIssues:'', auditSummary:'', researchSummary:'', adCopy:'', audienceDemographics:'', launchMode:false, adFormat:'single', niche:'fitness', brandName:'', brandColors:[{hex:'#00D4A0',label:'Primary'},{hex:'#00A878',label:'Secondary'}], brandFont:'Modern', brandLogoUrl:'', brandVibe:'', dallePrompt:'', lastImageUrl:'', visualConcept:'', lastAdId:null, adDataSaved:false, history:{ audit:[], research:[], build:[], visual:[] }, stagesDone: new Set(), targetCpa:null, targetRoas:null, currentProductId: null, products: [], brandSnapshot: null, locationLat: null, locationLon: null, brandLogos: {}, brandFonts: { headline: 'Barlow', subheadline: 'Inter', body: 'Inter' }, audienceSegments: [], selectedSegment: null, competitorAds: [], metaAdsSearchResult: null, adRecommendation: '', audienceIntelligence: null, lastBuiltAd: null, segmentVisuals: [], auditContext: null, lastAuditOutput: null, campaignType: null, campaignObjective: null, useInstantForm: null, formType: null, aiCampaignSuggestions: null, lastCampaignBrief: null, lastAdScore: null, promotionContext: '' }; renderBkPalette(); return; }
   S.product    = data.product || '';
   S.price      = data.price || '';
   S.usp        = data.usp || '';
@@ -2529,7 +2530,12 @@ async function saveData() {
     S.niche      = document.getElementById('new-niche').value;
     S.adData     = ''; S.launchMode = true;
     ['product','price','usp','budget','goal','audience','pain','desire','objection','competitors'].forEach(f=>{const el=document.getElementById('d-'+f);if(el)el.value=S[f]||'';});
-    if (!S.product) { alert('Enter your product name.'); return; }
+    {
+      const _ct = S.campaignType || '';
+      const _pd = document.getElementById('promotion-details')?.value?.trim() || '';
+      if (!S.product && _ct !== 'promotion') { alert('Please select a product or service, or choose Special Offer as your campaign type.'); return; }
+      if (_ct === 'promotion' && !_pd) { alert('Please describe your promotion in the Promotion Details field.'); return; }
+    }
   } else {
     const pasteVal = document.getElementById('d-paste').value.trim();
     if (!S.adData && pasteVal) { S.adData = pasteVal; S.adDataSaved = false; }
@@ -2547,7 +2553,19 @@ async function saveData() {
     S.competitors= document.getElementById('d-competitors').value.trim();
     S.compCopy   = document.getElementById('d-compcopy').value.trim();
     S.launchMode = false;
-    if (!S.product && !S.adData) { alert('Add your product info or ad data.'); return; }
+    {
+      const _ct = S.campaignType || '';
+      const _pd = document.getElementById('promotion-details')?.value?.trim() || '';
+      if (!S.product && !S.adData && _ct !== 'promotion') { alert('Please select a product or service, or choose Special Offer as your campaign type.'); return; }
+      if (_ct === 'promotion' && !_pd) { alert('Please describe your promotion in the Promotion Details field.'); return; }
+    }
+  }
+  // Build promotion context for pipeline injection
+  {
+    const _promoDetails = document.getElementById('promotion-details')?.value?.trim() || '';
+    S.promotionContext = (S.campaignType === 'promotion' && _promoDetails)
+      ? `CAMPAIGN TYPE: Special Promotion\nPROMOTION DETAILS: ${_promoDetails}\nNOTE: This campaign is not for a single product — it promotes a special offer across the full range of services/packages.\nBuild all ad copy and strategy around this promotion, not a single product.`
+      : '';
   }
   // Always read brand kit regardless of mode
   S.brandName    = document.getElementById('bk-name').value.trim();
@@ -2685,7 +2703,8 @@ function getSYSResearch() {
   const mktCity = S.serpIntelligence?.city || 'the local market';
   const mktKw = S.serpIntelligence?.keyword || 'the target niche';
   const auditCtx = S.auditContext ? `\n\nAUDIT FINDINGS (identify research that will directly fix these issues):\n${S.auditContext.substring(0,1200)}\n` : '';
-  return `You are an expert market research analyst and Meta Ads strategist.${auditCtx}
+  const promoCtx = S.promotionContext ? `\n\n${S.promotionContext}\n` : '';
+  return `You are an expert market research analyst and Meta Ads strategist.${auditCtx}${promoCtx}
 Produce a DETAILED competitive intelligence report with these exact sections:
 
 1. TARGET AUDIENCE PROFILE
@@ -2815,7 +2834,7 @@ INSTRUCTION: Write this ad SPECIFICALLY for ${S.selectedSegment.name}. Address t
   const msg=`BUILD THE BEST META AD:
 AUDIT: ${S.auditScore||'?'}/100 · Fix: ${S.auditIssues}${S.auditContext ? '\nAUDIT OPTIMIZATION CONTEXT: '+S.auditContext.substring(0,500) : ''}
 RESEARCH: ${S.researchSummary.substring(0,1000)}
-PRODUCT: ${S.product} · PRICE: ${S.price} · USP: ${S.usp}
+${S.promotionContext ? S.promotionContext+'\n' : ''}PRODUCT: ${S.product || '(promotion — see details above)'} · PRICE: ${S.price} · USP: ${S.usp}
 AUDIENCE: ${S.audience} · PAIN: ${S.pain} · DESIRE: ${S.desire}
 GOAL: ${S.goal} · FORMAT: ${S.adFormat||'single image'}${getTopAdsForContext()}
 Brand voice: ${S.brandSnapshot?.voice || 'not specified'}
@@ -2865,7 +2884,7 @@ function extractAdScore(adText) {
 }
 
 async function runCampaignBrief() {
-  const product   = S.product || 'your product/service';
+  const product   = S.product || (S.campaignType === 'promotion' ? 'promotion campaign' : 'your product/service');
   const price     = S.price ? `$${S.price}` : 'not specified';
   const budget    = document.getElementById('d-budget')?.value || document.getElementById('new-budget')?.value || 'not specified';
   const audience  = S.audience || 'not specified';
@@ -2891,6 +2910,7 @@ BUSINESS & AD CONTEXT:
 - Campaign Objective: ${objective}
 - Ad Format: ${adFormat}
 - Use Instant Form: ${useForm === true ? 'Yes — ' + (formType === 'intent' ? 'Higher Intent' : 'More Volume') : useForm === false ? 'No — Send to website' : 'Not specified'}
+${S.promotionContext ? '- ' + S.promotionContext.split('\n').join('\n- ') : ''}
 ${segment ? `- Target Segment: ${segment.name} | Fear: ${segment.primary_fear} | Desire: ${segment.primary_desire}` : ''}
 ${adCopySnippet ? `\nAD COPY PREVIEW:\n${adCopySnippet}` : ''}
 
@@ -4964,6 +4984,29 @@ function selectCampaignType(type) {
   });
   const promoSection = document.getElementById('promotion-details-section');
   if (promoSection) promoSection.style.display = type === 'promotion' ? 'block' : 'none';
+  // Update product selector labels and options for promotion mode
+  const dLabel   = document.getElementById('d-product-label');
+  const newLabel = document.getElementById('new-product-label');
+  const dSelect  = document.getElementById('d-product');
+  const newSel   = document.getElementById('new-product-select');
+  if (type === 'promotion') {
+    const labelText = 'Product / Service (optional for promotions)';
+    if (dLabel)   dLabel.textContent   = labelText;
+    if (newLabel) newLabel.textContent = labelText;
+    [dSelect, newSel].forEach(sel => {
+      if (!sel || sel.querySelector('option[value="__promotion__"]')) return;
+      const opt = new Option('All packages / promotion', '__promotion__');
+      sel.insertBefore(opt, sel.firstChild);
+    });
+  } else {
+    if (dLabel)   dLabel.textContent   = 'Product / Service';
+    if (newLabel) newLabel.textContent = 'Product / Service';
+    [dSelect, newSel].forEach(sel => {
+      if (!sel) return;
+      const promoOpt = sel.querySelector('option[value="__promotion__"]');
+      if (promoOpt) sel.removeChild(promoOpt);
+    });
+  }
 }
 
 function selectObjective(obj) {
