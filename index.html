@@ -2577,6 +2577,7 @@ async function saveData() {
     if (!S.adData && pasteVal) { S.adData = pasteVal; S.adDataSaved = false; }
     if (S.adData && !S.adDataSaved) { savePerformanceData(S.adData).then(count=>{S.adDataSaved=count>0;const msg=document.getElementById('perf-save-msg');if(msg&&count>0){msg.textContent=`✅ ${count} rows saved to performance history`;msg.style.display='block';}}); }
     S.product    = document.getElementById('d-product').value.trim();
+    if (S.product === 'promotion') S.product = ''; // sentinel value → cleared; promotionContext carries the details
     S.price      = document.getElementById('d-price').value.trim();
     S.usp        = document.getElementById('d-usp').value.trim();
     S.audience   = document.getElementById('d-audience').value.trim();
@@ -5020,28 +5021,15 @@ function selectCampaignType(type) {
   });
   const promoSection = document.getElementById('promotion-details-section');
   if (promoSection) promoSection.style.display = type === 'promotion' ? 'block' : 'none';
-  // Update product selector labels and options for promotion mode
+  // Update product selector labels
   const dLabel   = document.getElementById('d-product-label');
   const newLabel = document.getElementById('new-product-label');
-  const dSelect  = document.getElementById('d-product');
-  const newSel   = document.getElementById('new-product-select');
   if (type === 'promotion') {
-    const labelText = 'Product / Service (optional for promotions)';
-    if (dLabel)   dLabel.textContent   = labelText;
-    if (newLabel) newLabel.textContent = labelText;
-    [dSelect, newSel].forEach(sel => {
-      if (!sel || sel.querySelector('option[value="__promotion__"]')) return;
-      const opt = new Option('All packages / promotion', '__promotion__');
-      sel.insertBefore(opt, sel.firstChild);
-    });
+    if (dLabel)   dLabel.textContent = 'Product / Service (optional for promotions)';
+    if (newLabel) newLabel.textContent = 'Product / Service (optional for promotions)';
   } else {
-    if (dLabel)   dLabel.textContent   = 'Product / Service';
+    if (dLabel)   dLabel.textContent = 'Product / Service';
     if (newLabel) newLabel.textContent = 'Product / Service';
-    [dSelect, newSel].forEach(sel => {
-      if (!sel) return;
-      const promoOpt = sel.querySelector('option[value="__promotion__"]');
-      if (promoOpt) sel.removeChild(promoOpt);
-    });
   }
 }
 
@@ -6165,6 +6153,11 @@ function populateProductSelect() {
     const sel = document.getElementById(id);
     if (!sel || sel.tagName !== 'SELECT') return;
     sel.innerHTML = '<option value="">— Select a product or service —</option>';
+    // Promotion option is always available regardless of saved products
+    const promoOpt = document.createElement('option');
+    promoOpt.value = 'promotion';
+    promoOpt.textContent = '🏷️ Not product specific / Promotion';
+    sel.appendChild(promoOpt);
     if (products.length === 0) {
       const opt = document.createElement('option');
       opt.value = '__goto_baseprofile__';
@@ -6177,13 +6170,25 @@ function populateProductSelect() {
         opt.textContent = p.name;
         sel.appendChild(opt);
       });
-      if (S.product) sel.value = S.product;
     }
+    // Restore selection
+    if (S.campaignType === 'promotion') sel.value = 'promotion';
+    else if (S.product) sel.value = S.product;
   });
 }
 
 function onProductSelected(name) {
   if (name === '__goto_baseprofile__') { go('baseProfile'); return; }
+  if (name === 'promotion') {
+    S.product = '';
+    S.currentProductId = null;
+    const priceDisp = document.getElementById('d-price-display');
+    if (priceDisp) priceDisp.textContent = '';
+    const pill = document.getElementById('connected-product-pill');
+    if (pill) pill.style.display = 'none';
+    selectCampaignType('promotion');
+    return;
+  }
   if (!name) return;
   const prod = (S.products || []).find(p => p.name === name);
   if (!prod) return;
@@ -6204,6 +6209,16 @@ function onProductSelected(name) {
 
 function onNewProductSelected(name) {
   if (name === '__goto_baseprofile__') { go('baseProfile'); return; }
+  if (name === 'promotion') {
+    S.product = '';
+    S.currentProductId = null;
+    const hiddenProd = document.getElementById('new-product');
+    if (hiddenProd) hiddenProd.value = '';
+    const priceDisp = document.getElementById('new-price-display');
+    if (priceDisp) priceDisp.textContent = '';
+    selectCampaignType('promotion');
+    return;
+  }
   if (!name) return;
   const prod = (S.products || []).find(p => p.name === name);
   if (!prod) return;
