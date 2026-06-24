@@ -1639,17 +1639,9 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
   <div class="keys-save-banner" id="keys-save-banner">✓ Keys saved successfully</div>
   <div class="keys-err-banner" id="keys-err-banner"></div>
   <div class="settings-grid">
-    <div class="scard" style="grid-column:1/-1;">
-      <h3>🧠 AI Provider</h3>
-      <div style="display:flex;gap:8px;margin-bottom:8px;">
-        <button class="btn bp bsm" id="provider-claude" onclick="setProvider('claude',this)">Claude (Anthropic)</button>
-        <button class="btn bg bsm" id="provider-openai" onclick="setProvider('openai',this)">GPT-4o (OpenAI)</button>
-      </div>
-      <div style="font-size:11px;color:var(--t2);">Active: <span id="provider-label" style="color:var(--green);font-weight:600;">Claude</span></div>
-    </div>
     <div class="scard">
-      <h3>🤖 Claude API</h3>
-      <p>Get at <strong>console.anthropic.com</strong> → API Keys</p>
+      <h3>🤖 Claude API (AI Engine)</h3>
+      <p>Powers all research, ad building, and analysis. Get at <strong>console.anthropic.com</strong> → API Keys</p>
       <div class="key-row">
         <input class="key-input" id="key-claude" type="password" placeholder="sk-ant-api03-...">
         <span class="key-status ks-no" id="kstat-claude">—</span>
@@ -1657,8 +1649,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
       <button class="btn bp bsm save-keys-btn" onclick="saveKeys()" style="width:100%;">Save Keys</button>
     </div>
     <div class="scard">
-      <h3>🟢 OpenAI API</h3>
-      <p>Get at <strong>platform.openai.com</strong> → API Keys</p>
+      <h3>🟢 OpenAI API (Image Generation)</h3>
+      <p>Powers DALL-E 3 image generation only. Get at <strong>platform.openai.com</strong> → API Keys</p>
       <div class="key-row">
         <input class="key-input" id="key-openai" type="password" placeholder="sk-proj-...">
         <span class="key-status ks-no" id="kstat-openai">—</span>
@@ -2295,7 +2287,7 @@ function readBkColors() {
 }
 
 // ── Keys (stored in Supabase) ─────────────────────────────────
-let KEYS = { claude:'', openai:'', apify:'', ghl:'', ghlLocation:'', provider:'claude', replicate:'', bannerbear:'' };
+let KEYS = { claude:'', openai:'', apify:'', ghl:'', ghlLocation:'', replicate:'', bannerbear:'' };
 let dashSortCol = 'spend';
 let dashSortDir = -1;
 let dashSuggestions = [];
@@ -2307,11 +2299,9 @@ function _applyKeyData(row) {
   KEYS.apify       = row.apify_key       || '';
   KEYS.ghl         = row.ghl_key         || '';
   KEYS.ghlLocation = row.ghl_location_id || '';
-  KEYS.provider    = row.ai_provider     || 'claude';
   // Do NOT touch input fields here — panel may not be open yet.
   // populateKeyInputs() is called when Settings is opened via go('settings').
   updateAllKeyStatuses();
-  setProvider(KEYS.provider, document.getElementById('provider-' + KEYS.provider));
 }
 
 function populateKeyInputs() {
@@ -2383,11 +2373,9 @@ async function loadKeys() {
     KEYS.apify       = data.apify_key       || '';
     KEYS.ghl         = data.ghl_key         || '';
     KEYS.ghlLocation = data.ghl_location_id || '';
-    KEYS.provider    = data.ai_provider     || 'claude';
     KEYS.replicate   = data.replicate_key   || '';
     KEYS.bannerbear  = data.bannerbear_key  || '';
     updateAllKeyStatuses();
-    setProvider(KEYS.provider, document.getElementById('provider-' + KEYS.provider));
     populateKeyInputs();
     _setKeysLoadStatus('ok', '✓ Keys loaded');
   } else {
@@ -2411,7 +2399,6 @@ async function saveKeys() {
     apify_key:       KEYS.apify,
     ghl_key:         KEYS.ghl,
     ghl_location_id: KEYS.ghlLocation,
-    ai_provider:     KEYS.provider,
     replicate_key:   KEYS.replicate,
     bannerbear_key:  KEYS.bannerbear,
     updated_at:      new Date().toISOString()
@@ -2484,14 +2471,6 @@ async function testGHLConnection(key) {
   } catch(e) {
     if (el) { el.textContent='✗ ' + (e.message || 'Network error'); el.className='ghl-status ghl-disconnected'; }
   }
-}
-
-function setProvider(name, el) {
-  KEYS.provider = name;
-  document.querySelectorAll('#provider-claude,#provider-openai').forEach(b=>b.className='btn bg bsm');
-  if (el) el.className='btn bp bsm';
-  const lbl = document.getElementById('provider-label');
-  if (lbl) lbl.textContent = name==='openai'?'GPT-4o (OpenAI)':'Claude (Anthropic)';
 }
 
 // ── Business management (Supabase) ────────────────────────────
@@ -2893,20 +2872,9 @@ async function saveData() {
   await savePipelineRun(); updateCtx(); go('research');
 }
 
-// ── AI call ───────────────────────────────────────────────────
+// ── AI call (Claude only — OpenAI used only for DALL-E image generation) ─────
 async function ai(system, messages) {
   setSt('Agent running…','run');
-  if (KEYS.provider === 'openai') {
-    if (!KEYS.openai) { setSt('No OpenAI key',''); return '⚠️ OpenAI key not set. Go to Settings ⚙️.'; }
-    try {
-      const res = await fetch('https://api.openai.com/v1/chat/completions', {
-        method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+KEYS.openai},
-        body: JSON.stringify({ model:'gpt-4o', max_tokens:1500, messages:[{role:'system',content:system},...messages] })
-      });
-      const d = await res.json(); setSt('Done','done');
-      return d.choices?.[0]?.message?.content || (d.error?'⚠️ '+d.error.message:'⚠️ No response.');
-    } catch(e){setSt('Error','');return '⚠️ OpenAI error: '+e.message;}
-  }
   if (!KEYS.claude) { setSt('No Claude key',''); return '⚠️ Claude key not set. Go to Settings ⚙️.'; }
   try {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -6561,11 +6529,10 @@ async function analyzeBrand() {
   const snapEl = document.getElementById('bp-brand-snapshot');
 
   // ── Step 1: Check AI key before doing anything ────────────────
-  const hasAiKey = KEYS.provider === 'openai' ? !!KEYS.openai : !!KEYS.claude;
-  console.log('[analyzeBrand] start — provider:', KEYS.provider, '| hasAiKey:', hasAiKey, '| hasApify:', !!KEYS.apify);
+  const hasAiKey = !!KEYS.claude;
+  console.log('[analyzeBrand] start — hasAiKey:', hasAiKey, '| hasApify:', !!KEYS.apify);
   if (!hasAiKey) {
-    const keyName = KEYS.provider === 'openai' ? 'OpenAI' : 'Claude';
-    const msg = `No ${keyName} API key found. Add it in Settings first.`;
+    const msg = 'No Claude API key found. Add it in Settings first.';
     console.warn('[analyzeBrand] Blocked — no AI key');
     if (snapEl) { snapEl.style.display = 'block'; snapEl.innerHTML = `<div style="color:var(--red);font-size:11px;">⚠ ${escHtml(msg)}</div>`; }
     setSt('No AI key', '');
