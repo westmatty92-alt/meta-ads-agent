@@ -6156,7 +6156,7 @@ function populateProductSelect() {
     // Promotion option is always available regardless of saved products
     const promoOpt = document.createElement('option');
     promoOpt.value = 'promotion';
-    promoOpt.textContent = '🏷️ Not product specific / Promotion';
+    promoOpt.textContent = '🏷️ Not product specific';
     sel.appendChild(promoOpt);
     if (products.length === 0) {
       const opt = document.createElement('option');
