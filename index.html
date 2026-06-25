@@ -1184,9 +1184,9 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
             style="background:var(--volt);color:#000;border:none;border-radius:8px;padding:10px;font-size:12px;font-weight:700;cursor:pointer;">
             🎨 Generate with DALL-E 3<div style="font-size:10px;font-weight:400;margin-top:2px;opacity:0.7;">~$0.04-0.08 per image</div>
           </button>
-          <button onclick="generateAdImage('flux')"
-            style="background:transparent;border:1px solid var(--volt);color:var(--volt);border-radius:8px;padding:10px;font-size:12px;font-weight:700;cursor:pointer;">
-            ⚡ Generate with Flux<div style="font-size:10px;font-weight:400;margin-top:2px;opacity:0.7;">~$0.003 per image</div>
+          <button disabled title="Requires server-side proxy — coming in Phase 3"
+            style="background:transparent;border:1px solid var(--border);color:var(--t3);border-radius:8px;padding:10px;font-size:12px;font-weight:700;cursor:not-allowed;opacity:0.5;">
+            ⚡ Generate with Flux<div style="font-size:10px;font-weight:400;margin-top:2px;">Coming in Phase 3</div>
           </button>
         </div>
         <button onclick="generateAllSizes('dalle')"
@@ -3454,8 +3454,7 @@ async function generateImageDALLE(prompt, size) {
         prompt: prompt.slice(0, 3900),
         n: 1,
         size: dalleSize,
-        quality: 'standard',
-        response_format: 'url'
+        quality: 'standard'
       })
     });
     const data = await response.json();
@@ -3470,50 +3469,14 @@ async function generateImageDALLE(prompt, size) {
 }
 
 async function generateImageFlux(prompt, aspectRatio) {
-  if (!KEYS.replicate) {
-    alert('Replicate API key required for Flux generation. Add it in Settings.');
-    return null;
+  // Replicate blocks direct browser API calls (CORS restriction)
+  // Flux generation requires a server-side proxy — coming in Phase 3
+  const statusEl = document.getElementById('image-gen-status');
+  if (statusEl) {
+    statusEl.style.display = 'block';
+    statusEl.innerHTML = '⚠️ Flux generation requires server-side setup — use DALL-E 3 for now. Flux will be enabled in Phase 3.';
   }
-  const ratioMap = { '4:5': '4:5', '9:16': '9:16', '1:1': '1:1', 'landscape': '16:9' };
-  const ratio = ratioMap[aspectRatio] || '4:5';
-  try {
-    console.log('[flux] starting generation — ratio:', ratio);
-    const run = await fetch('https://api.replicate.com/v1/models/black-forest-labs/flux-1.1-pro/predictions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + KEYS.replicate, 'Prefer': 'wait' },
-      body: JSON.stringify({ input: { prompt: prompt.slice(0, 2000), aspect_ratio: ratio, output_format: 'jpg', output_quality: 90, safety_tolerance: 2 } })
-    });
-    const runData = await run.json();
-    if (runData.output) {
-      const url = Array.isArray(runData.output) ? runData.output[0] : runData.output;
-      console.log('[flux] sync response:', url ? 'OK' : 'failed');
-      return url || null;
-    }
-    const predictionId = runData?.id;
-    if (!predictionId) { console.warn('[flux] no prediction ID:', JSON.stringify(runData).slice(0, 200)); return null; }
-    console.log('[flux] polling prediction:', predictionId);
-    for (let i = 0; i < 20; i++) {
-      await new Promise(r => setTimeout(r, 3000));
-      const status = await fetch('https://api.replicate.com/v1/predictions/' + predictionId, {
-        headers: { 'Authorization': 'Bearer ' + KEYS.replicate }
-      });
-      const statusData = await status.json();
-      console.log('[flux] poll', i + 1, '— status:', statusData.status);
-      if (statusData.status === 'succeeded') {
-        const url = Array.isArray(statusData.output) ? statusData.output[0] : statusData.output;
-        return url || null;
-      }
-      if (statusData.status === 'failed' || statusData.status === 'canceled') {
-        console.warn('[flux] failed:', statusData.error);
-        return null;
-      }
-    }
-    console.warn('[flux] timed out after 60s');
-    return null;
-  } catch(e) {
-    console.warn('[flux] error:', e.message);
-    return null;
-  }
+  return null;
 }
 
 async function generateAdImage(provider) {
