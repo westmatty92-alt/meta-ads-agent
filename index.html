@@ -4008,6 +4008,17 @@ function selectDiscoveryOption(questionId, value, el) {
   });
   el.style.background = 'rgba(0,212,160,0.1)';
   el.style.border = '2px solid var(--volt)';
+  const currentQ = DISCOVERY_QUESTIONS[discoveryCurrentIndex];
+  if (currentQ?.type === 'single_choice') {
+    setTimeout(() => {
+      if (discoveryCurrentIndex === DISCOVERY_QUESTIONS.length - 1) {
+        saveDiscoveryAndBuild();
+      } else {
+        discoveryCurrentIndex++;
+        renderDiscoveryQuestion(discoveryCurrentIndex);
+      }
+    }, 400);
+  }
 }
 
 function discoveryNext() {
