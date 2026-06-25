@@ -4196,6 +4196,7 @@ function showDiscoveryResults() {
     <div style="background:var(--bg-elevated);border-radius:8px;padding:12px;font-size:12px;color:var(--t2);line-height:1.7;max-height:120px;overflow:hidden;">${escHtml((S.adCopy || '').slice(0, 300))}...</div>
     <div style="margin-top:12px;display:flex;gap:8px;">
       <button onclick="openDiscoveryAdView()" style="flex:1;background:var(--volt);color:#000;border:none;border-radius:6px;padding:8px;font-size:12px;font-weight:700;cursor:pointer;">View Complete Campaign →</button>
+      <button onclick="generateDiscoveryImage()" id="discovery-generate-img-btn" style="background:transparent;border:1px solid var(--volt);color:var(--volt);border-radius:6px;padding:8px 12px;font-size:12px;font-weight:600;cursor:pointer;">🎨 Generate Image<div style="font-size:10px;font-weight:400;opacity:0.7;margin-top:1px;">~$0.05 · 1 credit</div></button>
       <button onclick="go('adLibrary')" style="background:transparent;border:1px solid var(--border);border-radius:6px;padding:8px 12px;font-size:12px;color:var(--t2);cursor:pointer;">Ad Library</button>
     </div>
   </div>`;
@@ -4204,6 +4205,62 @@ function showDiscoveryResults() {
 function openDiscoveryAdView() {
   if (discoveryAdId) openAdView(discoveryAdId);
   else go('adLibrary');
+}
+
+async function generateDiscoveryImage() {
+  const btn = document.getElementById('discovery-generate-img-btn');
+  if (btn) {
+    btn.textContent = '⏳ Generating...';
+    btn.disabled = true;
+  }
+
+  const prompt = S.lastVisualPrompts?.dalle || S.lastVisualPrompts?.flux || '';
+
+  if (!prompt || prompt.length < 100) {
+    alert('Visual prompt not found. Click "View Complete Campaign" and generate from Stage 4 Visual.');
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '🎨 Generate Image<div style="font-size:10px;font-weight:400;opacity:0.7;margin-top:1px;">~$0.05 · 1 credit</div>';
+    }
+    return;
+  }
+
+  const imageUrl = await generateImageDALLE(prompt, '4:5');
+
+  if (imageUrl) {
+    const previewEl = document.getElementById('discovery-ad-preview');
+    const imgDiv = document.createElement('div');
+    imgDiv.style.cssText = 'background:var(--bg-surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:16px;';
+    imgDiv.innerHTML = `
+      <div style="padding:8px 12px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-size:11px;color:var(--t2);">1080×1536 Feed · GPT Image 2</span>
+        <a href="${imageUrl}" download="campaign-image.jpg" target="_blank"
+          style="background:var(--volt);color:#000;border-radius:5px;padding:3px 10px;font-size:10px;font-weight:600;text-decoration:none;">
+          ⬇ Download
+        </a>
+      </div>
+      <img src="${imageUrl}" style="width:100%;display:block;max-height:400px;object-fit:contain;background:#000;">`;
+    if (previewEl) previewEl.insertBefore(imgDiv, previewEl.firstChild);
+
+    if (S.lastAdId) {
+      await sb.from('generated_ads').update({ image_url: imageUrl }).eq('id', S.lastAdId);
+    }
+
+    if (btn) {
+      btn.style.background = 'var(--green)';
+      btn.style.border = '1px solid var(--green)';
+      btn.style.color = '#000';
+      btn.innerHTML = '✅ Image Generated<div style="font-size:10px;font-weight:400;opacity:0.7;margin-top:1px;">Saved to Ad Library</div>';
+    }
+
+    S.lastImageUrl = imageUrl;
+    console.log('[discovery] image generated and saved');
+  } else {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '❌ Failed — Try Again<div style="font-size:10px;font-weight:400;opacity:0.7;margin-top:1px;">~$0.05 · 1 credit</div>';
+    }
+  }
 }
 
 async function loadClientDiscovery() {
