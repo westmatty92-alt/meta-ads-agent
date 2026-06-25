@@ -1198,7 +1198,13 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
           📐 Generate All 3 Sizes with GPT Image 2 (~$0.15 total)
         </button>
         <div id="image-gen-status" style="display:none;font-size:12px;color:var(--t2);margin-bottom:10px;"></div>
-        <div id="generated-images-container" style="display:flex;flex-direction:column;gap:12px;"></div>
+        <div id="generated-images-container" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;"></div>
+        <div id="generate-variation-btn-container" style="display:none;margin-top:10px;">
+          <button onclick="generateAdImage('dalle')"
+            style="width:100%;background:transparent;border:1px solid var(--volt);color:var(--volt);border-radius:8px;padding:9px;font-size:12px;font-weight:700;cursor:pointer;">
+            🔄 Generate Another Variation (~$0.05)
+          </button>
+        </div>
         <div id="canva-prompt-section" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--border);">
           <div style="font-size:11px;color:var(--t3);margin-bottom:8px;">Open in Canva with the AI image prompt pre-filled:</div>
           <button onclick="openCanvaWithPrompt()"
@@ -2860,6 +2866,7 @@ function go(name) {
   if(name==='data'){ populateProductSelect(); renderCustomerIntelligence(); }
   if(name==='research'){ renderS3ResearchBrief(); }
   if(name==='discovery'){ initDiscoveryPanel(); }
+  if(name==='visual'){ restoreGeneratedImages(); }
 }
 function unlockStage(name){const el=document.getElementById('nav-'+name);if(el)el.classList.remove('locked');const b=document.getElementById('badge-'+name);if(b){b.textContent='Ready';b.className='sbadge br';}}
 function markDone(name,label){const el=document.getElementById('nav-'+name);if(el)el.classList.add('done');const b=document.getElementById('badge-'+name);if(b){b.textContent=label||'✓';b.className='sbadge bd';}const connMap={data:1,research:2,build:3,visual:4};const c=document.getElementById('conn-'+connMap[name]);if(c)c.classList.add('done');S.stagesDone.add(name);const pipeStages=['data','research','build','visual'];const pipeCount=[...S.stagesDone].filter(s=>pipeStages.includes(s)).length;document.getElementById('ctx-stgs').textContent=pipeCount+' / 4';}
@@ -3603,6 +3610,9 @@ For the GPT IMAGE 2 PROMPT:
   if (_imgStatus) { _imgStatus.style.display = 'none'; _imgStatus.innerHTML = ''; }
   const _imgContainer = document.getElementById('generated-images-container');
   if (_imgContainer) _imgContainer.innerHTML = '';
+  S.generatedImages = []; S.lastImageUrls = {};
+  const _varBtn = document.getElementById('generate-variation-btn-container');
+  if (_varBtn) _varBtn.style.display = 'none';
   selectImageSize(S.selectedImageSize);
   markDone('visual','✓'); await savePipelineRun();
   setSt('Pipeline complete ✓','done');
@@ -3790,28 +3800,36 @@ async function generateAdImage(provider) {
 
     S.lastImageUrl = imageUrl;
     if (!S.generatedImages) S.generatedImages = [];
-    S.generatedImages.push({ url: imageUrl, size, provider, prompt });
+    const _imgTs = Date.now();
+    S.generatedImages.push({ url: imageUrl, size, provider, prompt, timestamp: _imgTs });
 
     const sizeLabels = { '4:5': '1080×1350 Feed', '9:16': '1080×1920 Stories/Reels', '1:1': '1080×1080 Square' };
+    const imgId = 'gen-img-' + _imgTs;
     const imgCard = document.createElement('div');
-    imgCard.style.cssText = 'background:var(--bg-surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;';
+    imgCard.id = imgId;
+    imgCard.style.cssText = 'background:var(--bg-surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;display:flex;flex-direction:column;';
     imgCard.innerHTML = `
-      <div style="padding:8px 12px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
-        <span style="font-size:11px;color:var(--t2);">${sizeLabels[size] || size} · ${provider === 'dalle' ? 'GPT Image 2' : 'Flux'}</span>
-        <div style="display:flex;gap:6px;">
-          <a href="${imageUrl}" download="baseleap-ad-${size.replace(':', 'x')}.jpg" target="_blank"
-            style="background:var(--volt);color:#000;border:none;border-radius:5px;padding:3px 10px;font-size:10px;font-weight:600;cursor:pointer;text-decoration:none;">⬇ Download</a>
-          <button onclick="generateAdImage('${provider}')"
-            style="background:transparent;border:1px solid var(--border);border-radius:5px;padding:3px 8px;font-size:10px;color:var(--t2);cursor:pointer;">🔄 Regenerate</button>
-        </div>
+      <div style="position:relative;background:#000;">
+        <img src="${imageUrl}" style="width:100%;display:block;aspect-ratio:4/5;object-fit:cover;">
+        <div style="position:absolute;top:6px;left:6px;background:rgba(0,0,0,0.6);border-radius:4px;padding:2px 6px;font-size:10px;color:#fff;">${sizeLabels[size] || size}</div>
+        <div style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,0.6);border-radius:4px;padding:2px 6px;font-size:10px;color:#fff;">${provider === 'dalle' ? 'GPT Image 2' : 'Flux'}</div>
       </div>
-      <img src="${imageUrl}" style="width:100%;display:block;max-height:500px;object-fit:contain;background:#000;" alt="Generated ad image">`;
+      <div style="padding:8px;display:flex;flex-direction:column;gap:6px;flex:1;justify-content:flex-end;">
+        <button onclick="addImageToAdLibrary('${imageUrl}', '${size}', '${imgId}')" id="add-btn-${imgId}"
+          style="width:100%;background:var(--volt);color:#000;border:none;border-radius:6px;padding:7px;font-size:11px;font-weight:700;cursor:pointer;">
+          + Add to Ad Library
+        </button>
+        <a href="${imageUrl}" download="baseleap-ad-${size.replace(':','x')}-${_imgTs}.png" target="_blank"
+          style="width:100%;background:transparent;border:1px solid var(--border);border-radius:6px;padding:7px;font-size:11px;color:var(--t2);text-decoration:none;text-align:center;display:block;">
+          ⬇ Download
+        </a>
+      </div>`;
     container?.appendChild(imgCard);
+    const _variationBtn = document.getElementById('generate-variation-btn-container');
+    if (_variationBtn) _variationBtn.style.display = 'block';
 
     if (S.lastAdId) {
-      await sb.from('generated_ads').update({ image_url: imageUrl, visual_prompt: prompt }).eq('id', S.lastAdId);
-      const saved = adLibrary.find(a => a.id === S.lastAdId);
-      if (saved) saved.image_url = imageUrl;
+      await sb.from('generated_ads').update({ visual_prompt: prompt }).eq('id', S.lastAdId);
     }
 
     // Update Ad View panel image if open for this ad
@@ -3826,6 +3844,78 @@ async function generateAdImage(provider) {
     setSt('Image failed', '');
     if (statusEl) statusEl.innerHTML = `❌ Image generation failed — check your API key in Settings or try again.`;
   }
+}
+
+async function addImageToAdLibrary(imageUrl, size, imgId) {
+  const btn = document.getElementById('add-btn-' + imgId);
+  if (btn) { btn.textContent = '⏳ Saving...'; btn.disabled = true; }
+
+  const adId = S.lastAdId;
+
+  if (adId) {
+    const updateData = { image_url: imageUrl };
+    if (!S.lastImageUrls) S.lastImageUrls = {};
+    S.lastImageUrls[size] = imageUrl;
+    updateData.image_urls = S.lastImageUrls;
+
+    const { error } = await sb.from('generated_ads').update(updateData).eq('id', adId);
+
+    if (error) {
+      console.warn('[addImageToAdLibrary] error:', error.message);
+      if (btn) { btn.textContent = '❌ Failed'; btn.disabled = false; }
+      return;
+    }
+
+    const saved = adLibrary.find(a => a.id === adId);
+    if (saved) { saved.image_url = imageUrl; saved.image_urls = S.lastImageUrls; }
+  } else {
+    if (!S.pendingImages) S.pendingImages = {};
+    S.pendingImages[size] = imageUrl;
+    S.lastGeneratedImageUrl = imageUrl;
+  }
+
+  if (btn) {
+    btn.textContent = '✅ Saved to Ad Library';
+    btn.style.background = 'var(--green)';
+    btn.disabled = true;
+  }
+
+  const badge = document.querySelector('#nav-adLibrary .nav-badge');
+  if (badge) badge.textContent = parseInt(badge.textContent || 0) + 1;
+
+  console.log('[addImageToAdLibrary] saved:', size, imageUrl.slice(0, 50));
+}
+
+function restoreGeneratedImages() {
+  const container = document.getElementById('generated-images-container');
+  if (!container || !S.generatedImages?.length) return;
+  container.innerHTML = '';
+  const sizeLabels = { '4:5': '1080×1350 Feed', '9:16': '1080×1920 Stories/Reels', '1:1': '1080×1080 Square' };
+  S.generatedImages.forEach(img => {
+    const imgId = 'gen-img-' + img.timestamp;
+    const imgCard = document.createElement('div');
+    imgCard.id = imgId;
+    imgCard.style.cssText = 'background:var(--bg-surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;display:flex;flex-direction:column;';
+    imgCard.innerHTML = `
+      <div style="position:relative;background:#000;">
+        <img src="${img.url}" style="width:100%;display:block;aspect-ratio:4/5;object-fit:cover;">
+        <div style="position:absolute;top:6px;left:6px;background:rgba(0,0,0,0.6);border-radius:4px;padding:2px 6px;font-size:10px;color:#fff;">${sizeLabels[img.size] || img.size}</div>
+        <div style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,0.6);border-radius:4px;padding:2px 6px;font-size:10px;color:#fff;">${img.provider === 'dalle' ? 'GPT Image 2' : 'Flux'}</div>
+      </div>
+      <div style="padding:8px;display:flex;flex-direction:column;gap:6px;flex:1;justify-content:flex-end;">
+        <button onclick="addImageToAdLibrary('${img.url}', '${img.size}', '${imgId}')" id="add-btn-${imgId}"
+          style="width:100%;background:var(--volt);color:#000;border:none;border-radius:6px;padding:7px;font-size:11px;font-weight:700;cursor:pointer;">
+          + Add to Ad Library
+        </button>
+        <a href="${img.url}" download="baseleap-ad-${img.size.replace(':','x')}-${img.timestamp}.png" target="_blank"
+          style="width:100%;background:transparent;border:1px solid var(--border);border-radius:6px;padding:7px;font-size:11px;color:var(--t2);text-decoration:none;text-align:center;display:block;">
+          ⬇ Download
+        </a>
+      </div>`;
+    container.appendChild(imgCard);
+  });
+  const variationBtn = document.getElementById('generate-variation-btn-container');
+  if (variationBtn) variationBtn.style.display = 'block';
 }
 
 async function generateAllSizes(provider) {
@@ -6252,6 +6342,11 @@ async function followUp(stage) {
 // ── Run all ───────────────────────────────────────────────────
 async function runAll() {
   document.getElementById('run-all').disabled=true;
+  S.generatedImages = []; S.lastImageUrls = {};
+  const _varBtnRA = document.getElementById('generate-variation-btn-container');
+  if (_varBtnRA) _varBtnRA.style.display = 'none';
+  const _imgContRA = document.getElementById('generated-images-container');
+  if (_imgContRA) _imgContRA.innerHTML = '';
   await saveData();
   await new Promise(r=>setTimeout(r,300));
   // Auto-select highest-priority segment if none selected
