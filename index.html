@@ -2680,7 +2680,8 @@ let S = {
   promotionContext: '',
   clientDiscovery: null,
   discoveryContext: null,
-  pipelineMode: null
+  pipelineMode: null,
+  discoverySuggestions: null
 };
 
 async function savePipelineRun() {
@@ -4147,6 +4148,9 @@ STRATEGY IMPLICATIONS (apply from ad-strategy skill):
     // Stage 3 — Ad Builder
     await runBuildSilent();
 
+    updateBuildStatus('💡 Generating recommendations...', 75);
+    await generateDiscoverySuggestions();
+
     updateBuildStatus('🎨 Creating your visual concept...', 80);
     await new Promise(r => setTimeout(r, 500));
 
@@ -4177,37 +4181,181 @@ async function runVisualSilent() {
   try { await runVisual(); } catch(e) { console.warn('[runVisualSilent]', e.message); }
 }
 
+async function generateDiscoverySuggestions() {
+  const claudeKey = document.getElementById('key-claude')?.value?.trim() || S.keys?.claude;
+  if (!claudeKey) return null;
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': claudeKey, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 600,
+        messages: [{ role: 'user', content: `Based on these business discovery answers, recommend the best Meta ad setup.
+
+Business: ${S.brandSnapshot?.business_name || 'local service business'}
+Industry: ${S.brandSnapshot?.industry || 'service'}
+Years in business: ${discoveryAnswers.years_in_business}
+Reviews: ${discoveryAnswers.review_count}
+Close rate: ${discoveryAnswers.close_rate}
+Monthly capacity: ${discoveryAnswers.monthly_capacity}
+Primary objection: ${discoveryAnswers.primary_objection}
+Campaign goal: ${discoveryAnswers.campaign_goal}
+Budget: ${discoveryAnswers.monthly_budget}
+Promotion: ${discoveryAnswers.promotion_details || 'none'}
+Ads run before: ${discoveryAnswers.ads_run_before}
+
+Return ONLY this JSON, no other text:
+{
+  "ad_format": "single_image",
+  "ad_format_reason": "one sentence why",
+  "campaign_type": "product|promotion|event|awareness",
+  "campaign_type_reason": "one sentence why",
+  "objective": "leads|traffic|awareness|conversions",
+  "objective_reason": "one sentence why",
+  "use_instant_form": true,
+  "instant_form_reason": "one sentence why",
+  "form_type": "volume|intent",
+  "form_type_reason": "one sentence why",
+  "daily_budget": "$15 CAD",
+  "daily_budget_reason": "one sentence why",
+  "not_recommended": [
+    {"format": "video", "reason": "one sentence why not"},
+    {"format": "carousel", "reason": "one sentence why not"}
+  ],
+  "summary": "2 sentence overall recommendation"
+}` }]
+      })
+    });
+    const data = await response.json();
+    const text = data.content?.find(b => b.type === 'text')?.text || '';
+    const result = JSON.parse(text.match(/\{[\s\S]*\}/)[0]);
+    S.discoverySuggestions = result;
+    return result;
+  } catch(e) {
+    console.warn('[discoverySuggestions] parse failed:', e.message);
+    return null;
+  }
+}
+
+function renderDiscoverySuggestions(suggestions) {
+  if (!suggestions) return '';
+  const formatLabels = { single_image:'📸 Single Image', video:'🎥 Video', carousel:'🎠 Carousel', reels:'📱 Reels', collection:'🗂️ Collection' };
+  return `
+    <div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:12px;padding:16px 20px;margin-bottom:16px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+        <div style="font-size:13px;font-weight:700;color:var(--t1);">🤖 AI Recommendations</div>
+        <button onclick="applyDiscoverySuggestions()" style="background:var(--volt);color:#000;border:none;border-radius:6px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;">✅ Use These Settings</button>
+      </div>
+      <div style="font-size:12px;color:var(--t2);line-height:1.6;margin-bottom:14px;background:var(--bg-elevated);border-radius:6px;padding:10px 12px;">${suggestions.summary}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
+        <div style="background:rgba(0,212,160,0.08);border:1px solid rgba(0,212,160,0.2);border-radius:8px;padding:10px 12px;">
+          <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">✅ Recommended Format</div>
+          <div style="font-size:13px;font-weight:700;color:var(--volt);">${formatLabels[suggestions.ad_format] || suggestions.ad_format}</div>
+          <div style="font-size:11px;color:var(--t2);margin-top:3px;">${suggestions.ad_format_reason}</div>
+        </div>
+        <div style="background:rgba(0,212,160,0.08);border:1px solid rgba(0,212,160,0.2);border-radius:8px;padding:10px 12px;">
+          <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">✅ Objective</div>
+          <div style="font-size:13px;font-weight:700;color:var(--volt);">${(suggestions.objective||'').charAt(0).toUpperCase() + (suggestions.objective||'').slice(1)}</div>
+          <div style="font-size:11px;color:var(--t2);margin-top:3px;">${suggestions.objective_reason}</div>
+        </div>
+        <div style="background:rgba(0,212,160,0.08);border:1px solid rgba(0,212,160,0.2);border-radius:8px;padding:10px 12px;">
+          <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">✅ Instant Form</div>
+          <div style="font-size:13px;font-weight:700;color:var(--volt);">${suggestions.use_instant_form ? 'Yes — ' + (suggestions.form_type === 'intent' ? 'Higher Intent' : 'More Volume') : 'No — Send to Website'}</div>
+          <div style="font-size:11px;color:var(--t2);margin-top:3px;">${suggestions.form_type_reason}</div>
+        </div>
+        <div style="background:rgba(0,212,160,0.08);border:1px solid rgba(0,212,160,0.2);border-radius:8px;padding:10px 12px;">
+          <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">✅ Daily Budget</div>
+          <div style="font-size:13px;font-weight:700;color:var(--volt);">${suggestions.daily_budget}</div>
+          <div style="font-size:11px;color:var(--t2);margin-top:3px;">${suggestions.daily_budget_reason}</div>
+        </div>
+      </div>
+      ${suggestions.not_recommended?.length ? `
+      <div style="border-top:1px solid var(--border);padding-top:10px;">
+        <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">❌ Not recommended yet</div>
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          ${suggestions.not_recommended.map(item => `<div style="font-size:11px;color:var(--t3);"><span style="color:var(--red);">✗</span> <strong>${formatLabels[item.format] || item.format}:</strong> ${item.reason}</div>`).join('')}
+        </div>
+      </div>` : ''}
+    </div>`;
+}
+
+function applyDiscoverySuggestions() {
+  const s = S.discoverySuggestions;
+  if (!s) return;
+  if (s.campaign_type) selectCampaignType(s.campaign_type);
+  if (s.objective) selectObjective(s.objective);
+  selectInstantForm(s.use_instant_form !== false);
+  if (s.form_type) selectFormType(s.form_type);
+  if (s.ad_format) {
+    const formatMap = { single_image:'image', video:'video', carousel:'carousel', reels:'reels' };
+    const fv = formatMap[s.ad_format];
+    if (fv) { const r = document.querySelector(`input[name="adFormat"][value="${fv}"]`); if (r) r.checked = true; }
+  }
+  if (s.daily_budget) {
+    const budgetField = document.getElementById('s1-budget') || document.getElementById('d-budget');
+    if (budgetField) {
+      const daily = parseInt(s.daily_budget.replace(/[^0-9]/g, ''));
+      if (daily) budgetField.value = '$' + (daily * 30) + '/mo';
+    }
+  }
+  go('data');
+  setTimeout(() => {
+    const note = document.createElement('div');
+    note.style.cssText = 'background:rgba(0,212,160,0.1);border:1px solid var(--volt);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--volt);margin-bottom:12px;';
+    note.innerHTML = '✅ AI recommendations applied — all settings pre-filled from your Discovery answers';
+    const container = document.getElementById('s1-content-info');
+    if (container) { container.insertBefore(note, container.firstChild); setTimeout(() => note.remove(), 6000); }
+  }, 300);
+}
+
 function showDiscoveryResults() {
   document.getElementById('discovery-building').style.display = 'none';
-
-  // Open full Ad View directly if we have a saved ad ID
-  if (S.lastAdId) {
-    discoveryAdId = S.lastAdId;
-    openAdView(S.lastAdId);
-    return;
-  }
-
-  // Fallback — no ad ID saved
   document.getElementById('discovery-results').style.display = 'block';
+
+  if (S.lastAdId) discoveryAdId = S.lastAdId;
+
   const previewEl = document.getElementById('discovery-ad-preview');
-  if (previewEl) {
-    previewEl.innerHTML = `
+  if (!previewEl) return;
+
+  const suggestionsHTML = renderDiscoverySuggestions(S.discoverySuggestions);
+
+  let adCardHTML;
+  if (S.lastAdId) {
+    const hook = S.lastBuiltAd?.hook || extractHookFromContent(S.adCopy || '');
+    const score = S.lastAdScore;
+    const scoreColor = score >= 90 ? 'var(--green)' : score >= 70 ? 'var(--yellow)' : 'var(--t3)';
+    adCardHTML = `
+      <div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">
+          <div>
+            <div style="font-size:15px;font-weight:700;color:var(--t1);">"${escHtml(hook)}"</div>
+            <div style="font-size:11px;color:var(--t3);margin-top:4px;">${S.selectedSegment?.name || ''} · ${new Date().toLocaleDateString('en-CA')}</div>
+          </div>
+          ${score ? `<div style="font-size:20px;font-weight:700;color:${scoreColor};">${score}/100</div>` : ''}
+        </div>
+        <div style="background:var(--bg-elevated);border-radius:8px;padding:12px;font-size:12px;color:var(--t2);line-height:1.7;max-height:120px;overflow:hidden;">${escHtml((S.adCopy || '').slice(0, 300))}...</div>
+        <div style="margin-top:12px;display:flex;gap:8px;">
+          <button onclick="openDiscoveryAdView()" style="flex:1;background:var(--volt);color:#000;border:none;border-radius:6px;padding:8px;font-size:12px;font-weight:700;cursor:pointer;">View Complete Campaign →</button>
+          <button onclick="generateDiscoveryImage()" id="discovery-generate-img-btn" style="background:transparent;border:1px solid var(--volt);color:var(--volt);border-radius:6px;padding:8px 12px;font-size:12px;font-weight:600;cursor:pointer;">🎨 Generate Image<div style="font-size:10px;font-weight:400;opacity:0.7;margin-top:1px;">~$0.05 · 1 credit</div></button>
+          <button onclick="go('adLibrary')" style="background:transparent;border:1px solid var(--border);border-radius:6px;padding:8px 12px;font-size:12px;color:var(--t2);cursor:pointer;">Ad Library</button>
+        </div>
+        <button onclick="editInPipeline()" style="width:100%;margin-top:8px;background:transparent;border:1px solid var(--border);border-radius:6px;padding:8px;font-size:12px;color:var(--t2);cursor:pointer;">✏️ Edit in Pipeline →</button>
+      </div>`;
+  } else {
+    adCardHTML = `
       <div style="text-align:center;padding:20px;">
         <div style="font-size:32px;margin-bottom:8px;">✅</div>
         <div style="font-size:15px;font-weight:700;color:var(--t1);margin-bottom:8px;">Campaign Built Successfully</div>
         <div style="font-size:12px;color:var(--t2);margin-bottom:16px;">Saved to Ad Library automatically</div>
         <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
-          <button onclick="go('adLibrary')"
-            style="background:var(--volt);color:#000;border:none;border-radius:8px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;">
-            View in Ad Library →
-          </button>
-          <button onclick="editInPipeline()"
-            style="background:transparent;border:1px solid var(--border);border-radius:8px;padding:10px 20px;font-size:13px;color:var(--t2);cursor:pointer;">
-            ✏️ Edit in Pipeline →
-          </button>
+          <button onclick="go('adLibrary')" style="background:var(--volt);color:#000;border:none;border-radius:8px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;">View in Ad Library →</button>
+          <button onclick="editInPipeline()" style="background:transparent;border:1px solid var(--border);border-radius:8px;padding:10px 20px;font-size:13px;color:var(--t2);cursor:pointer;">✏️ Edit in Pipeline →</button>
         </div>
       </div>`;
   }
+
+  previewEl.innerHTML = suggestionsHTML + adCardHTML;
 }
 
 function openDiscoveryAdView() {
