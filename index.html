@@ -603,6 +603,10 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
       <div class="sinfo"><div class="sname">Base Profile</div><div class="sdesc">Business setup</div></div>
       <span class="sbadge br">Setup</span>
     </div>
+    <div class="stage" id="nav-discovery" onclick="go('discovery')">
+      <div class="si">🧭</div>
+      <div class="sinfo"><div class="sname">Ad Discovery</div><div class="sdesc">Guided campaign builder</div></div>
+    </div>
     <div class="stage" id="nav-dashboard" onclick="go('dashboard')">
       <div class="si">📊</div>
       <div class="sinfo"><div class="sname">Dashboard</div><div class="sdesc">Campaign analytics</div></div>
@@ -1625,6 +1629,98 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
 
     </div>
 
+    <!-- Ad Discovery Panel -->
+    <div class="spanel" id="panel-discovery">
+
+      <!-- Header -->
+      <div style="padding:20px 24px;border-bottom:1px solid var(--border);flex-shrink:0;">
+        <div style="font-size:20px;font-weight:800;color:var(--t1);font-family:var(--display);margin-bottom:4px;">🧭 Ad Discovery</div>
+        <div style="font-size:13px;color:var(--t2);">Answer 12 questions. AI builds your complete campaign strategy.</div>
+      </div>
+
+      <!-- Mode selector (shown by default) -->
+      <div id="discovery-mode-selector" style="padding:24px;overflow-y:auto;flex:1;">
+        <div style="font-size:13px;color:var(--t2);margin-bottom:16px;">How would you like to build your campaign?</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:24px;">
+          <div onclick="startGuidedDiscovery()"
+            style="background:var(--bg-surface);border:2px solid var(--volt);border-radius:12px;padding:20px;cursor:pointer;transition:all 0.2s;">
+            <div style="font-size:24px;margin-bottom:8px;">🧭</div>
+            <div style="font-size:14px;font-weight:700;color:var(--t1);margin-bottom:6px;">Guided Mode</div>
+            <div style="font-size:12px;color:var(--t2);line-height:1.5;">Answer 12 questions. AI builds the full strategy and runs the pipeline automatically.</div>
+            <div style="margin-top:10px;font-size:11px;color:var(--t3);">Best for: Business owners new to ads</div>
+          </div>
+          <div onclick="go('data')"
+            style="background:var(--bg-surface);border:1px solid var(--border);border-radius:12px;padding:20px;cursor:pointer;transition:all 0.2s;">
+            <div style="font-size:24px;margin-bottom:8px;">⚡</div>
+            <div style="font-size:14px;font-weight:700;color:var(--t1);margin-bottom:6px;">Manual Mode</div>
+            <div style="font-size:12px;color:var(--t2);line-height:1.5;">Go straight to Stage 1 Setup and control every setting yourself.</div>
+            <div style="margin-top:10px;font-size:11px;color:var(--t3);">Best for: Experienced marketers and agencies</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Discovery Questionnaire (hidden by default) -->
+      <div id="discovery-questionnaire" style="display:none;padding:24px;overflow-y:auto;flex:1;">
+        <!-- Progress bar -->
+        <div style="margin-bottom:20px;flex-shrink:0;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+            <div style="font-size:11px;color:var(--t3);">Question <span id="discovery-current-q">1</span> of 12</div>
+            <div style="font-size:11px;color:var(--volt);" id="discovery-section-label">Business Maturity</div>
+          </div>
+          <div style="background:var(--bg-elevated);border-radius:4px;height:4px;">
+            <div id="discovery-progress-bar" style="background:var(--volt);border-radius:4px;height:4px;width:8%;transition:width 0.3s;"></div>
+          </div>
+        </div>
+        <!-- Question container -->
+        <div id="discovery-question-container" style="min-height:300px;"></div>
+        <!-- Navigation -->
+        <div style="display:flex;gap:10px;margin-top:20px;">
+          <button id="discovery-back-btn" onclick="discoveryBack()"
+            style="display:none;background:transparent;border:1px solid var(--border);border-radius:8px;padding:10px 20px;color:var(--t2);font-size:13px;cursor:pointer;">
+            ← Back
+          </button>
+          <button id="discovery-next-btn" onclick="discoveryNext()"
+            style="flex:1;background:var(--volt);color:#000;border:none;border-radius:8px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;">
+            Next →
+          </button>
+        </div>
+      </div>
+
+      <!-- Building Campaign Screen (hidden by default) -->
+      <div id="discovery-building" style="display:none;padding:40px 24px;text-align:center;flex:1;">
+        <div style="font-size:48px;margin-bottom:16px;">⚡</div>
+        <div style="font-size:18px;font-weight:700;color:var(--t1);margin-bottom:8px;">Building Your Campaign</div>
+        <div id="discovery-build-status" style="font-size:13px;color:var(--t2);margin-bottom:24px;">Analysing your market...</div>
+        <div style="background:var(--bg-elevated);border-radius:8px;height:6px;margin:0 auto;max-width:300px;">
+          <div id="discovery-build-progress" style="background:var(--volt);border-radius:8px;height:6px;width:0%;transition:width 0.5s;"></div>
+        </div>
+        <div style="margin-top:12px;font-size:11px;color:var(--t3);">This takes 2–3 minutes — please don't close this tab</div>
+      </div>
+
+      <!-- Results Screen (hidden by default) -->
+      <div id="discovery-results" style="display:none;padding:24px;overflow-y:auto;flex:1;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+          <div style="font-size:24px;">✅</div>
+          <div>
+            <div style="font-size:16px;font-weight:700;color:var(--t1);">Your Campaign is Ready</div>
+            <div style="font-size:12px;color:var(--t2);">Saved to Ad Library automatically</div>
+          </div>
+          <div style="margin-left:auto;display:flex;gap:8px;">
+            <button onclick="go('adLibrary')"
+              style="background:transparent;border:1px solid var(--border);border-radius:6px;padding:6px 14px;font-size:12px;color:var(--t2);cursor:pointer;">
+              Ad Library
+            </button>
+            <button onclick="openDiscoveryAdView()"
+              style="background:var(--volt);color:#000;border:none;border-radius:6px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;">
+              View Full Campaign →
+            </button>
+          </div>
+        </div>
+        <div id="discovery-ad-preview"></div>
+      </div>
+
+    </div>
+
   </main>
 </div><!-- end .app -->
 
@@ -2161,6 +2257,9 @@ const sb = supabase.createClient(SUPA_URL, SUPA_KEY, {
 
 let currentUser = null;
 let currentBizId = null;
+let discoveryAnswers = {};
+let discoveryCurrentIndex = 0;
+let discoveryAdId = null;
 let businesses = [];
 let adLibrary = [];
 let viewingAdId = null;
@@ -2222,6 +2321,7 @@ async function initApp(user) {
 
   await loadBusinesses();
   await loadBaseProfile();
+  await loadClientDiscovery();
   await loadCompetitorIntelligence();
   await loadSERPIntelligence();
   renderBPBrandSnapshot();
@@ -2573,7 +2673,10 @@ let S = {
   aiCampaignSuggestions: null,
   lastCampaignBrief: null,
   lastAdScore: null,
-  promotionContext: ''
+  promotionContext: '',
+  clientDiscovery: null,
+  discoveryContext: null,
+  pipelineMode: null
 };
 
 async function savePipelineRun() {
@@ -2759,6 +2862,7 @@ function go(name) {
   if(name==='dashboard'){ loadPerfData().then(()=>{ renderDashboard(); updateDashTimestamp(); }); populateProductDropdowns(); }
   if(name==='data'){ populateProductSelect(); renderCustomerIntelligence(); }
   if(name==='research'){ renderS3ResearchBrief(); }
+  if(name==='discovery'){ initDiscoveryPanel(); }
 }
 function unlockStage(name){const el=document.getElementById('nav-'+name);if(el)el.classList.remove('locked');const b=document.getElementById('badge-'+name);if(b){b.textContent='Ready';b.className='sbadge br';}}
 function markDone(name,label){const el=document.getElementById('nav-'+name);if(el)el.classList.add('done');const b=document.getElementById('badge-'+name);if(b){b.textContent=label||'✓';b.className='sbadge bd';}const connMap={data:1,research:2,build:3,visual:4};const c=document.getElementById('conn-'+connMap[name]);if(c)c.classList.add('done');S.stagesDone.add(name);const pipeStages=['data','research','build','visual'];const pipeCount=[...S.stagesDone].filter(s=>pipeStages.includes(s)).length;document.getElementById('ctx-stgs').textContent=pipeCount+' / 4';}
@@ -3039,7 +3143,7 @@ STRATEGY FRAMEWORK — apply before writing research brief:
 - Apply Canadian market specifics for Ontario
 - Map seasonal patterns to current month
 - Identify primary objection from competitor data
-Read .claude/skills/ad-strategy/SKILL.md frameworks.`;
+Read .claude/skills/ad-strategy/SKILL.md frameworks.${S.discoveryContext ? '\n\n' + S.discoveryContext : ''}`;
 }
 
 async function runResearch() {
@@ -3213,7 +3317,7 @@ Never use in ads: ${S.brandSnapshot?.avoid || 'not specified'}
 Competitor intelligence: ${S.competitorIntelligence?.length ? S.competitorIntelligence.slice(0,5).map(c=>`${c.competitor_name||c.name}: ${c.has_active_meta_ads?c.meta_ad_count+' active Meta ads':'no Meta ads'} | rating ${c.rating||'—'}`).join(' | ') : 'none saved — run Auto-Research first'}
 Google SERP: ${S.serpIntelligence?.organicResults?.length ? `"${S.serpIntelligence.keyword}" in ${S.serpIntelligence.city} — ${S.serpIntelligence.organicResults.length} businesses, ${S.serpIntelligence.paidAds?.length||0} Google Ads, top questions: ${S.serpIntelligence.peopleAlsoAsk?.slice(0,3).map(q=>q.question).join(' | ')||'none'}` : 'not run yet'}${budgetCtx}${segmentContext}`;
   S.history.build=[{role:'user',content:msg}];
-  const reply=await ai(SYS_BUILD,S.history.build);
+  const reply=await ai(SYS_BUILD + (S.discoveryContext ? '\n\n' + S.discoveryContext : ''), S.history.build);
   S.history.build.push({role:'assistant',content:reply});
   t.remove(); S.adCopy=reply;
   S.lastBudgetRecommendation = extractBudgetRecommendation(reply);
@@ -3327,7 +3431,7 @@ META ADS SETUP — include in campaign brief:
 - Pixel checklist: include in launch checklist
 - CASL consent language in Instant Form
 - A/B testing order: hooks first, then audiences, then creative
-- Advantage+ placements recommended for new accounts`, [{role: 'user', content: prompt}]);
+- Advantage+ placements recommended for new accounts${S.discoveryContext ? '\n\n' + S.discoveryContext : ''}`, [{role: 'user', content: prompt}]);
     t.remove();
     S.lastCampaignBrief = reply;
 
@@ -3765,6 +3869,356 @@ async function deleteAd(adId) {
   adLibrary = adLibrary.filter(a => a.id !== adId);
   renderAdLibrary();
   console.log('[deleteAd] deleted:', adId);
+}
+
+// ── Ad Discovery Flow ─────────────────────────────────────────
+
+const DISCOVERY_QUESTIONS = [
+  { id:'years_in_business', section:'Business Maturity', question:'How long have you been in business?', type:'single_choice', options:[
+    {value:'under_6mo',label:'Under 6 months',hint:'Just getting started'},
+    {value:'6_18mo',label:'6 months – 1.5 years',hint:'Early stage'},
+    {value:'1_3yr',label:'1.5 – 3 years',hint:'Growing'},
+    {value:'3yr_plus',label:'3+ years',hint:'Established'}
+  ]},
+  { id:'clients_served', section:'Business Maturity', question:'How many clients or customers have you served so far?', type:'single_choice', options:[
+    {value:'under_10',label:'Under 10',hint:'Building proof'},
+    {value:'10_50',label:'10 – 50',hint:'Early traction'},
+    {value:'50_200',label:'50 – 200',hint:'Growing base'},
+    {value:'200_plus',label:'200+',hint:'Established client base'}
+  ]},
+  { id:'review_count', section:'Business Maturity', question:'How many Google or online reviews do you have?', type:'single_choice', options:[
+    {value:'0',label:'None yet',hint:"We'll use a different proof strategy"},
+    {value:'1_5',label:'1 – 5 reviews',hint:'Small but usable'},
+    {value:'5_20',label:'5 – 20 reviews',hint:'Good social proof'},
+    {value:'20_plus',label:'20+ reviews',hint:'Strong credibility'}
+  ]},
+  { id:'close_rate', section:'Sales Intelligence', question:"If 10 people inquire about your business, how many become paying clients?", type:'single_choice', options:[
+    {value:'under_2',label:'1 – 2 out of 10',hint:"We'll focus on lead quality"},
+    {value:'3_4',label:'3 – 4 out of 10',hint:'Average — room to improve'},
+    {value:'5_7',label:'5 – 7 out of 10',hint:'Strong — ready to scale'},
+    {value:'8_plus',label:'8+ out of 10',hint:'Excellent — maximize volume'}
+  ]},
+  { id:'monthly_capacity', section:'Sales Intelligence', question:'How many new clients can you realistically handle this month?', type:'single_choice', options:[
+    {value:'1_5',label:'1 – 5',hint:'Small capacity — targeted ads'},
+    {value:'5_15',label:'5 – 15',hint:'Moderate capacity'},
+    {value:'15_30',label:'15 – 30',hint:'Good capacity'},
+    {value:'30_plus',label:'30+',hint:'High capacity — maximize volume'}
+  ]},
+  { id:'primary_objection', section:'Sales Intelligence', question:"What's the most common reason people don't book after inquiring?", type:'single_choice', options:[
+    {value:'price',label:'Too expensive',hint:"We'll address value in the ad"},
+    {value:'trust',label:'Not sure if it works / trust issues',hint:"We'll lead with proof"},
+    {value:'timing',label:'Not ready yet / timing',hint:"We'll create real urgency"},
+    {value:'competition',label:'Chose a competitor',hint:"We'll own your differentiator"},
+    {value:'unknown',label:'Not sure',hint:"We'll test multiple angles"}
+  ]},
+  { id:'why_clients_choose_you', section:'Voice of Customer', question:"In your clients' own words — why do they choose you over the alternatives?", type:'text', placeholder:'e.g. "They said I was the only one who came to them instead of making them drive across town"', hint:'This exact language often becomes your best hook'},
+  { id:'client_fear', section:'Voice of Customer', question:"What was your client's biggest fear or hesitation BEFORE they booked?", type:'text', placeholder:"e.g. \"They worried it wouldn't actually work after trying strips for years\"", hint:"Addressing this fear in your ad removes the #1 barrier to booking"},
+  { id:'referral_language', section:'Voice of Customer', question:'What do happy clients say when they refer you to friends?', type:'text', placeholder:'e.g. "Just try it — she comes to your house and it actually works"', hint:'Real referral language = real ad copy'},
+  { id:'ads_run_before', section:'Campaign Context', question:'Have you run Meta (Facebook/Instagram) ads before?', type:'single_choice', options:[
+    {value:'never',label:'Never — this is my first campaign',hint:"We'll start with the basics"},
+    {value:'yes_worked',label:'Yes — they worked well',hint:"We'll build on what worked"},
+    {value:'yes_failed',label:"Yes — they didn't work",hint:"We'll diagnose and fix"},
+    {value:'yes_unsure',label:'Yes — not sure how they performed',hint:"We'll start fresh with tracking"}
+  ]},
+  { id:'campaign_goal', section:'Campaign Context', question:"What's the main goal of this campaign?", type:'single_choice', options:[
+    {value:'new_clients',label:'Get new clients / bookings',hint:'Lead generation campaign'},
+    {value:'promotion',label:'Promote a special offer or discount',hint:'Promotional campaign'},
+    {value:'seasonal',label:'Seasonal push (wedding, summer, holiday)',hint:'Seasonal campaign'},
+    {value:'awareness',label:'Get my brand known in my area',hint:'Awareness campaign'},
+    {value:'relaunch',label:'Relaunch or enter a new area',hint:'Launch campaign'}
+  ]},
+  { id:'monthly_budget', section:'Campaign Context', question:"What's your monthly ad budget?", type:'single_choice', options:[
+    {value:'300_450',label:'Under $450 CAD/month',hint:'$10–15/day — minimal viable'},
+    {value:'450_900',label:'$450 – $900 CAD/month',hint:'$15–30/day — testing phase'},
+    {value:'900_2100',label:'$900 – $2,100 CAD/month',hint:'$30–70/day — scaling ready'},
+    {value:'2100_plus',label:'$2,100+ CAD/month',hint:'$70+/day — full funnel'}
+  ]},
+  { id:'promotion_details', section:'Campaign Context', question:'Any specific offer or promotion you want to run? (optional)', type:'text', placeholder:'e.g. "20% off first session in July" or "Free consultation this month"', hint:'Leave blank if running a standard campaign', optional:true}
+];
+
+function initDiscoveryPanel() {
+  // Reset to mode selector if no active questionnaire in progress
+  if (!document.getElementById('discovery-questionnaire')?.style.display ||
+      document.getElementById('discovery-questionnaire').style.display === 'none') {
+    document.getElementById('discovery-mode-selector').style.display = 'block';
+    document.getElementById('discovery-results').style.display = 'none';
+    document.getElementById('discovery-building').style.display = 'none';
+  }
+}
+
+function startGuidedDiscovery() {
+  if (S.clientDiscovery && Object.keys(S.clientDiscovery).length > 0) {
+    const update = confirm("You've already completed Ad Discovery for this client. Update your answers?");
+    if (!update) { runDiscoveryPipeline(); return; }
+    discoveryAnswers = { ...S.clientDiscovery };
+  } else {
+    discoveryAnswers = {};
+  }
+  discoveryCurrentIndex = 0;
+  document.getElementById('discovery-mode-selector').style.display = 'none';
+  document.getElementById('discovery-questionnaire').style.display = 'flex';
+  document.getElementById('discovery-questionnaire').style.flexDirection = 'column';
+  renderDiscoveryQuestion(0);
+}
+
+function renderDiscoveryQuestion(index) {
+  const q = DISCOVERY_QUESTIONS[index];
+  if (!q) return;
+  const progress = Math.round(((index + 1) / DISCOVERY_QUESTIONS.length) * 100);
+  document.getElementById('discovery-current-q').textContent = index + 1;
+  document.getElementById('discovery-section-label').textContent = q.section;
+  document.getElementById('discovery-progress-bar').style.width = progress + '%';
+  const backBtn = document.getElementById('discovery-back-btn');
+  if (backBtn) backBtn.style.display = index > 0 ? 'block' : 'none';
+  const nextBtn = document.getElementById('discovery-next-btn');
+  if (nextBtn) nextBtn.textContent = index === DISCOVERY_QUESTIONS.length - 1 ? '🚀 Build My Campaign' : 'Next →';
+  const container = document.getElementById('discovery-question-container');
+  if (!container) return;
+  let html = `<div style="margin-bottom:20px;">
+    <div style="font-size:16px;font-weight:700;color:var(--t1);margin-bottom:6px;">${q.question}</div>
+    ${q.hint ? `<div style="font-size:12px;color:var(--t3);margin-bottom:16px;">${q.hint}</div>` : ''}
+  </div>`;
+  if (q.type === 'single_choice') {
+    html += '<div style="display:flex;flex-direction:column;gap:8px;">';
+    q.options.forEach(opt => {
+      const isSelected = discoveryAnswers[q.id] === opt.value;
+      html += `<div onclick="selectDiscoveryOption('${q.id}','${opt.value}',this)"
+        style="background:${isSelected ? 'rgba(0,212,160,0.1)' : 'var(--bg-elevated)'};border:${isSelected ? '2px solid var(--volt)' : '1px solid var(--border)'};border-radius:8px;padding:12px 16px;cursor:pointer;transition:all 0.15s;" data-value="${opt.value}">
+        <div style="font-size:13px;font-weight:600;color:var(--t1);">${opt.label}</div>
+        ${opt.hint ? `<div style="font-size:11px;color:var(--t3);margin-top:2px;">${opt.hint}</div>` : ''}
+      </div>`;
+    });
+    html += '</div>';
+  } else if (q.type === 'text') {
+    const escapedPlaceholder = (q.placeholder || '').replace(/"/g, '&quot;');
+    html += `<textarea id="discovery-text-input" class="fi" rows="3" placeholder="${escapedPlaceholder}"
+      style="width:100%;resize:vertical;"
+      oninput="discoveryAnswers['${q.id}']=this.value">${discoveryAnswers[q.id] || ''}</textarea>
+      ${q.optional ? '<div style="font-size:11px;color:var(--t3);margin-top:4px;">Optional — skip if not applicable</div>' : ''}`;
+  }
+  container.innerHTML = html;
+}
+
+function selectDiscoveryOption(questionId, value, el) {
+  discoveryAnswers[questionId] = value;
+  const parent = el.parentElement;
+  parent.querySelectorAll('[data-value]').forEach(item => {
+    item.style.background = 'var(--bg-elevated)';
+    item.style.border = '1px solid var(--border)';
+  });
+  el.style.background = 'rgba(0,212,160,0.1)';
+  el.style.border = '2px solid var(--volt)';
+}
+
+function discoveryNext() {
+  const q = DISCOVERY_QUESTIONS[discoveryCurrentIndex];
+  if (!q.optional && !discoveryAnswers[q.id]) {
+    alert('Please answer this question before continuing.');
+    return;
+  }
+  if (discoveryCurrentIndex === DISCOVERY_QUESTIONS.length - 1) {
+    saveDiscoveryAndBuild();
+  } else {
+    discoveryCurrentIndex++;
+    renderDiscoveryQuestion(discoveryCurrentIndex);
+  }
+}
+
+function discoveryBack() {
+  if (discoveryCurrentIndex > 0) {
+    discoveryCurrentIndex--;
+    renderDiscoveryQuestion(discoveryCurrentIndex);
+  }
+}
+
+async function saveDiscoveryAndBuild() {
+  const userId = currentUser?.id;
+  const bizId = currentBizId;
+  if (userId && bizId) {
+    const payload = {
+      business_id: bizId,
+      user_id: userId,
+      years_in_business: discoveryAnswers.years_in_business,
+      clients_served: discoveryAnswers.clients_served,
+      review_count: discoveryAnswers.review_count,
+      close_rate: discoveryAnswers.close_rate,
+      monthly_capacity: discoveryAnswers.monthly_capacity,
+      primary_objection: discoveryAnswers.primary_objection,
+      why_clients_choose_you: discoveryAnswers.why_clients_choose_you,
+      client_fear_before_buying: discoveryAnswers.client_fear,
+      referral_language: discoveryAnswers.referral_language,
+      ads_run_before: discoveryAnswers.ads_run_before !== 'never',
+      ads_result: discoveryAnswers.ads_run_before,
+      campaign_goal: discoveryAnswers.campaign_goal,
+      updated_at: new Date().toISOString()
+    };
+    const { error } = await sb.from('client_discovery').upsert(payload, { onConflict: 'business_id' });
+    if (error) console.warn('[discovery] save failed:', error.message);
+    else { S.clientDiscovery = { ...discoveryAnswers }; console.log('[discovery] saved'); }
+  }
+  runDiscoveryPipeline();
+}
+
+async function runDiscoveryPipeline() {
+  document.getElementById('discovery-questionnaire').style.display = 'none';
+  document.getElementById('discovery-mode-selector').style.display = 'none';
+  document.getElementById('discovery-results').style.display = 'none';
+  document.getElementById('discovery-building').style.display = 'flex';
+  document.getElementById('discovery-building').style.flexDirection = 'column';
+  document.getElementById('discovery-building').style.justifyContent = 'center';
+  document.getElementById('discovery-building').style.alignItems = 'center';
+
+  const statusEl = document.getElementById('discovery-build-status');
+  const progressEl = document.getElementById('discovery-build-progress');
+  function updateBuildStatus(msg, pct) {
+    if (statusEl) statusEl.textContent = msg;
+    if (progressEl) progressEl.style.width = pct + '%';
+  }
+
+  // Wire discovery answers into S state
+  S.campaignType = discoveryAnswers.campaign_goal === 'promotion' ? 'promotion' : 'product';
+  S.campaignObjective = 'leads';
+  S.useInstantForm = true;
+  S.formType = ['8_plus','5_7'].includes(discoveryAnswers.close_rate) ? 'volume' : 'intent';
+  S.budget = discoveryAnswers.monthly_budget || S.budget;
+  S.promotionDetails = discoveryAnswers.promotion_details || '';
+  S.pipelineMode = 'discovery';
+
+  S.discoveryContext = `BUSINESS DISCOVERY ANSWERS:
+Years in business: ${discoveryAnswers.years_in_business || 'not provided'}
+Clients served: ${discoveryAnswers.clients_served || 'not provided'}
+Reviews: ${discoveryAnswers.review_count || '0'}
+Close rate: ${discoveryAnswers.close_rate || 'not provided'}
+Monthly capacity: ${discoveryAnswers.monthly_capacity || 'not provided'}
+Primary objection: ${discoveryAnswers.primary_objection || 'not provided'}
+Why clients choose us: "${discoveryAnswers.why_clients_choose_you || 'not provided'}"
+Client fear before booking: "${discoveryAnswers.client_fear || 'not provided'}"
+Referral language: "${discoveryAnswers.referral_language || 'not provided'}"
+Ads run before: ${discoveryAnswers.ads_run_before || 'not provided'}
+Campaign goal: ${discoveryAnswers.campaign_goal || 'not provided'}
+Budget: ${discoveryAnswers.monthly_budget || 'not provided'}
+Promotion: ${discoveryAnswers.promotion_details || 'none'}
+
+STRATEGY IMPLICATIONS (apply from ad-strategy skill):
+- Use close rate to determine targeting tightness and form type
+- Use review count to determine social proof tier
+- Use referral language as primary hook direction
+- Use client fear as primary objection to address in copy
+- Apply Canadian market tone — warm, local, specific`;
+
+  try {
+    // Stage 1 — Auto-Research if not already done
+    updateBuildStatus('🔍 Researching your market...', 15);
+    if (!S.serpIntelligence?.organicResults?.length) {
+      const city = S.brandSnapshot?.location?.split(',')[0]?.trim() || 'Ontario';
+      const keyword = S.selectedProduct?.name || S.brandSnapshot?.industry || 'local service';
+      const kw = document.getElementById('ar-google-keywords');
+      const cw = document.getElementById('ar-search-city');
+      if (kw && !kw.value) kw.value = keyword;
+      if (cw && !cw.value) cw.value = city;
+      await runAutoResearch();
+    }
+
+    updateBuildStatus('📊 Analysing competitor landscape...', 35);
+    await new Promise(r => setTimeout(r, 500));
+
+    // Stage 2 — Research
+    updateBuildStatus('🧠 Building your ad strategy...', 50);
+    await runResearchSilent();
+
+    updateBuildStatus('✍️ Writing your ad copy...', 65);
+    await new Promise(r => setTimeout(r, 500));
+
+    // Stage 3 — Ad Builder
+    await runBuildSilent();
+
+    updateBuildStatus('🎨 Creating your visual concept...', 80);
+    await new Promise(r => setTimeout(r, 500));
+
+    // Stage 4 — Visual
+    await runVisualSilent();
+
+    updateBuildStatus('✅ Campaign ready!', 100);
+    await new Promise(r => setTimeout(r, 500));
+
+    S.pipelineMode = null;
+    showDiscoveryResults();
+  } catch(e) {
+    console.error('[discovery pipeline]', e);
+    updateBuildStatus('❌ Something went wrong — ' + e.message, 0);
+    S.pipelineMode = null;
+  }
+}
+
+async function runResearchSilent() {
+  try { await runResearch(); } catch(e) { console.warn('[runResearchSilent]', e.message); }
+}
+
+async function runBuildSilent() {
+  try { await runBuild(); } catch(e) { console.warn('[runBuildSilent]', e.message); }
+}
+
+async function runVisualSilent() {
+  try { await runVisual(); } catch(e) { console.warn('[runVisualSilent]', e.message); }
+}
+
+function showDiscoveryResults() {
+  document.getElementById('discovery-building').style.display = 'none';
+  document.getElementById('discovery-results').style.display = 'block';
+  discoveryAdId = S.lastAdId;
+  const previewEl = document.getElementById('discovery-ad-preview');
+  if (!previewEl) return;
+  const hook = S.lastBuiltAd?.hook || extractHookFromContent(S.adCopy || '');
+  const score = S.lastAdScore;
+  const scoreColor = score >= 90 ? 'var(--green)' : score >= 70 ? 'var(--yellow)' : 'var(--t3)';
+  previewEl.innerHTML = `<div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">
+      <div>
+        <div style="font-size:15px;font-weight:700;color:var(--t1);">"${escHtml(hook)}"</div>
+        <div style="font-size:11px;color:var(--t3);margin-top:4px;">${S.selectedSegment?.name || ''} · ${new Date().toLocaleDateString('en-CA')}</div>
+      </div>
+      ${score ? `<div style="font-size:20px;font-weight:700;color:${scoreColor};">${score}/100</div>` : ''}
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px;">
+      <div style="background:var(--bg-elevated);border-radius:6px;padding:8px;">
+        <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;">Objective</div>
+        <div style="font-size:12px;font-weight:600;color:var(--t1);">${S.campaignObjective || 'Leads'}</div>
+      </div>
+      <div style="background:var(--bg-elevated);border-radius:6px;padding:8px;">
+        <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;">Form Type</div>
+        <div style="font-size:12px;font-weight:600;color:var(--t1);">${S.formType === 'intent' ? 'Higher Intent' : 'More Volume'}</div>
+      </div>
+      <div style="background:var(--bg-elevated);border-radius:6px;padding:8px;">
+        <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;">Budget</div>
+        <div style="font-size:12px;font-weight:600;color:var(--t1);">${S.budget || 'Not set'}/mo</div>
+      </div>
+    </div>
+    <div style="background:var(--bg-elevated);border-radius:8px;padding:12px;font-size:12px;color:var(--t2);line-height:1.7;max-height:120px;overflow:hidden;">${escHtml((S.adCopy || '').slice(0, 300))}...</div>
+    <div style="margin-top:12px;display:flex;gap:8px;">
+      <button onclick="openDiscoveryAdView()" style="flex:1;background:var(--volt);color:#000;border:none;border-radius:6px;padding:8px;font-size:12px;font-weight:700;cursor:pointer;">View Complete Campaign →</button>
+      <button onclick="go('adLibrary')" style="background:transparent;border:1px solid var(--border);border-radius:6px;padding:8px 12px;font-size:12px;color:var(--t2);cursor:pointer;">Ad Library</button>
+    </div>
+  </div>`;
+}
+
+function openDiscoveryAdView() {
+  if (discoveryAdId) openAdView(discoveryAdId);
+  else go('adLibrary');
+}
+
+async function loadClientDiscovery() {
+  if (!currentBizId || !currentUser?.id) return;
+  const { data, error } = await sb
+    .from('client_discovery')
+    .select('*')
+    .eq('business_id', currentBizId)
+    .eq('user_id', currentUser.id)
+    .single();
+  if (error || !data) return;
+  S.clientDiscovery = data;
+  if (data.monthly_budget) S.budget = data.budget || S.budget;
+  if (data.campaign_goal) S.campaignType = data.campaign_goal;
+  console.log('[loadDiscovery] loaded for client');
 }
 
 function openCanvaWithPrompt() {
