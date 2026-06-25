@@ -1257,18 +1257,15 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
     <div class="spanel" id="panel-adView">
 
       <!-- TOP BAR -->
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 20px;border-bottom:1px solid var(--border);flex-shrink:0;">
-        <div style="display:flex;align-items:center;gap:10px;">
-          <button onclick="closeAdView()" style="background:transparent;border:1px solid var(--border);border-radius:6px;padding:5px 10px;color:var(--t2);font-size:12px;cursor:pointer;">← Back</button>
-          <div>
-            <div id="adv-title" style="font-size:14px;font-weight:700;color:var(--t1);">Ad Package</div>
-            <div id="adv-meta" style="font-size:11px;color:var(--t3);margin-top:1px;"></div>
-          </div>
+      <div style="display:grid;grid-template-columns:auto 1fr auto;align-items:center;padding:12px 20px;border-bottom:1px solid var(--border);flex-shrink:0;gap:12px;">
+        <button onclick="closeAdView()" style="background:transparent;border:1px solid var(--border);border-radius:6px;padding:5px 10px;color:var(--t2);font-size:12px;cursor:pointer;white-space:nowrap;">← Back</button>
+        <div style="text-align:center;min-width:0;">
+          <div id="adv-title" style="font-size:14px;font-weight:700;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Ad Package</div>
+          <div id="adv-meta" style="font-size:11px;color:var(--t3);margin-top:1px;"></div>
         </div>
         <div style="display:flex;align-items:center;gap:8px;">
+          <button onclick="markAdAsUsed(currentAdViewId)" style="background:transparent;border:1px solid var(--green);color:var(--green);border-radius:6px;padding:5px 12px;font-size:11px;cursor:pointer;white-space:nowrap;">✓ Mark Used</button>
           <div id="adv-score-badge"></div>
-          <button onclick="markAdAsUsed(currentAdViewId)" style="background:transparent;border:1px solid var(--green);color:var(--green);border-radius:6px;padding:5px 12px;font-size:11px;cursor:pointer;">✓ Mark Used</button>
-          <button onclick="copyFullAdPackage()" style="background:var(--volt);color:#000;border:none;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer;">📋 Copy All</button>
         </div>
       </div>
 
@@ -1281,41 +1278,31 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
           <!-- ROW 1: AD PREVIEW (image left + Facebook preview right) -->
           <div style="display:grid;grid-template-columns:280px 1fr;gap:16px;margin-bottom:12px;">
 
-            <!-- Left: Generated image + size options -->
+            <!-- Left: Generated image carousel -->
             <div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:10px;padding:12px;">
               <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">🖼️ Ad Creative</div>
               <div id="adv-image-zone"></div>
-              <div style="margin-top:8px;display:flex;flex-direction:column;gap:4px;">
-                <div style="font-size:10px;color:var(--t3);margin-bottom:2px;">Sizes needed:</div>
-                <div style="font-size:10px;color:var(--t2);">📱 1080×1350 — Feed (primary)</div>
-                <div style="font-size:10px;color:var(--t2);">📲 1080×1920 — Stories/Reels</div>
-                <div style="font-size:10px;color:var(--t2);">⬜ 1080×1080 — Square</div>
-              </div>
-              <button onclick="go('visual')" style="margin-top:10px;width:100%;background:transparent;border:1px solid var(--volt);color:var(--volt);border-radius:6px;padding:6px;font-size:11px;cursor:pointer;">🎨 Generate Images →</button>
             </div>
 
             <!-- Right: Facebook-style ad preview -->
             <div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;">
               <div style="padding:10px 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--border);">
-                <div id="adv-avatar-initial" style="width:32px;height:32px;border-radius:50%;background:var(--volt);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#000;flex-shrink:0;">B</div>
+                <div id="adv-page-avatar" style="width:32px;height:32px;border-radius:50%;background:var(--volt);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#000;flex-shrink:0;">B</div>
                 <div>
                   <div id="adv-page-name" style="font-size:12px;font-weight:600;color:var(--t1);">Your Business</div>
                   <div style="font-size:10px;color:var(--t3);">Sponsored · 🌐</div>
                 </div>
               </div>
               <div style="padding:10px 14px;">
-                <div id="adv-preview-text" style="font-size:12px;color:var(--t1);line-height:1.6;max-height:80px;overflow:hidden;"></div>
+                <div id="adv-preview-primary-text" style="font-size:12px;color:var(--t1);line-height:1.6;max-height:80px;overflow:hidden;"></div>
                 <span id="adv-preview-seemore" onclick="toggleAdPreviewText()" style="font-size:11px;color:#1877f2;cursor:pointer;display:none;">See more</span>
               </div>
-              <div id="adv-preview-image" style="background:var(--bg-elevated);height:160px;display:flex;align-items:center;justify-content:center;">
-                <span style="color:var(--t3);font-size:12px;">[ Ad Image — 1080×1350 ]</span>
-              </div>
               <div style="padding:10px 14px;background:var(--bg-elevated);border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
-                <div>
-                  <div id="adv-preview-headline" style="font-size:12px;font-weight:600;color:var(--t1);"></div>
-                  <div id="adv-preview-description" style="font-size:11px;color:var(--t3);margin-top:2px;"></div>
+                <div style="flex:1;min-width:0;">
+                  <div id="adv-preview-headline" style="font-size:13px;font-weight:700;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>
+                  <div id="adv-preview-description" style="font-size:11px;color:var(--t3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>
                 </div>
-                <div id="adv-preview-cta" style="background:#1877f2;color:#fff;border-radius:6px;padding:6px 12px;font-size:11px;font-weight:600;white-space:nowrap;"></div>
+                <div id="adv-preview-cta" style="background:#1877f2;color:#fff;border-radius:6px;padding:6px 12px;font-size:11px;font-weight:600;white-space:nowrap;margin-left:10px;"></div>
               </div>
             </div>
           </div>
@@ -3565,9 +3552,9 @@ CAMPAIGN OBJECTIVE: ${S.campaignObjective || S.goal || 'leads'}
 
 BRAND DNA:
 - Brand name (use in name= field): ${brandName}
-- Colors: ${S.brandColors?.map(c=>`${c.label||'Color'} ${c.hex}`).join(', ') || S.brandSnapshot?.colors || 'warm neutrals'}
+- Colors: ${getBrandColors() || S.brandColors?.map(c=>`${c.label||'Color'} ${c.hex}`).join(', ') || 'warm neutrals'}
 - Fonts: Headline=${S.brandFonts?.headline||'not set'}, Body=${S.brandFonts?.body||'not set'}
-- Visual style: ${S.brandSnapshot?.visual_style || 'premium, clean, minimal'}
+- Visual style: ${getBrandStyle() || S.brandSnapshot?.visual_style || 'premium, clean, minimal'}
 - Tone: ${S.brandSnapshot?.tone || 'warm, confident, trustworthy'}
 - Avoid: ${S.brandSnapshot?.avoid || 'not specified'}
 
@@ -3902,8 +3889,9 @@ location="${(S.brandSnapshot?.location || 'Ontario, Canada').split(',')[0]}, Can
 subject=confident woman 30-44 with bright natural smile, warm expression,
 setting=warm summer backyard or cozy home environment, golden hour lighting,
 text overlay: "${(ad.hook || '').replace(/[*_#>]/g,'').slice(0,40)}" at top in elegant white serif,
-aesthetic=premium minimal feminine clean warm,
-color palette=warm cream neutral tones soft gold,
+${getBrandStyle() ? `aesthetic=${getBrandStyle()}` : 'aesthetic=premium minimal feminine clean warm'},
+${getBrandColors() ? `color palette=${getBrandColors()}` : 'color palette=warm cream neutral tones soft gold'},
+${getBrandColors() ? `CRITICAL: Use ONLY these brand colors: ${getBrandColors()}. Do NOT use green or any color not in the brand palette.` : ''}
 NOT=clinical dental imagery stock photo cheap coupon aesthetic,
 aspect ratio 4:5, photorealistic editorial quality`
           }]
@@ -4665,7 +4653,8 @@ async function saveToAdLibrary() {
     budget_recommendation: S.lastBudgetRecommendation || null,
     research_brief:   S.audienceIntelligence?.brief?.slice(0, 3000) || null,
     research_date:    S.audienceIntelligence?.updated_at || null,
-    segment_name:     S.selectedSegment?.name || null
+    segment_name:     S.selectedSegment?.name || null,
+    headline:         extractFirstHeadline(S.adCopy || '') || null
   }).select().single();
   if (!error && data) {
     S.lastAdId = data.id;
@@ -5271,7 +5260,7 @@ function renderAdLibrary() {
   const scoreColor = s => !s ? 'var(--t2)' : s>=80 ? 'var(--green)' : s>=60 ? 'var(--yellow)' : 'var(--red)';
   grid.innerHTML = adLibrary.map(ad => {
     const date  = ad.created_at ? new Date(ad.created_at).toLocaleDateString() : '';
-    const hook  = escHtml((ad.hook||'').substring(0,120));
+    const hook  = escHtml((ad.headline || ad.hook || '').substring(0,120));
     const thumb = ad.image_url
       ? `<img class="adlib-thumb" src="${escHtml(ad.image_url)}" onerror="this.style.display='none'" alt="Ad image">`
       : '';
@@ -5577,6 +5566,7 @@ function renderMarkdown(text) {
     .replace(/^###\s+(.+)$/gm, '<div style="font-size:12px;font-weight:600;color:var(--t2);margin:8px 0 4px;">$1</div>')
     .replace(/^---+$/gm, '<hr style="border:none;border-top:1px solid var(--border);margin:10px 0;">')
     .replace(/^[-•]\s+(.+)$/gm, '<div style="display:flex;gap:6px;margin:3px 0;"><span style="color:var(--volt);">•</span><span>$1</span></div>')
+    .replace(/^>\s+(.+)$/gm, '<div style="border-left:3px solid var(--volt);padding-left:10px;color:var(--t2);margin:4px 0;">$1</div>')
     .replace(/\n\n/g, '<br><br>')
     .replace(/\n/g, '<br>');
 }
@@ -5625,6 +5615,152 @@ function extractExclusions(campaignBrief) {
   return '- Existing customers (Custom Audience)\n- Competitor employees\n- Age under 18\n- People who have already converted (retarget separately)';
 }
 
+function extractFirstHeadline(text) {
+  if (!text) return null;
+  const section = text.match(/##\s*HEADLINE[S]?[^\n]*\n([\s\S]*?)(?=##|$)/i);
+  if (section) {
+    const lines = section[1].split('\n')
+      .map(l => l.replace(/^[-*\d.)\s]+/, '').replace(/\*\*/g, '').trim())
+      .filter(l => l.length > 3);
+    return lines[0] || null;
+  }
+  return null;
+}
+
+function extractDescription(text) {
+  if (!text) return null;
+  const section = text.match(/##\s*(?:CTA|DESCRIPTION)[^\n]*\n([\s\S]*?)(?=##|$)/i);
+  if (section) return section[1].replace(/\*\*/g, '').trim().slice(0, 120);
+  return null;
+}
+
+function extractCTA(text) {
+  if (!text) return 'Book Now';
+  const match = text.match(/(?:CTA Button|CTA|Call to Action)[:\s]+([^\n]+)/i);
+  if (match) return match[1].replace(/\*\*/g, '').trim().slice(0, 20);
+  return 'Book Now';
+}
+
+function getBrandColors() {
+  const colors = S.brandSnapshot?.colors || S.brandSnapshot?.brand_colors || S.brandSnapshot?.colour_palette || null;
+  if (!colors) return null;
+  if (Array.isArray(colors)) return colors.map(c => c.hex || c.name || c).filter(Boolean).join(', ');
+  if (typeof colors === 'string') return colors;
+  if (typeof colors === 'object') return Object.entries(colors).map(([n, h]) => `${n}: ${h}`).join(', ');
+  return null;
+}
+
+function getBrandStyle() {
+  return S.brandSnapshot?.visual_style || S.brandSnapshot?.brand_aesthetic || S.brandSnapshot?.tone || null;
+}
+
+function renderAdImageCarousel(ad) {
+  const images = [];
+  if (ad.image_url) images.push({ url: ad.image_url, size: '1080×1350', label: 'Feed (4:5)', format: 'feed' });
+  if (ad.image_urls?.['9:16']) images.push({ url: ad.image_urls['9:16'], size: '1080×1920', label: 'Stories/Reels (9:16)', format: 'stories' });
+  if (ad.image_urls?.['1:1']) images.push({ url: ad.image_urls['1:1'], size: '1080×1080', label: 'Square (1:1)', format: 'square' });
+
+  window._carouselImages = images;
+  window._carouselIndex = 0;
+
+  if (images.length === 0) {
+    return `<div style="background:var(--bg-elevated);border:1px dashed var(--border);border-radius:10px;padding:24px;text-align:center;">
+      <div style="font-size:28px;margin-bottom:8px;">🖼️</div>
+      <div style="font-size:12px;color:var(--t2);margin-bottom:6px;">No images generated yet</div>
+      <div style="font-size:11px;color:var(--t3);margin-bottom:14px;">📱 1080×1350 · 📲 1080×1920 · ⬜ 1080×1080</div>
+      <button onclick="generateImageForCurrentAd()" id="adv-generate-btn"
+        style="background:var(--volt);color:#000;border:none;border-radius:8px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;width:100%;">
+        🎨 Generate Images (~$0.05)
+      </button>
+    </div>`;
+  }
+
+  return `<div id="adv-carousel">
+    <div style="position:relative;border-radius:10px;overflow:hidden;background:#000;margin-bottom:10px;">
+      <img id="adv-carousel-img" src="${escHtml(images[0].url)}"
+        style="width:100%;display:block;max-height:380px;object-fit:contain;">
+      <div id="adv-carousel-label"
+        style="position:absolute;top:8px;left:8px;background:rgba(0,0,0,0.6);border-radius:4px;padding:3px 8px;font-size:10px;color:#fff;">
+        ${images[0].label}
+      </div>
+      ${images.length > 1 ? `
+      <button onclick="carouselPrev()"
+        style="position:absolute;left:8px;top:50%;transform:translateY(-50%);background:rgba(0,0,0,0.5);border:none;border-radius:50%;width:32px;height:32px;color:#fff;font-size:18px;cursor:pointer;line-height:1;">‹</button>
+      <button onclick="carouselNext()"
+        style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:rgba(0,0,0,0.5);border:none;border-radius:50%;width:32px;height:32px;color:#fff;font-size:18px;cursor:pointer;line-height:1;">›</button>
+      ` : ''}
+    </div>
+    ${images.length > 1 ? `
+    <div style="display:flex;justify-content:center;gap:6px;margin-bottom:10px;">
+      ${images.map((_, i) => `<div onclick="carouselGo(${i})" id="adv-dot-${i}"
+        style="width:${i===0?'20':'6'}px;height:6px;border-radius:3px;background:${i===0?'var(--volt)':'var(--border)'};cursor:pointer;transition:all 0.2s;"></div>`).join('')}
+    </div>` : ''}
+    <a id="adv-download-btn" href="${escHtml(images[0].url)}" download="ad-feed.png" target="_blank"
+      style="display:block;background:var(--volt);color:#000;border-radius:6px;padding:8px;font-size:12px;font-weight:700;text-decoration:none;text-align:center;margin-bottom:6px;">
+      ⬇ Download ${images[0].label}
+    </a>
+    ${images.length < 3 ? `
+    <button onclick="generateMoreSizes()"
+      style="width:100%;background:transparent;border:1px solid var(--border);border-radius:6px;padding:7px;font-size:11px;color:var(--t2);cursor:pointer;margin-bottom:6px;">
+      🎨 Generate Missing Sizes
+    </button>` : ''}
+    <button onclick="downloadAdPackage()"
+      style="width:100%;background:var(--bg-elevated);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:12px;color:var(--t1);cursor:pointer;font-weight:600;">
+      📦 Download Ad Package (all sizes)
+    </button>
+  </div>`;
+}
+
+function carouselGo(index) {
+  const images = window._carouselImages || [];
+  if (index < 0 || index >= images.length) return;
+  window._carouselIndex = index;
+  const img = document.getElementById('adv-carousel-img');
+  const label = document.getElementById('adv-carousel-label');
+  const dl = document.getElementById('adv-download-btn');
+  if (img) img.src = images[index].url;
+  if (label) label.textContent = images[index].label;
+  if (dl) { dl.href = images[index].url; dl.download = 'ad-' + images[index].format + '.png'; dl.textContent = '⬇ Download ' + images[index].label; }
+  images.forEach((_, i) => {
+    const dot = document.getElementById('adv-dot-' + i);
+    if (dot) { dot.style.width = i === index ? '20px' : '6px'; dot.style.background = i === index ? 'var(--volt)' : 'var(--border)'; }
+  });
+}
+
+function carouselNext() {
+  const images = window._carouselImages || [];
+  carouselGo((window._carouselIndex + 1) % images.length);
+}
+
+function carouselPrev() {
+  const images = window._carouselImages || [];
+  carouselGo((window._carouselIndex - 1 + images.length) % images.length);
+}
+
+function generateMoreSizes() {
+  const prompt = S.lastVisualPrompts?.dalle || currentAdViewData?.visual_prompt;
+  if (!prompt) { alert('Generate the main image first.'); return; }
+  generateAllSizes('dalle');
+}
+
+async function downloadAdPackage() {
+  const images = window._carouselImages || [];
+  if (!images.length) { alert('No images to download yet.'); return; }
+  const btn = event?.target?.closest('button') || event?.target;
+  if (btn) { btn.textContent = '⏳ Downloading...'; btn.disabled = true; }
+  for (let i = 0; i < images.length; i++) {
+    await new Promise(r => setTimeout(r, 600));
+    const a = document.createElement('a');
+    a.href = images[i].url;
+    a.download = 'ad-' + images[i].format + '-' + images[i].size.replace('×', 'x') + '.png';
+    a.target = '_blank';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }
+  if (btn) { btn.textContent = '✅ Downloaded ' + images.length + ' images'; btn.disabled = false; setTimeout(() => { btn.textContent = '📦 Download Ad Package (all sizes)'; }, 3000); }
+}
+
 function openAdView(adId) {
   const ad = adLibrary.find(a => a.id === adId);
   if (!ad) { console.warn('[openAdView] ad not found:', adId); return; }
@@ -5638,7 +5774,10 @@ function openAdView(adId) {
   const brief = ad.campaign_brief || '';
 
   // ── TOP BAR ──────────────────────────────────────────────────
-  document.getElementById('adv-title').textContent = ad.hook || extractHookFromContent(ad.primary_text || '') || 'Ad Package';
+  const rawCopy = ad.primary_text || ad.content || '';
+  const adTitle = (extractFirstHeadline(rawCopy) || ad.hook || extractHookFromContent(rawCopy) || 'Ad Package')
+    .replace(/[*_#>]/g, '').trim().slice(0, 80);
+  document.getElementById('adv-title').textContent = adTitle;
   document.getElementById('adv-meta').textContent = [
     ad.segment_name,
     ad.campaign_type,
@@ -5656,111 +5795,71 @@ function openAdView(adId) {
     }
   }
 
-  // ── IMAGE ZONE ───────────────────────────────────────────────
+  // ── IMAGE ZONE (carousel) ─────────────────────────────────────
   const imageZone = document.getElementById('adv-image-zone');
-  if (imageZone) {
-    if (ad.image_url) {
-      imageZone.innerHTML = `
-        <div>
-          <img src="${escHtml(ad.image_url)}" style="width:100%;border-radius:8px;border:1px solid var(--border);display:block;" onerror="this.style.display='none'">
-          <div style="display:flex;gap:6px;margin-top:8px;">
-            <a href="${escHtml(ad.image_url)}" download="ad-image-feed.jpg" target="_blank"
-              style="flex:1;background:var(--volt);color:#000;border:none;border-radius:6px;
-              padding:6px;font-size:11px;font-weight:600;text-decoration:none;text-align:center;">
-              ⬇ Download Feed
-            </a>
-            <button onclick="generateImageForCurrentAd()"
-              style="background:transparent;border:1px solid var(--border);border-radius:6px;
-              padding:6px 10px;font-size:11px;color:var(--t2);cursor:pointer;">
-              🔄 Regenerate
-            </button>
-          </div>
-          <div style="margin-top:6px;font-size:10px;color:var(--t3);">
-            Also generate:
-            <span onclick="generateImageSize('9:16')" style="color:var(--volt);cursor:pointer;text-decoration:underline;">Stories (9:16)</span> ·
-            <span onclick="generateImageSize('1:1')" style="color:var(--volt);cursor:pointer;text-decoration:underline;">Square (1:1)</span>
-          </div>
-        </div>`;
-    } else {
-      imageZone.innerHTML = `
-        <div style="background:var(--bg-elevated);border:1px solid var(--border);
-          border-radius:10px;padding:20px;text-align:center;">
-          <div style="font-size:12px;color:var(--t2);margin-bottom:12px;">
-            No image generated yet
-          </div>
-          <div style="font-size:11px;color:var(--t3);margin-bottom:12px;">
-            Sizes needed: 1080×1350 · 1080×1920 · 1080×1080
-          </div>
-          <button onclick="generateImageForCurrentAd()"
-            style="background:var(--volt);color:#000;border:none;border-radius:8px;
-            padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;width:100%;">
-            🎨 Generate Image (~$0.05)
-          </button>
-        </div>`;
-    }
-  }
+  if (imageZone) imageZone.innerHTML = renderAdImageCarousel(ad);
 
   // ── FACEBOOK PREVIEW ─────────────────────────────────────────
-  const bizName = S.brandSnapshot?.business_name || S.bizName || 'Your Business';
-  const initial = bizName[0]?.toUpperCase() || 'B';
-  const avatarEl = document.getElementById('adv-avatar-initial');
-  const pageNameEl = document.getElementById('adv-page-name');
-  if (avatarEl) avatarEl.textContent = initial;
-  if (pageNameEl) pageNameEl.textContent = bizName;
+  const businessName = S.brandSnapshot?.business_name || S.bizName || 'Your Business';
+  const pageAvatar = document.getElementById('adv-page-avatar');
+  const pageName = document.getElementById('adv-page-name');
+  if (pageAvatar) pageAvatar.textContent = businessName.charAt(0).toUpperCase();
+  if (pageName) pageName.textContent = businessName;
 
-  const previewText = document.getElementById('adv-preview-text');
+  const cleanCopy = rawCopy
+    .replace(/#{1,3}\s[^\n]*/g, '')
+    .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/\*([^*]+)\*/g, '$1')
+    .replace(/^>\s*/gm, '')
+    .replace(/---/g, '')
+    .replace(/\([^)]*visual direction[^)]*\)/gi, '')
+    .trim();
+
+  const primaryTextEl = document.getElementById('adv-preview-primary-text');
   const seeMoreBtn = document.getElementById('adv-preview-seemore');
-  if (previewText) {
-    previewText.textContent = ad.primary_text || ad.content || '';
-    previewText.style.maxHeight = '80px';
-    previewText.style.overflow = 'hidden';
-    if (seeMoreBtn) seeMoreBtn.style.display = (ad.primary_text || '').length > 200 ? 'inline' : 'none';
+  if (primaryTextEl) {
+    primaryTextEl.textContent = cleanCopy.slice(0, 280);
+    primaryTextEl.style.maxHeight = '80px';
+    primaryTextEl.style.overflow = 'hidden';
+    if (seeMoreBtn) seeMoreBtn.style.display = cleanCopy.length > 280 ? 'block' : 'none';
   }
+
+  const previewHeadline = extractFirstHeadline(rawCopy) || businessName;
+  const previewDesc = extractDescription(rawCopy) || 'Professional service · Local · Results guaranteed';
+  const previewCta = extractCTA(rawCopy);
 
   const headlineEl = document.getElementById('adv-preview-headline');
-  if (headlineEl) {
-    const hl = ad.headlines?.split('\n')[0]?.replace(/^[-*•\d.]+\s*/, '').trim() || ad.hook || '';
-    headlineEl.textContent = hl.slice(0, 60);
-  }
-
   const descEl = document.getElementById('adv-preview-description');
-  if (descEl) descEl.textContent = S.brandSnapshot?.website || S.website || 'yourbusiness.com';
-
   const ctaEl = document.getElementById('adv-preview-cta');
-  if (ctaEl) {
-    const ctaRaw = ad.cta || '';
-    const ctaMatch = ctaRaw.match(/(?:CTA(?:\s+Button)?:\s*)([^\n]+)/i)?.[1] || ctaRaw.split('\n')[0];
-    ctaEl.textContent = (ctaMatch || 'Learn More').slice(0, 20);
-  }
-
-  const previewImg = document.getElementById('adv-preview-image');
-  if (previewImg && ad.image_url) {
-    previewImg.innerHTML = `<img src="${escHtml(ad.image_url)}" style="width:100%;height:160px;object-fit:cover;" onerror="">`;
-  }
+  if (headlineEl) headlineEl.textContent = previewHeadline;
+  if (descEl) descEl.textContent = previewDesc;
+  if (ctaEl) ctaEl.textContent = previewCta;
 
   // ── TARGETING ────────────────────────────────────────────────
   const seg = S.audienceSegments?.find(s => s.name === ad.segment_name) ?? S.audienceSegments?.[0] ?? null;
+  const segment = seg;
   const targetingRaw = extractSection(brief, 'TARGETING') ?? extractSection(brief, 'AUDIENCE') ?? '';
-  const serpCity = S.serpIntelligence?.city || S.brandSnapshot?.location || 'Local market';
+  const serpCity = S.serpIntelligence?.city || S.brandSnapshot?.location?.split(',')[0]?.trim() || 'Local area';
   const industry = (S.brandSnapshot?.industry || S.brandSnapshot?.business_type || '').toLowerCase();
 
   const demoEl = document.getElementById('adv-demographics');
   if (demoEl) {
-    let demoHtml = '';
-    if (seg) {
-      demoHtml = [
-        seg.age_range ? `<div style="display:flex;gap:6px;margin:3px 0;"><span style="color:var(--volt);">•</span><span><strong>Age:</strong> ${escHtml(seg.age_range)}</span></div>` : '',
-        seg.gender ? `<div style="display:flex;gap:6px;margin:3px 0;"><span style="color:var(--volt);">•</span><span><strong>Gender:</strong> ${escHtml(seg.gender)}</span></div>` : '',
-        `<div style="display:flex;gap:6px;margin:3px 0;"><span style="color:var(--volt);">•</span><span><strong>Location:</strong> ${escHtml(serpCity)} + 25km radius</span></div>`,
-        seg.income ? `<div style="display:flex;gap:6px;margin:3px 0;"><span style="color:var(--volt);">•</span><span><strong>Income:</strong> ${escHtml(seg.income)}</span></div>` : '',
-        seg.motivation ? `<div style="display:flex;gap:6px;margin:3px 0;"><span style="color:var(--volt);">•</span><span><strong>Motivation:</strong> ${escHtml(seg.motivation)}</span></div>` : ''
-      ].filter(Boolean).join('') || `<div style="display:flex;gap:6px;margin:3px 0;"><span style="color:var(--volt);">•</span><span>Age: 25-44 · Location: ${escHtml(serpCity)}</span></div>`;
-    } else if (targetingRaw) {
-      demoHtml = renderMarkdown(targetingRaw.slice(0, 300));
+    if (segment) {
+      demoEl.innerHTML = `<div style="display:flex;flex-direction:column;gap:8px;">
+        <div><div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;">Age</div>
+          <div style="color:var(--t1);font-size:12px;margin-top:2px;">${escHtml(segment.age_range || '25-44')}</div></div>
+        <div><div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;">Gender</div>
+          <div style="color:var(--t1);font-size:12px;margin-top:2px;">${escHtml(segment.gender || 'Primarily female (70%), male secondary (30%)')}</div></div>
+        <div><div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;">Location</div>
+          <div style="color:var(--t1);font-size:12px;margin-top:2px;">${escHtml(serpCity)} + 25km radius</div></div>
+        <div><div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;">Income</div>
+          <div style="color:var(--t1);font-size:12px;margin-top:2px;">${escHtml(segment.income || '$45,000-$95,000 household')}</div></div>
+        <div><div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;">Life Stage</div>
+          <div style="color:var(--t1);font-size:12px;margin-top:2px;">${escHtml(segment.motivation || 'Working professionals, event-motivated')}</div></div>
+      </div>`;
     } else {
-      demoHtml = '<span style="color:var(--t3);">Run auto-research to generate.</span>';
+      demoEl.innerHTML = '<div style="color:var(--t3);font-size:12px;">Run auto-research to generate segment data</div>';
     }
-    demoEl.innerHTML = demoHtml;
   }
 
   const psychoEl = document.getElementById('adv-psychographics');
@@ -5869,6 +5968,12 @@ function openAdView(adId) {
     }
   }
 
+  // ── OPEN ACCORDIONS BY DEFAULT ───────────────────────────────
+  const targetingAccordion = document.getElementById('adv-targeting');
+  if (targetingAccordion) targetingAccordion.style.display = 'block';
+  const targetingArrow = document.getElementById('adv-targeting-arrow');
+  if (targetingArrow) targetingArrow.textContent = '▲';
+
   // Reset scroll
   document.getElementById('adv-scroll-zone')?.scrollTo(0, 0);
 }
@@ -5885,7 +5990,7 @@ function toggleAccordion(id) {
 }
 
 function toggleAdPreviewText() {
-  const el = document.getElementById('adv-preview-text');
+  const el = document.getElementById('adv-preview-primary-text');
   const btn = document.getElementById('adv-preview-seemore');
   if (!el) return;
   const collapsed = el.style.maxHeight === '80px';
