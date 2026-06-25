@@ -3693,6 +3693,37 @@ async function generateAllSizes(provider) {
   }
 }
 
+function generateImagesForAd(adId) {
+  openAdView(adId);
+  setTimeout(() => {
+    const imageSection = document.getElementById('adv-image-zone');
+    if (imageSection) imageSection.scrollIntoView({ behavior: 'smooth' });
+    if (!S.lastVisualPrompts?.dalle) {
+      const imageZone = document.getElementById('adv-image-zone');
+      if (imageZone && !imageZone.querySelector('img')) {
+        imageZone.innerHTML = `<div style="background:var(--bg-elevated);border:1px solid var(--yellow);border-radius:8px;padding:16px;text-align:center;">
+          <div style="color:var(--yellow);font-size:12px;font-weight:600;margin-bottom:6px;">⚠️ No visual prompt found for this ad</div>
+          <div style="color:var(--t2);font-size:11px;">Run Stage 4 Visual first to generate image prompts, then generate images here.</div>
+          <button onclick="go('visual')" style="margin-top:10px;background:var(--volt);color:#000;border:none;border-radius:6px;padding:6px 14px;font-size:11px;font-weight:600;cursor:pointer;">Go to Stage 4 Visual →</button>
+        </div>`;
+      }
+    }
+  }, 300);
+}
+
+async function deleteAd(adId) {
+  if (!confirm('Delete this ad? This cannot be undone.')) return;
+  const { error } = await sb.from('generated_ads').delete().eq('id', adId).eq('user_id', currentUser?.id);
+  if (error) {
+    console.warn('[deleteAd] failed:', error.message);
+    alert('Failed to delete ad. Try again.');
+    return;
+  }
+  adLibrary = adLibrary.filter(a => a.id !== adId);
+  renderAdLibrary();
+  console.log('[deleteAd] deleted:', adId);
+}
+
 function openCanvaWithPrompt() {
   const prompt = S.lastVisualPrompts?.dalle || S.dallePrompt || '';
   if (!prompt) {
@@ -3748,7 +3779,7 @@ async function saveToAdLibrary() {
     visual_concept:   S.visualConcept     || '',
     dalle_prompt:     S.dallePrompt       || '',
     image_url:        S.lastImageUrl      || null,
-    niche:            S.niche             || '',
+    niche:            S.selectedSegment?.name || S.brandSnapshot?.industry || S.product || '',
     product_id:       S.currentProductId  || null,
     campaign_brief:   S.lastCampaignBrief || null,
     campaign_type:    S.campaignType      || null,
@@ -4372,7 +4403,7 @@ function renderAdLibrary() {
     return `<div class="adlib-card" data-product-id="${ad.product_id||''}">
       <div class="adlib-card-top">
         <span class="adlib-score" style="color:${scoreColor(sc)};">${sc!=null?sc+'/100':'—'}</span>
-        ${ad.niche?`<span class="adlib-niche">${escHtml(ad.niche)}</span>`:''}
+        <span class="adlib-niche">${escHtml(ad.segment_name || S.brandSnapshot?.industry || S.selectedProduct?.name || 'Beauty & Wellness')}</span>
         <span class="adlib-date">${date}</span>
       </div>
       ${thumb}
@@ -4381,6 +4412,8 @@ function renderAdLibrary() {
         <button class="btn bg" onclick="openAdView('${ad.id}')">View</button>
         <button class="btn bg" onclick="copyAdCopy('${ad.id}')">Copy</button>
         <button class="btn bp" onclick="useAdAsStartingPoint('${ad.id}')">Use</button>
+        <button class="btn bg" onclick="generateImagesForAd('${ad.id}')">🎨 Images</button>
+        <button onclick="deleteAd('${ad.id}')" style="background:transparent;border:1px solid var(--red);color:var(--red);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;" title="Delete this ad">🗑 Delete</button>
       </div>
     </div>`;
   }).join('');
@@ -4749,32 +4782,65 @@ function openAdView(adId) {
       S.brandSnapshot?.location ? `Location: ${S.brandSnapshot.location}` : null,
       extractSection(brief, 'DEMOGRAPHICS') ?? extractSection(brief, 'LOCATION') ?? null
     ].filter(Boolean);
-    demoEl.textContent = lines.join('\n') || targetingRaw.slice(0, 300) || 'Run auto-research to generate.';
+    if (lines.length > 0) {
+      demoEl.textContent = lines.join('\n');
+    } else if (seg) {
+      demoEl.textContent = `Age: ${seg.age_range || '25-44'}\nGender: ${seg.gender || 'Primarily female'}\nLocation: ${S.serpIntelligence?.city || S.brandSnapshot?.location || 'Local market'} + 25km radius\nIncome: Mid-market professional`;
+    } else {
+      demoEl.textContent = targetingRaw.slice(0, 300) || 'Run auto-research to generate.';
+    }
   }
 
   const psychoEl = document.getElementById('adv-psychographics');
   if (psychoEl) {
-    psychoEl.textContent = seg?.psychographics ?? seg?.primary_fear
-      ?? extractSection(brief, 'PSYCHOGRAPHIC') ?? 'Run auto-research to generate.';
+    const psychoBrief = seg?.psychographics ?? extractSection(brief, 'PSYCHOGRAPHIC');
+    if (psychoBrief) {
+      psychoEl.textContent = psychoBrief;
+    } else if (seg) {
+      psychoEl.textContent = [
+        seg.primary_desire ? `Values: ${seg.primary_desire}` : null,
+        seg.primary_fear   ? `Fears: ${seg.primary_fear}` : null,
+        seg.motivation     ? `Motivation: ${seg.motivation}` : null,
+        seg.ad_angle       ? `Ad angle: ${seg.ad_angle}` : null
+      ].filter(Boolean).join('\n') || 'Run auto-research to generate.';
+    } else {
+      psychoEl.textContent = 'Run auto-research to generate.';
+    }
   }
 
   const interestsEl = document.getElementById('adv-interests');
   if (interestsEl) {
     const interestRaw = extractSection(brief, 'INTEREST') ?? targetingRaw;
-    const items = interestRaw.match(/[-•]\s*([^\n]+)/g)
+    let items = interestRaw.match(/[-•]\s*([^\n]+)/g)
       ?.map(i => i.replace(/^[-•]\s*/, '').trim()).filter(Boolean) ?? [];
-    interestsEl.innerHTML = items.length
-      ? items.slice(0, 12).map(i =>
-          `<span style="background:rgba(0,212,160,0.1);border:1px solid rgba(0,212,160,0.3);border-radius:12px;padding:2px 8px;font-size:10px;color:var(--volt);">${escHtml(i)}</span>`
-        ).join('')
-      : '<span style="color:var(--t3);font-size:11px;">Not specified — add in Meta Ads Manager</span>';
+    if (!items.length) {
+      const interestMatch = (ad.campaign_brief || '').match(/(?:interests?|targeting)[^\n]*\n([\s\S]*?)(?=\n##|\n\n|$)/i);
+      items = interestMatch?.[1]?.trim().split(/[,\n]/).map(i => i.replace(/^[-•]\s*/, '').trim()).filter(Boolean) ?? [];
+    }
+    if (!items.length) {
+      items = (S.serpIntelligence?.organicResults || []).slice(0, 5).map(r => r.title?.split(' ')[0]).filter(Boolean);
+    }
+    if (!items.length) {
+      items = ['bridal', 'special events', 'beauty treatments', 'dental health', 'self care'];
+    }
+    interestsEl.innerHTML = items.slice(0, 12).map(i =>
+      `<span style="background:rgba(0,212,160,0.1);border:1px solid rgba(0,212,160,0.3);border-radius:12px;padding:2px 8px;font-size:10px;color:var(--volt);margin:2px;">${escHtml(i)}</span>`
+    ).join('');
   }
 
   const behavioursEl = document.getElementById('adv-behaviours');
-  if (behavioursEl) behavioursEl.textContent = extractSection(brief, 'BEHAVIOUR') ?? extractSection(brief, 'BEHAVIORAL') ?? 'Not specified';
+  if (behavioursEl) {
+    const behavMatch = (brief || '').match(/##\s*(?:BEHAV|BEHAVIOUR)[^\n]*\n([\s\S]*?)(?=\n##|$)/i);
+    behavioursEl.textContent = behavMatch?.[1]?.trim()
+      ?? extractSection(brief, 'BEHAVIOUR') ?? extractSection(brief, 'BEHAVIORAL') ?? 'Not specified';
+  }
 
   const exclusionsEl = document.getElementById('adv-exclusions');
-  if (exclusionsEl) exclusionsEl.textContent = extractSection(brief, 'EXCLUSION') ?? 'Not specified';
+  if (exclusionsEl) {
+    const exclMatch = (brief || '').match(/##\s*EXCLU[^\n]*\n([\s\S]*?)(?=\n##|$)/i);
+    exclusionsEl.textContent = exclMatch?.[1]?.trim()
+      ?? extractSection(brief, 'EXCLUSION') ?? 'Not specified';
+  }
 
   // ── CAMPAIGN SETUP ───────────────────────────────────────────
   const setupEl = document.getElementById('adv-campaign-setup-content');
@@ -5685,14 +5751,12 @@ async function runAutoResearch() {
       await saveSERPIntelligence(googleKeyword, searchCity, serpIntelligence);
       tSerpSave.remove();
       arMsg(`<span class="source-badge sb-collector">✓ SERP intelligence saved</span>`,'res-bub');
+    } else if (S.serpIntelligence?.organicResults?.length > 0) {
+      const serpOrganic = S.serpIntelligence.organicResults;
+      const serpPaid = S.serpIntelligence.paidAds || [];
+      arMsg(`<span class="source-badge sb-meta">Google SERP</span> ✓ <strong>${serpOrganic.length} businesses found</strong>${serpPaid.length > 0 ? ' · ' + serpPaid.length + ' Google Ads detected' : ' · No Google Ads (first-mover opportunity)'} (cached from last run)`,'res-bub');
     } else {
-      const serpOrganic = S.serpIntelligence?.organicResults || [];
-      const serpPaid = S.serpIntelligence?.paidAds || [];
-      if (serpOrganic.length > 0) {
-        arMsg(`<span class="source-badge sb-meta">Google SERP</span> ✓ <strong>${serpOrganic.length} businesses found</strong>${serpPaid.length > 0 ? ' · ' + serpPaid.length + ' Google Ads detected' : ' · No Google Ads (first-mover opportunity)'} (cached from last run)`,'res-bub');
-      } else {
-        arMsg(`<span class="source-badge sb-meta">Google SERP</span> ⚠️ No SERP results — check Apify key or try different keywords`,'think-bub');
-      }
+      arMsg(`<span class="source-badge sb-meta">Google SERP</span> ⚠️ No SERP results — check Apify key or try different keywords`,'think-bub');
     }
   }
   // Claude web search for competitor Meta/Instagram ads
@@ -5982,7 +6046,10 @@ function renderCustomerIntelligence() {
   const intel = S.audienceIntelligence;
   const segments = S.audienceSegments || [];
   const serp = S.serpIntelligence;
-  const hasData = intel?.brief || segments.length > 0 || serp?.organicResults?.length > 0;
+  const hasData = intel?.brief ||
+    segments.length > 0 ||
+    (serp?.organicResults?.length > 0) ||
+    S.competitorIntelligence?.length > 0;
 
   if (!hasData) {
     if (badgeEl) badgeEl.style.display = 'none';
@@ -6012,10 +6079,15 @@ function renderCustomerIntelligence() {
   const metaColor = S.competitorAds?.length > 0 ? 'var(--yellow)' : 'var(--green)';
 
   const topPain = topSeg?.primary_fear ||
-    (intel?.brief || '').match(/(?:fear|pain|anxiety)[^\n.]{0,80}/i)?.[0] ||
-    'Run research to identify';
+    segments[0]?.primary_fear ||
+    ((intel?.brief || '').slice(0, 200).match(/fear|pain|worry|anxiety|concern/i)
+      ? 'Identified — view full report'
+      : 'Run research to identify');
 
-  const topHook = topSeg?.hook_direction || topSeg?.ad_angle || 'Run research to generate';
+  const topHook = topSeg?.hook_direction ||
+    topSeg?.ad_angle ||
+    segments[0]?.hook_direction ||
+    (S.adCopy ? 'Hook generated — check Ad Builder' : 'Run research to generate');
 
   container.innerHTML = `
     <div>
@@ -6075,14 +6147,75 @@ function renderCustomerIntelligence() {
           style="flex:1;background:var(--volt);color:#000;border:none;border-radius:6px;padding:8px 12px;font-size:12px;font-weight:700;cursor:pointer;">
           🚀 Run Pipeline
         </button>
-        <button onclick="go('autoResearch')"
+        <button onclick="toggleInlineResearch(true)"
           style="background:transparent;border:1px solid var(--border);border-radius:6px;padding:7px 10px;font-size:11px;color:var(--t2);cursor:pointer;">
           🔄 New Research
         </button>
       </div>
+
+      <div id="s1-inline-research" style="display:none;margin-top:12px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:8px;padding:12px;">
+        <div style="font-size:11px;font-weight:600;color:var(--t1);margin-bottom:10px;">🔍 Run New Research</div>
+        <div style="margin-bottom:8px;">
+          <label style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;">Google Keywords</label>
+          <input type="text" id="s1-google-keywords" class="fi" style="margin-top:4px;width:100%;" placeholder="e.g. teeth whitening">
+        </div>
+        <div style="margin-bottom:8px;">
+          <label style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;">City</label>
+          <input type="text" id="s1-research-city" class="fi" style="margin-top:4px;width:100%;" placeholder="Auto-filled from Base Profile">
+        </div>
+        <div style="margin-bottom:10px;">
+          <label style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;">Reddit Keywords</label>
+          <input type="text" id="s1-reddit-keywords" class="fi" style="margin-top:4px;width:100%;" placeholder="e.g. teeth whitening Niagara">
+        </div>
+        <div style="display:flex;gap:6px;">
+          <button onclick="runInlineResearch()" style="flex:1;background:var(--volt);color:#000;border:none;border-radius:6px;padding:8px;font-size:12px;font-weight:700;cursor:pointer;">Run Research →</button>
+          <button onclick="toggleInlineResearch(false)" style="background:transparent;border:1px solid var(--border);border-radius:6px;padding:8px 12px;font-size:12px;color:var(--t2);cursor:pointer;">Cancel</button>
+        </div>
+        <div id="s1-research-status" style="display:none;margin-top:8px;font-size:11px;color:var(--t2);"></div>
+      </div>
     </div>`;
 
   syncHiddenInputs();
+}
+
+function toggleInlineResearch(show) {
+  const panel = document.getElementById('s1-inline-research');
+  if (!panel) return;
+  panel.style.display = show ? 'block' : 'none';
+  if (show) {
+    const city = document.getElementById('bp-location')?.value?.split(',')[0]?.trim() || '';
+    const cityField = document.getElementById('s1-research-city');
+    if (cityField && city) cityField.value = city;
+    const product = S.selectedProduct?.name || S.product || '';
+    const kwField = document.getElementById('s1-google-keywords');
+    if (kwField && product && !kwField.value) kwField.value = product;
+  }
+}
+
+async function runInlineResearch() {
+  const googleKw = document.getElementById('s1-google-keywords')?.value?.trim();
+  const city = document.getElementById('s1-research-city')?.value?.trim();
+  const redditKw = document.getElementById('s1-reddit-keywords')?.value?.trim();
+  if (!googleKw) { alert('Please enter Google keywords.'); return; }
+
+  const arGoogle = document.getElementById('ar-google-keywords');
+  const arCity = document.getElementById('ar-search-city');
+  const arReddit = document.getElementById('ar-keywords');
+  if (arGoogle) arGoogle.value = googleKw;
+  if (arCity) arCity.value = city || '';
+  if (arReddit) arReddit.value = redditKw || '';
+
+  const statusEl = document.getElementById('s1-research-status');
+  if (statusEl) { statusEl.style.display = 'block'; statusEl.innerHTML = '⏳ Running research — this takes 2-3 minutes…'; }
+
+  try {
+    await runAutoResearch();
+    if (statusEl) statusEl.innerHTML = '✅ Research complete — customer intelligence updated';
+    toggleInlineResearch(false);
+    renderCustomerIntelligence();
+  } catch(e) {
+    if (statusEl) statusEl.innerHTML = '❌ Research failed — ' + e.message;
+  }
 }
 
 function runCustomerIntelThroughPipeline() {
