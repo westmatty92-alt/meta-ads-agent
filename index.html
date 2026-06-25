@@ -3511,11 +3511,11 @@ function showSegmentVisual(tabIndex) {
 // ── Image generation ─────────────────────────────────────────
 
 function extractVisualPrompts(text) {
-  const gptMatch = text.match(/##\s*GPT IMAGE 2 PROMPT\s*\n+([\s\S]*?)(?=\n##|---\s*\n##|$)/i);
-  const dalle = gptMatch?.[1]?.trim() || null;
+  const gptMatch = text.match(/##\s*GPT IMAGE 2 PROMPT\s*\n+([\s\S]*?)(?=\n##|$)/i);
+  const dalle = gptMatch?.[1]?.replace(/\n*---\s*$/, '').trim() || null;
 
-  const mjMatch = text.match(/##\s*MIDJOURNEY PROMPT\s*\n+([\s\S]*?)(?=\n##|---\s*\n##|$)/i);
-  const midjourney = mjMatch?.[1]?.trim() || null;
+  const mjMatch = text.match(/##\s*MIDJOURNEY PROMPT\s*\n+([\s\S]*?)(?=\n##|$)/i);
+  const midjourney = mjMatch?.[1]?.replace(/\n*---\s*$/, '').trim() || null;
 
   const oldDalle = text.match(/(?:DALL-E PROMPT|DALL·E PROMPT)[^`]*```([^`]+)```/i)?.[1]?.trim()
     || text.match(/(?:DALL-E|DALL·E)[:\s]+([^\n#]{100,})/i)?.[1]?.trim();
@@ -3523,6 +3523,7 @@ function extractVisualPrompts(text) {
   const flux = fluxMatch?.[1]?.trim() || dalle || oldDalle || null;
 
   console.log('[extractPrompts] GPT Image 2 prompt found:', dalle ? 'YES (' + dalle.length + ' chars)' : 'NO');
+  console.log('[extractPrompts] GPT Image 2 prompt preview:', dalle?.slice(0, 150));
   return { dalle: dalle || oldDalle || null, flux, midjourney };
 }
 
@@ -3609,6 +3610,14 @@ async function generateAdImage(provider) {
   prompt += '. Suitable for Facebook/Instagram ad, high production value, no watermarks.';
 
   const statusEl = document.getElementById('image-gen-status');
+
+  if (prompt.length < 100) {
+    if (statusEl) {
+      statusEl.style.display = 'block';
+      statusEl.innerHTML = '⚠️ Visual prompt is too short — make sure you ran the full pipeline with Stay Radiant loaded before generating images. Do not refresh between stages.';
+    }
+    return;
+  }
   const container = document.getElementById('generated-images-container');
 
   if (statusEl) {
