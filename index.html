@@ -1330,7 +1330,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
               <div id="adv-targeting" style="display:none;padding:0 14px 12px;">
                 <div style="margin-bottom:10px;">
                   <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Demographics</div>
-                  <div id="adv-demographics" style="font-size:12px;color:var(--t2);line-height:1.8;white-space:pre-wrap;"></div>
+                  <div id="adv-demographics" style="font-size:12px;color:var(--t2);line-height:1.8;"></div>
                 </div>
                 <div style="margin-bottom:10px;">
                   <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Psychographics</div>
@@ -1356,7 +1356,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
                 <span id="adv-campaign-setup-arrow" style="color:var(--t3);font-size:12px;">▼</span>
               </div>
               <div id="adv-campaign-setup" style="display:none;padding:0 14px 12px;">
-                <div id="adv-campaign-setup-content" style="font-size:12px;color:var(--t2);line-height:1.8;white-space:pre-wrap;"></div>
+                <div id="adv-campaign-setup-content" style="font-size:12px;color:var(--t2);line-height:1.8;"></div>
               </div>
             </div>
           </div>
@@ -1369,7 +1369,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
                 <span id="adv-instant-form-arrow" style="color:var(--t3);font-size:12px;">▼</span>
               </div>
               <div id="adv-instant-form" style="display:none;padding:0 14px 12px;max-height:300px;overflow-y:auto;">
-                <div id="adv-form-content" style="font-size:12px;color:var(--t2);line-height:1.8;white-space:pre-wrap;"></div>
+                <div id="adv-form-content" style="font-size:12px;color:var(--t2);line-height:1.8;"></div>
               </div>
             </div>
             <div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;">
@@ -1378,7 +1378,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
                 <span id="adv-budget-arrow" style="color:var(--t3);font-size:12px;">▼</span>
               </div>
               <div id="adv-budget" style="display:none;padding:0 14px 12px;max-height:300px;overflow-y:auto;">
-                <div id="adv-budget-content" style="font-size:12px;color:var(--t2);line-height:1.8;white-space:pre-wrap;"></div>
+                <div id="adv-budget-content" style="font-size:12px;color:var(--t2);line-height:1.8;"></div>
               </div>
             </div>
             <div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;">
@@ -1399,7 +1399,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
               <span id="adv-strategy-arrow" style="color:var(--t3);font-size:12px;">▼</span>
             </div>
             <div id="adv-strategy" style="display:none;padding:0 14px 12px;max-height:300px;overflow-y:auto;">
-              <div id="adv-strategy-content" style="font-size:12px;color:var(--t2);line-height:1.8;white-space:pre-wrap;"></div>
+              <div id="adv-strategy-content" style="font-size:12px;color:var(--t2);line-height:1.8;"></div>
             </div>
           </div>
 
@@ -1410,7 +1410,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
               <span id="adv-visual-arrow" style="color:var(--t3);font-size:12px;">▼</span>
             </div>
             <div id="adv-visual" style="display:none;padding:0 14px 12px;max-height:300px;overflow-y:auto;">
-              <div id="adv-visual-content" style="font-size:12px;color:var(--t2);line-height:1.8;white-space:pre-wrap;"></div>
+              <div id="adv-visual-content" style="font-size:12px;color:var(--t2);line-height:1.8;"></div>
             </div>
           </div>
 
@@ -5440,6 +5440,63 @@ function closeAdlibModal() {
 
 // ── Full-Screen Ad View Panel ──────────────────────────────────
 
+function renderMarkdown(text) {
+  if (!text) return '';
+  return text
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+    .replace(/^##\s+(.+)$/gm, '<div style="font-size:13px;font-weight:700;color:var(--t1);margin:12px 0 6px;">$1</div>')
+    .replace(/^###\s+(.+)$/gm, '<div style="font-size:12px;font-weight:600;color:var(--t2);margin:8px 0 4px;">$1</div>')
+    .replace(/^---+$/gm, '<hr style="border:none;border-top:1px solid var(--border);margin:10px 0;">')
+    .replace(/^[-•]\s+(.+)$/gm, '<div style="display:flex;gap:6px;margin:3px 0;"><span style="color:var(--volt);">•</span><span>$1</span></div>')
+    .replace(/\n\n/g, '<br><br>')
+    .replace(/\n/g, '<br>');
+}
+
+function extractInterests(campaignBrief, industry) {
+  const targeting = extractSection(campaignBrief, 'TARGETING') ?? extractSection(campaignBrief, 'AUDIENCE') ?? '';
+  const interestSection = extractSection(campaignBrief, 'INTEREST') ?? targeting;
+  const parsed = interestSection.match(/[-•]\s*([^\n]+)/g)
+    ?.map(i => i.replace(/^[-•]\s*/, '').trim()).filter(i => i.length > 2 && i.length < 50) ?? [];
+  if (parsed.length >= 3) return parsed;
+  const ind = industry || '';
+  if (ind.includes('beauty') || ind.includes('salon') || ind.includes('spa') || ind.includes('laser') || ind.includes('skin')) {
+    return ['skincare', 'beauty treatments', 'self care', 'wellness', 'anti-aging', 'cosmetic procedures', 'bridal beauty', 'personal grooming'];
+  }
+  if (ind.includes('dental') || ind.includes('dentist') || ind.includes('orthodon')) {
+    return ['dental health', 'teeth whitening', 'cosmetic dentistry', 'oral care', 'smile makeover', 'braces', 'family health'];
+  }
+  if (ind.includes('reno') || ind.includes('construct') || ind.includes('home') || ind.includes('kitchen') || ind.includes('bath')) {
+    return ['home renovation', 'interior design', 'kitchen remodel', 'real estate', 'home improvement', 'DIY projects', 'home decor'];
+  }
+  if (ind.includes('fit') || ind.includes('gym') || ind.includes('yoga') || ind.includes('train')) {
+    return ['fitness', 'healthy lifestyle', 'weight loss', 'gym membership', 'personal training', 'nutrition', 'wellness apps'];
+  }
+  return ['local services', 'small business', 'community events', 'family lifestyle', 'home & garden', 'health & wellness'];
+}
+
+function extractBehaviours(campaignBrief, industry) {
+  const behavSection = extractSection(campaignBrief, 'BEHAVIOUR') ?? extractSection(campaignBrief, 'BEHAVIORAL') ?? extractSection(campaignBrief, 'BEHAV') ?? '';
+  if (behavSection && behavSection.length > 20) return behavSection;
+  const ind = industry || '';
+  if (ind.includes('beauty') || ind.includes('salon') || ind.includes('spa') || ind.includes('laser') || ind.includes('skin')) {
+    return '- Engaged shoppers (online purchases last 30 days)\n- Small business page admins\n- People who travel frequently\n- Fitness & wellness enthusiasts\n- Engaged with beauty content';
+  }
+  if (ind.includes('dental') || ind.includes('dentist') || ind.includes('orthodon')) {
+    return '- Health & wellness focused buyers\n- Parents with children at home\n- Engaged shoppers\n- People who recently moved\n- Healthcare appointment seekers';
+  }
+  if (ind.includes('reno') || ind.includes('construct') || ind.includes('home')) {
+    return '- Recent homebuyers\n- Home improvement purchasers\n- DIY project enthusiasts\n- Engaged with home & garden content\n- Small business owners';
+  }
+  return '- Engaged shoppers (online purchases last 30 days)\n- Local community members\n- Health & wellness interested\n- Small business supporters';
+}
+
+function extractExclusions(campaignBrief) {
+  const exclSection = extractSection(campaignBrief, 'EXCLUSION') ?? extractSection(campaignBrief, 'EXCLU') ?? '';
+  if (exclSection && exclSection.length > 10) return exclSection;
+  return '- Existing customers (Custom Audience)\n- Competitor employees\n- Age under 18\n- People who have already converted (retarget separately)';
+}
+
 function openAdView(adId) {
   const ad = adLibrary.find(a => a.id === adId);
   if (!ad) { console.warn('[openAdView] ad not found:', adId); return; }
@@ -5521,56 +5578,49 @@ function openAdView(adId) {
   // ── TARGETING ────────────────────────────────────────────────
   const seg = S.audienceSegments?.find(s => s.name === ad.segment_name) ?? S.audienceSegments?.[0] ?? null;
   const targetingRaw = extractSection(brief, 'TARGETING') ?? extractSection(brief, 'AUDIENCE') ?? '';
+  const serpCity = S.serpIntelligence?.city || S.brandSnapshot?.location || 'Local market';
+  const industry = (S.brandSnapshot?.industry || S.brandSnapshot?.business_type || '').toLowerCase();
 
   const demoEl = document.getElementById('adv-demographics');
   if (demoEl) {
-    const lines = [
-      seg?.age_range   ? `Age: ${seg.age_range}` : null,
-      seg?.gender      ? `Gender: ${seg.gender}` : null,
-      S.brandSnapshot?.location ? `Location: ${S.brandSnapshot.location}` : null,
-      extractSection(brief, 'DEMOGRAPHICS') ?? extractSection(brief, 'LOCATION') ?? null
-    ].filter(Boolean);
-    if (lines.length > 0) {
-      demoEl.textContent = lines.join('\n');
-    } else if (seg) {
-      demoEl.textContent = `Age: ${seg.age_range || '25-44'}\nGender: ${seg.gender || 'Primarily female'}\nLocation: ${S.serpIntelligence?.city || S.brandSnapshot?.location || 'Local market'} + 25km radius\nIncome: Mid-market professional`;
+    let demoHtml = '';
+    if (seg) {
+      demoHtml = [
+        seg.age_range ? `<div style="display:flex;gap:6px;margin:3px 0;"><span style="color:var(--volt);">•</span><span><strong>Age:</strong> ${escHtml(seg.age_range)}</span></div>` : '',
+        seg.gender ? `<div style="display:flex;gap:6px;margin:3px 0;"><span style="color:var(--volt);">•</span><span><strong>Gender:</strong> ${escHtml(seg.gender)}</span></div>` : '',
+        `<div style="display:flex;gap:6px;margin:3px 0;"><span style="color:var(--volt);">•</span><span><strong>Location:</strong> ${escHtml(serpCity)} + 25km radius</span></div>`,
+        seg.income ? `<div style="display:flex;gap:6px;margin:3px 0;"><span style="color:var(--volt);">•</span><span><strong>Income:</strong> ${escHtml(seg.income)}</span></div>` : '',
+        seg.motivation ? `<div style="display:flex;gap:6px;margin:3px 0;"><span style="color:var(--volt);">•</span><span><strong>Motivation:</strong> ${escHtml(seg.motivation)}</span></div>` : ''
+      ].filter(Boolean).join('') || `<div style="display:flex;gap:6px;margin:3px 0;"><span style="color:var(--volt);">•</span><span>Age: 25-44 · Location: ${escHtml(serpCity)}</span></div>`;
+    } else if (targetingRaw) {
+      demoHtml = renderMarkdown(targetingRaw.slice(0, 300));
     } else {
-      demoEl.textContent = targetingRaw.slice(0, 300) || 'Run auto-research to generate.';
+      demoHtml = '<span style="color:var(--t3);">Run auto-research to generate.</span>';
     }
+    demoEl.innerHTML = demoHtml;
   }
 
   const psychoEl = document.getElementById('adv-psychographics');
   if (psychoEl) {
-    const psychoBrief = seg?.psychographics ?? extractSection(brief, 'PSYCHOGRAPHIC');
-    if (psychoBrief) {
-      psychoEl.textContent = psychoBrief;
+    let psychoHtml = '';
+    if (seg?.psychographics) {
+      psychoHtml = renderMarkdown(seg.psychographics);
     } else if (seg) {
-      psychoEl.textContent = [
-        seg.primary_desire ? `Values: ${seg.primary_desire}` : null,
-        seg.primary_fear   ? `Fears: ${seg.primary_fear}` : null,
-        seg.motivation     ? `Motivation: ${seg.motivation}` : null,
-        seg.ad_angle       ? `Ad angle: ${seg.ad_angle}` : null
-      ].filter(Boolean).join('\n') || 'Run auto-research to generate.';
+      psychoHtml = [
+        seg.primary_desire ? `<div style="display:flex;gap:6px;margin:3px 0;"><span style="color:var(--volt);">•</span><span><strong>Values/Desires:</strong> ${escHtml(seg.primary_desire)}</span></div>` : '',
+        seg.primary_fear ? `<div style="display:flex;gap:6px;margin:3px 0;"><span style="color:var(--volt);">•</span><span><strong>Fears:</strong> ${escHtml(seg.primary_fear)}</span></div>` : '',
+        seg.motivation ? `<div style="display:flex;gap:6px;margin:3px 0;"><span style="color:var(--volt);">•</span><span><strong>Motivation:</strong> ${escHtml(seg.motivation)}</span></div>` : '',
+        seg.ad_angle ? `<div style="display:flex;gap:6px;margin:3px 0;"><span style="color:var(--volt);">•</span><span><strong>Ad angle:</strong> ${escHtml(seg.ad_angle)}</span></div>` : ''
+      ].filter(Boolean).join('') || '<span style="color:var(--t3);">Run auto-research to generate.</span>';
     } else {
-      psychoEl.textContent = 'Run auto-research to generate.';
+      psychoHtml = '<span style="color:var(--t3);">Run auto-research to generate.</span>';
     }
+    psychoEl.innerHTML = psychoHtml;
   }
 
   const interestsEl = document.getElementById('adv-interests');
   if (interestsEl) {
-    const interestRaw = extractSection(brief, 'INTEREST') ?? targetingRaw;
-    let items = interestRaw.match(/[-•]\s*([^\n]+)/g)
-      ?.map(i => i.replace(/^[-•]\s*/, '').trim()).filter(Boolean) ?? [];
-    if (!items.length) {
-      const interestMatch = (ad.campaign_brief || '').match(/(?:interests?|targeting)[^\n]*\n([\s\S]*?)(?=\n##|\n\n|$)/i);
-      items = interestMatch?.[1]?.trim().split(/[,\n]/).map(i => i.replace(/^[-•]\s*/, '').trim()).filter(Boolean) ?? [];
-    }
-    if (!items.length) {
-      items = (S.serpIntelligence?.organicResults || []).slice(0, 5).map(r => r.title?.split(' ')[0]).filter(Boolean);
-    }
-    if (!items.length) {
-      items = ['bridal', 'special events', 'beauty treatments', 'dental health', 'self care'];
-    }
+    const items = extractInterests(brief, industry);
     interestsEl.innerHTML = items.slice(0, 12).map(i =>
       `<span style="background:rgba(0,212,160,0.1);border:1px solid rgba(0,212,160,0.3);border-radius:12px;padding:2px 8px;font-size:10px;color:var(--volt);margin:2px;">${escHtml(i)}</span>`
     ).join('');
@@ -5578,16 +5628,12 @@ function openAdView(adId) {
 
   const behavioursEl = document.getElementById('adv-behaviours');
   if (behavioursEl) {
-    const behavMatch = (brief || '').match(/##\s*(?:BEHAV|BEHAVIOUR)[^\n]*\n([\s\S]*?)(?=\n##|$)/i);
-    behavioursEl.textContent = behavMatch?.[1]?.trim()
-      ?? extractSection(brief, 'BEHAVIOUR') ?? extractSection(brief, 'BEHAVIORAL') ?? 'Not specified';
+    behavioursEl.innerHTML = renderMarkdown(extractBehaviours(brief, industry));
   }
 
   const exclusionsEl = document.getElementById('adv-exclusions');
   if (exclusionsEl) {
-    const exclMatch = (brief || '').match(/##\s*EXCLU[^\n]*\n([\s\S]*?)(?=\n##|$)/i);
-    exclusionsEl.textContent = exclMatch?.[1]?.trim()
-      ?? extractSection(brief, 'EXCLUSION') ?? 'Not specified';
+    exclusionsEl.innerHTML = renderMarkdown(extractExclusions(brief));
   }
 
   // ── CAMPAIGN SETUP ───────────────────────────────────────────
@@ -5595,16 +5641,26 @@ function openAdView(adId) {
   if (setupEl) {
     const format = extractSection(brief, 'FORMAT') ?? '';
     const objective = extractSection(brief, 'CAMPAIGN OBJECTIVE') ?? extractSection(brief, 'OBJECTIVE') ?? '';
-    setupEl.textContent = [format, objective].filter(Boolean).join('\n\n') || brief.slice(0, 400) || 'No campaign setup found.';
+    const setupContent = [format, objective].filter(Boolean).join('\n\n') || brief.slice(0, 400) || 'No campaign setup found.';
+    setupEl.innerHTML = renderMarkdown(setupContent);
   }
 
   // ── INSTANT FORM ─────────────────────────────────────────────
   const formEl = document.getElementById('adv-form-content');
-  if (formEl) formEl.textContent = extractSection(brief, 'INSTANT FORM') ?? extractSection(brief, 'LEAD FORM') ?? 'No instant form data — run the pipeline to generate.';
+  if (formEl) {
+    const formSection = extractSection(brief, 'INSTANT FORM') ?? extractSection(brief, 'LEAD FORM');
+    if (formSection) {
+      formEl.innerHTML = renderMarkdown(formSection);
+    } else {
+      const bizNameForm = escHtml(S.brandSnapshot?.business_name || 'this business');
+      const defaultForm = `**Context Card Headline:** Transform your results with ${bizNameForm}\n\n**Form Questions:**\n- What service are you most interested in?\n- When are you looking to get started?\n- What's the best number to reach you?\n\n**Thank You Screen:** We'll call you within 1 business day to confirm your free consultation.\n\n**CASL Consent:** By submitting, you consent to receive communications from ${bizNameForm}. You may unsubscribe at any time.`;
+      formEl.innerHTML = renderMarkdown(defaultForm);
+    }
+  }
 
   // ── BUDGET ───────────────────────────────────────────────────
   const budgetEl = document.getElementById('adv-budget-content');
-  if (budgetEl) budgetEl.textContent = ad.budget_recommendation ?? extractSection(brief, 'BUDGET') ?? 'No budget recommendation yet — run the pipeline with a budget set.';
+  if (budgetEl) budgetEl.innerHTML = renderMarkdown(ad.budget_recommendation ?? extractSection(brief, 'BUDGET') ?? 'No budget recommendation yet — run the pipeline with a budget set.');
 
   // ── LAUNCH CHECKLIST ─────────────────────────────────────────
   const checklistEl = document.getElementById('adv-checklist-content');
@@ -5633,11 +5689,11 @@ function openAdView(adId) {
 
   // ── STRATEGY NOTE ────────────────────────────────────────────
   const stratEl = document.getElementById('adv-strategy-content');
-  if (stratEl) stratEl.textContent = ad.strategy_note ?? extractSection(brief, 'STRATEGY NOTE') ?? extractSection(brief, 'STRATEGY') ?? 'No strategy note yet.';
+  if (stratEl) stratEl.innerHTML = renderMarkdown(ad.strategy_note ?? extractSection(brief, 'STRATEGY NOTE') ?? extractSection(brief, 'STRATEGY') ?? 'No strategy note yet.');
 
   // ── VISUAL CONCEPT ───────────────────────────────────────────
   const visualEl = document.getElementById('adv-visual-content');
-  if (visualEl) visualEl.textContent = ad.visual_concept ?? extractSection(brief, 'VISUAL CONCEPT') ?? extractSection(brief, 'VISUAL') ?? 'No visual concept yet — run Stage 5 Visual to generate one.';
+  if (visualEl) visualEl.innerHTML = renderMarkdown(ad.visual_concept ?? extractSection(brief, 'VISUAL CONCEPT') ?? extractSection(brief, 'VISUAL') ?? 'No visual concept yet — run Stage 5 Visual to generate one.');
 
   // ── CHAT HISTORY ─────────────────────────────────────────────
   const chatEl = document.getElementById('adv-chat-history');
