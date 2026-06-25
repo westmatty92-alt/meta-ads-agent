@@ -3321,19 +3321,30 @@ OUTPUT 1 — VISUAL CONCEPT BRIEF
 The strategic creative direction for human reference.
 
 OUTPUT 2 — GPT IMAGE 2 PROMPT
-A clean, specific photographic prompt optimized for GPT Image 2.
-This prompt must follow these rules:
-- Start with the subject and setting (person, environment)
-- Include lighting direction (golden hour, soft natural light, studio, etc.)
-- Include mood and aesthetic (premium, warm, clean, minimal)
-- Specify what text should appear on the image if any
-- End with technical style notes (photorealistic, editorial, etc.)
-- Keep it under 400 words
-- NO creative brief language
-- NO layout instructions
-- NO MidJourney syntax (no --ar, no --v)
-- NO generic stock photo descriptions
-- Make it specific to the brand, product, segment, and hook
+A structured ad image prompt using the exact formula below.
+
+GPT IMAGE 2 PROMPT RULES (follow exactly):
+- Use this formula structure — do not deviate:
+  [Product type] advertising photo, [service/product name],
+  location="[city, province]",
+  subject=[person — age, gender, expression, what they're doing],
+  setting=[environment — specific, not generic],
+  lighting=[specific — golden hour, soft window light, studio, etc.],
+  text overlay: "[EXACT TOP LINE TEXT]" at top in [font style],
+  headline: "[EXACT MAIN HEADLINE]" in [size] [font style],
+  subtext: "[EXACT SUPPORTING TEXT]" smaller [placement],
+  CTA: "[EXACT BUTTON TEXT]" [position],
+  aesthetic=[3-5 specific style words],
+  color palette=[specific colors matching brand],
+  NOT=[3-5 specific exclusions],
+  aspect ratio [ratio], photorealistic editorial quality
+- Put EXACT text in quotes — use the actual promotional text and headline provided
+- Name text placement explicitly: "at top", "centered", "bottom left"
+- Specify font style for each text element: "elegant serif", "bold sans-serif", "small caps"
+- Use NOT= to exclude competitor visual clichés and unwanted elements
+- Keep under 400 words
+- No MidJourney syntax (no --ar, no --v flags)
+- End with aspect ratio and "photorealistic editorial quality"
 
 CANADIAN BEAUTY AD STANDARDS:
 - Use diverse, real-looking women (not obviously AI/model)
@@ -3362,7 +3373,7 @@ FORMAT YOUR RESPONSE EXACTLY LIKE THIS:
 ---
 
 ## GPT IMAGE 2 PROMPT
-[The clean photographic prompt — ready to copy and paste directly into GPT Image 2]
+[The structured ad prompt using the formula above — ready to copy and paste directly into GPT Image 2]
 
 ---
 
@@ -3375,26 +3386,33 @@ async function runVisual() {
   divider('visual',`Generating visual concept${visSegLabel}`);
   const t=thinking('visual','Building creative brief and image prompts…');
   const competitorNames = (S.serpIntelligence?.organicResults || []).slice(0, 3).map(c => `- ${c.title}`).join('\n') || 'competitors with clinical/cold imagery';
+  const promoText = S.promotionDetails || document.getElementById('promotion-details')?.value || '';
+  const adHook = S.lastBuiltAd?.hook || extractHookFromContent(S.adCopy || '');
+  const brandName = S.brandSnapshot?.business_name || S.brandName || S.product || '';
+  const locationCity = (S.brandSnapshot?.location || 'Ontario, Canada').replace(/,\s*Canada$/i, '').trim();
+  const segmentDesire = S.selectedSegment?.primary_desire || S.desire || '';
   const visualMsg = `Generate the visual concept and image prompts for this specific ad.
 
-BUSINESS: ${S.brandSnapshot?.business_name || S.brandName || S.product}
+BUSINESS: ${brandName}
 INDUSTRY: ${S.brandSnapshot?.industry || 'beauty'}
 LOCATION: ${S.brandSnapshot?.location || 'Ontario, Canada'}
+CITY (for location= field in prompt): ${locationCity}
 BRAND VOICE: ${S.brandSnapshot?.brand_voice || S.brandSnapshot?.voice || 'warm, personal, trusted friend'}
 
-AD HOOK: ${S.lastBuiltAd?.hook || extractHookFromContent(S.adCopy || '')}
+AD HOOK: ${adHook}
 AD COPY OPENING: ${(S.adCopy || '').slice(0, 300)}
 
 TARGET SEGMENT: ${S.selectedSegment?.name || S.audience || 'local women 25-45'}
+SEGMENT PRIMARY DESIRE (use for subject mood/expression): ${segmentDesire}
 SEGMENT FEAR: ${S.selectedSegment?.primary_fear || S.pain || ''}
-SEGMENT DESIRE: ${S.selectedSegment?.primary_desire || S.desire || ''}
 EMOTIONAL MOMENT: ${S.selectedSegment?.motivation || ''}
 
 CAMPAIGN TYPE: ${S.campaignType || 'promotion'}
-PROMOTION: ${S.promotionDetails || document.getElementById('promotion-details')?.value || ''}
+PROMOTION DETAILS (use as exact text overlay/headline in prompt): ${promoText}
 CAMPAIGN OBJECTIVE: ${S.campaignObjective || S.goal || 'leads'}
 
 BRAND DNA:
+- Brand name (use in name= field): ${brandName}
 - Colors: ${S.brandColors?.map(c=>`${c.label||'Color'} ${c.hex}`).join(', ') || S.brandSnapshot?.colors || 'warm neutrals'}
 - Fonts: Headline=${S.brandFonts?.headline||'not set'}, Body=${S.brandFonts?.body||'not set'}
 - Visual style: ${S.brandSnapshot?.visual_style || 'premium, clean, minimal'}
@@ -3406,7 +3424,12 @@ ${competitorNames}
 Competitive gap: own the opposite of what competitors are doing visually.
 
 Generate the complete visual package following the exact format in your instructions.
-The GPT IMAGE 2 PROMPT must be specific enough that a model with no other context produces the correct image for this brand, segment, and campaign.`;
+For the GPT IMAGE 2 PROMPT:
+- Use the structured formula (product type, location=, subject=, setting=, lighting=, text overlay:, headline:, subtext:, CTA:, aesthetic=, color palette=, NOT=, aspect ratio, photorealistic editorial quality)
+- Put the EXACT promotional text and hook in quotes as the text overlay and headline
+- Set name="${brandName}" and location="${locationCity}, Ontario"
+- Make the subject's expression reflect the segment's primary desire: "${segmentDesire}"
+- Prompt must work with zero other context — all brand, segment, and campaign info baked in`;
   S.history.visual=[{role:'user',content:visualMsg}];
   const reply=await ai(SYS_VISUAL,S.history.visual);
   S.history.visual.push({role:'assistant',content:reply});

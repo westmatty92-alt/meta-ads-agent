@@ -422,6 +422,52 @@ Preview skills: https://www.typeui.sh/design-skills
 
 ---
 
+## 🖼️ GPT IMAGE 2 PROMPT ENGINEERING
+
+**Skill file:** `.claude/skills/gpt-image-2/SKILL.md`
+**Source:** Based on Anil-matcha/Awesome-GPT-Image-2-API-Prompts
+
+### Core Principle
+GPT Image 2 rewards precise briefs over keyword chains. Name the job. Define success. The model follows structure.
+
+### Ad Image Prompt Formula
+```
+[Product type] advertising photo, [service/product name],
+location="[city, province]",
+subject=[person — age, gender, expression, what they're doing],
+setting=[environment — specific, not generic],
+lighting=[specific — golden hour, soft window light, studio, etc.],
+text overlay: "[EXACT TOP LINE TEXT]" at top in [font style],
+headline: "[EXACT MAIN HEADLINE]" in [size] [font style],
+subtext: "[EXACT SUPPORTING TEXT]" smaller [placement],
+CTA: "[EXACT BUTTON TEXT]" [position],
+aesthetic=[3-5 specific style words],
+color palette=[specific colors matching brand],
+NOT=[3-5 specific exclusions],
+aspect ratio [ratio], photorealistic editorial quality
+```
+
+### Key Rules
+1. Put EXACT text in quotes — never describe, always specify
+2. Name text placement explicitly: "at top", "centered", "bottom left"
+3. Specify font style for each text element: "elegant serif", "bold sans-serif", "small caps"
+4. Use `NOT=` to exclude competitor visual clichés
+5. Always specify aspect ratio
+6. End with "photorealistic editorial quality"
+7. Keep under 400 words
+8. No MidJourney syntax (no --ar, no --v flags)
+
+### Text Rendering
+GPT Image 2 renders text at ~99% accuracy when:
+- Text is in quotes with explicit placement
+- Font style is named for each element
+- Size hierarchy is defined (large headline, smaller subtext, tiny caption)
+
+### How SYS_VISUAL uses this
+`runVisual()` passes the promotional text, brand name, location city, and segment desire explicitly in the user message so the AI can bake them into the prompt formula fields.
+
+---
+
 ## 📋 SESSION START CHECKLIST
 
 - [ ] cd to project directory
