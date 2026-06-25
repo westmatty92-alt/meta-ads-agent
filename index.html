@@ -3032,7 +3032,14 @@ Produce a DETAILED competitive intelligence report with these exact sections:
 
 Format each section clearly with headers. Be specific to ${mktCity} and the ${mktKw} market.
 Use all data provided — SERP results, Reddit data, competitor listings, review snippets.
-If brand snapshot is available use this tone and angles: ${S.brandSnapshot ? JSON.stringify(S.brandSnapshot) : 'not available'}${competitorContext}${serpContext}${S.selectedSegment ? `\n\nTARGET SEGMENT FOR THIS RESEARCH:\nWe are researching for: ${S.selectedSegment.name}\nPrimary fear: ${S.selectedSegment.primary_fear}\nPrimary desire: ${S.selectedSegment.primary_desire}\nRecommended ad angle: ${S.selectedSegment.ad_angle}\nHook direction: ${S.selectedSegment.hook_direction}\n\nRESEARCH INSTRUCTION: Focus competitor analysis on how they do or do not speak to this specific segment. Find gaps where THIS segment's fears and desires are unaddressed by competitors. Surface opportunities specific to this audience.` : ''}`;
+If brand snapshot is available use this tone and angles: ${S.brandSnapshot ? JSON.stringify(S.brandSnapshot) : 'not available'}${competitorContext}${serpContext}${S.selectedSegment ? `\n\nTARGET SEGMENT FOR THIS RESEARCH:\nWe are researching for: ${S.selectedSegment.name}\nPrimary fear: ${S.selectedSegment.primary_fear}\nPrimary desire: ${S.selectedSegment.primary_desire}\nRecommended ad angle: ${S.selectedSegment.ad_angle}\nHook direction: ${S.selectedSegment.hook_direction}\n\nRESEARCH INSTRUCTION: Focus competitor analysis on how they do or do not speak to this specific segment. Find gaps where THIS segment's fears and desires are unaddressed by competitors. Surface opportunities specific to this audience.` : ''}
+
+STRATEGY FRAMEWORK — apply before writing research brief:
+- Detect business stage from available signals
+- Apply Canadian market specifics for Ontario
+- Map seasonal patterns to current month
+- Identify primary objection from competitor data
+Read .claude/skills/ad-strategy/SKILL.md frameworks.`;
 }
 
 async function runResearch() {
@@ -3098,6 +3105,25 @@ QUALITY GATES before finalizing:
 - Does it sound like a human, not a corporate brand?
 - Is there exactly ONE clear CTA?
 - Does it own what competitors are not saying?
+
+HOOK FRAMEWORKS — use these for every ad:
+- Named Enemy Hook: attack what customer already hates
+- Countdown Hook: real deadline as opener
+- Mirror Hook: reflect customer's internal monologue
+- Contrast Hook: show gap between now and desired state
+- Local Pride Hook: anchor to specific city
+- Failure Acknowledgment Hook: validate past failures
+- Insider Revelation Hook: share surprising truth
+Quality gates: First 3 words stop scroll. Never start with brand name.
+One specific detail (number, place, time) in every hook.
+
+STRATEGY CONTEXT — apply before writing:
+- Check business stage from S.brandSnapshot
+- Use highest available social proof tier
+- Handle primary objection in primary text
+- Apply Canadian tone (warm, local, specific)
+- Price in CAD explicitly
+- CTA preference: "Book your spot" over "Buy Now"
 
 BUDGET RECOMMENDATION section (required — include after SCORE PROJECTION):
 Use the monthly budget provided to calculate specific daily amounts for each phase. Show real numbers, not placeholders.
@@ -3293,7 +3319,15 @@ Break down the ${budget} monthly budget:
 Provide a 8-10 item checklist of everything needed before launch. Include pixel setup, creative review, audience setup, and any platform-specific requirements.`;
 
   try {
-    const reply = await ai('You are a Meta Ads campaign strategist. Be specific, actionable, and direct.', [{role: 'user', content: prompt}]);
+    const reply = await ai(`You are a Meta Ads campaign strategist. Be specific, actionable, and direct.
+
+META ADS SETUP — include in campaign brief:
+- Campaign naming: [Business]-[Type]-[YYYY-MM]-[Objective]
+- Learning phase: minimum $15 CAD/day, no edits during learning
+- Pixel checklist: include in launch checklist
+- CASL consent language in Instant Form
+- A/B testing order: hooks first, then audiences, then creative
+- Advantage+ placements recommended for new accounts`, [{role: 'user', content: prompt}]);
     t.remove();
     S.lastCampaignBrief = reply;
 
@@ -3352,6 +3386,15 @@ CANADIAN BEAUTY AD STANDARDS:
 - Local feel — Ontario summer, real environments
 - Premium but accessible — not luxury fashion, not cheap flyer
 - Warm, inviting, confidence-forward
+
+SEASONAL VISUAL DIRECTION (Ontario):
+Current month context — use appropriate seasonal mood:
+Jan-Feb: Indoor warmth, cozy, Valentine romantic
+Mar-Apr: Spring freshness, outdoor light returning
+May-Jun: Wedding season, summer anticipation, golden hour
+Jul-Aug: Full summer, beach/backyard, warm amber light
+Sep-Oct: Fall warmth, back to routine, rich tones
+Nov-Dec: Holiday warmth, gift context, festive but elegant
 
 FORMAT YOUR RESPONSE EXACTLY LIKE THIS:
 
