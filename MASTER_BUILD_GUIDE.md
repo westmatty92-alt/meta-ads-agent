@@ -288,6 +288,52 @@ project/
 | Code review | fullstack-guardian |
 | Before production | security-reviewer |
 | AI prompts | prompt-engineer |
+| Ad strategy (before any creative work) | ad-strategy |
+| Generating scroll-stopping hooks | ad-hooks |
+| Meta campaign setup / pixel / naming | meta-ads-setup |
+
+### Ad Skills (Baseleap-Specific)
+
+#### ad-strategy
+**Location:** `.claude/skills/ad-strategy/SKILL.md`
+**Source:** Proprietary — built from Baseleap discovery questionnaire + live client data
+**Invoke before:** Writing any ad, campaign brief, or budget recommendation
+
+Contains 8 strategic frameworks:
+1. Business maturity decision tree (New / Growing / Established stages)
+2. Close rate strategy mapping (4 bands with diagnosis + ad strategy per band)
+3. Social proof hierarchy (6 tiers — transformation story down to recency signal)
+4. Budget allocation by stage (5 CAD monthly brackets with phase splits + kill rules)
+5. Objection mapping (7 objections → root cause → specific ad element fix)
+6. Canadian market specifics (voice, seasonal calendar, Ontario suburban calibration, CASL)
+7. Service vs product business logic (full campaign structure differences)
+8. Campaign type selection (8 types with form setup, copy angles, retargeting sequences)
+
+Quick decision checklist: 7 questions that must be answered before writing any ad.
+
+#### ad-hooks (fetched from zubair-trabzada/ai-ads-claude)
+**Location:** `.claude/skills/ad-hooks/SKILL.md`
+**Source:** External — zubair-trabzada/ai-ads-claude (fetched 2026-06-25)
+**Invoke when:** Generating hooks, improving CTR, writing opening lines
+
+Generates 20+ scroll-stopping hooks across 5 psychological angles:
+- Pain/Problem hooks (5 minimum)
+- Curiosity/Question hooks (5 minimum) — Zeigarnik Effect
+- Social Proof/Authority hooks (5 minimum)
+- Contrarian/Controversial hooks (3 minimum)
+- Urgency/Scarcity hooks (2 minimum)
+
+Each hook includes: A/B variation, character count, platform-specific formatting (Meta, TikTok, Google, LinkedIn, YouTube, Pinterest, Email), CTR impact prediction, and psychology breakdown.
+Also includes: Hook Foundation framework, A/B testing strategy (3 phases), and Hook Quality Standards (7-test checklist).
+
+#### meta-ads-setup
+**Location:** `.claude/skills/meta-ads-setup/SKILL.md`
+**Source:** Manual — based on Meta Ads best practices (adkit/ads-skills fetch failed 2026-06-25)
+**Invoke when:** Setting up campaigns, configuring Instant Forms, troubleshooting learning phase
+
+Covers: Campaign structure (3-level rule), objective selection, pixel setup checklist, Instant Form best practices (Higher Intent vs More Volume), ad set configuration, learning phase rules ($15/day minimum, 50 events in 7 days), common budget-wasting mistakes, A/B testing order (hooks first → audiences → creative format), and Baseleap naming convention.
+
+Canadian-specific: CASL consent language for Instant Forms, $15 CAD/day learning phase floor.
 
 ### Marketing Skill (Auto-Injected)
 **Location:** `.claude/skills/marketing/SKILL.md`
