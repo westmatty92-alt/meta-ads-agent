@@ -3850,17 +3850,145 @@ function generateImagesForAd(adId) {
   setTimeout(() => {
     const imageSection = document.getElementById('adv-image-zone');
     if (imageSection) imageSection.scrollIntoView({ behavior: 'smooth' });
-    if (!S.lastVisualPrompts?.dalle) {
-      const imageZone = document.getElementById('adv-image-zone');
-      if (imageZone && !imageZone.querySelector('img')) {
-        imageZone.innerHTML = `<div style="background:var(--bg-elevated);border:1px solid var(--yellow);border-radius:8px;padding:16px;text-align:center;">
-          <div style="color:var(--yellow);font-size:12px;font-weight:600;margin-bottom:6px;">⚠️ No visual prompt found for this ad</div>
-          <div style="color:var(--t2);font-size:11px;">Run Stage 4 Visual first to generate image prompts, then generate images here.</div>
-          <button onclick="go('visual')" style="margin-top:10px;background:var(--volt);color:#000;border:none;border-radius:6px;padding:6px 14px;font-size:11px;font-weight:600;cursor:pointer;">Go to Stage 4 Visual →</button>
-        </div>`;
-      }
-    }
   }, 300);
+}
+
+async function generateImageForCurrentAd() {
+  const ad = currentAdViewData;
+  if (!ad) return;
+
+  const btn = event?.target?.closest('button') || event?.target;
+  if (!btn) return;
+  const originalText = btn.innerHTML;
+  btn.innerHTML = '⏳ Generating...';
+  btn.disabled = true;
+
+  if (!KEYS.openai) {
+    alert('OpenAI API key required. Add it in Settings.');
+    btn.innerHTML = originalText;
+    btn.disabled = false;
+    return;
+  }
+
+  let prompt = S.lastVisualPrompts?.dalle || ad.visual_prompt || null;
+
+  if (!prompt && KEYS.claude) {
+    btn.innerHTML = '⏳ Creating visual concept...';
+    try {
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': KEYS.claude,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-6',
+          max_tokens: 400,
+          messages: [{
+            role: 'user',
+            content: `Generate a GPT Image 2 prompt for this Meta ad.
+
+Business: ${S.brandSnapshot?.business_name || 'local service business'}
+Industry: ${S.brandSnapshot?.industry || 'beauty/wellness'}
+Location: ${S.brandSnapshot?.location || 'Ontario, Canada'}
+Ad hook: ${ad.hook || extractHookFromContent(ad.primary_text || ad.content || '')}
+Target segment: ${ad.segment_name || 'local women 25-44'}
+
+Write ONLY the image prompt. Use this format:
+Product advertising photo, [service] brand, name="${S.brandSnapshot?.business_name || 'Stay Radiant'}",
+location="${(S.brandSnapshot?.location || 'Ontario, Canada').split(',')[0]}, Canada",
+subject=confident woman 30-44 with bright natural smile, warm expression,
+setting=warm summer backyard or cozy home environment, golden hour lighting,
+text overlay: "${(ad.hook || '').replace(/[*_#>]/g,'').slice(0,40)}" at top in elegant white serif,
+aesthetic=premium minimal feminine clean warm,
+color palette=warm cream neutral tones soft gold,
+NOT=clinical dental imagery stock photo cheap coupon aesthetic,
+aspect ratio 4:5, photorealistic editorial quality`
+          }]
+        })
+      });
+      const data = await response.json();
+      prompt = data.content?.find(b => b.type === 'text')?.text?.trim() || null;
+    } catch(e) {
+      console.warn('[generateImageForCurrentAd] prompt generation error:', e.message);
+    }
+  }
+
+  if (!prompt) {
+    alert('Could not generate image prompt. Please run Stage 4 Visual first.');
+    btn.innerHTML = originalText;
+    btn.disabled = false;
+    return;
+  }
+
+  btn.innerHTML = '⏳ Generating image...';
+
+  const imageUrl = await generateImageDALLE(prompt, '4:5');
+
+  if (imageUrl) {
+    const imageZone = document.getElementById('adv-image-zone');
+    if (imageZone) {
+      imageZone.innerHTML = `
+        <div>
+          <img src="${escHtml(imageUrl)}"
+            style="width:100%;border-radius:8px;border:1px solid var(--border);display:block;">
+          <div style="display:flex;gap:6px;margin-top:8px;">
+            <a href="${escHtml(imageUrl)}" download="ad-image-feed.jpg" target="_blank"
+              style="flex:1;background:var(--volt);color:#000;border:none;border-radius:6px;
+              padding:6px;font-size:11px;font-weight:600;text-decoration:none;text-align:center;">
+              ⬇ Download Feed
+            </a>
+            <button onclick="generateImageForCurrentAd()"
+              style="background:transparent;border:1px solid var(--border);border-radius:6px;
+              padding:6px 10px;font-size:11px;color:var(--t2);cursor:pointer;">
+              🔄 Regenerate
+            </button>
+          </div>
+          <div style="margin-top:6px;font-size:10px;color:var(--t3);">
+            Also generate:
+            <span onclick="generateImageSize('9:16')" style="color:var(--volt);cursor:pointer;text-decoration:underline;">Stories (9:16)</span> ·
+            <span onclick="generateImageSize('1:1')" style="color:var(--volt);cursor:pointer;text-decoration:underline;">Square (1:1)</span>
+          </div>
+        </div>`;
+    }
+
+    const previewImg = document.getElementById('adv-preview-image');
+    if (previewImg) {
+      previewImg.innerHTML = `<img src="${escHtml(imageUrl)}"
+        style="width:100%;height:100%;object-fit:cover;display:block;">`;
+    }
+
+    if (currentAdViewId) {
+      await sb.from('generated_ads')
+        .update({ image_url: imageUrl, visual_prompt: prompt })
+        .eq('id', currentAdViewId);
+      const adInLib = adLibrary.find(a => a.id === currentAdViewId);
+      if (adInLib) { adInLib.image_url = imageUrl; adInLib.visual_prompt = prompt; }
+    }
+
+    S.lastGeneratedImageUrl = imageUrl;
+    console.log('[generateImageForCurrentAd] success');
+
+  } else {
+    btn.innerHTML = '❌ Failed — Try Again';
+    btn.disabled = false;
+    setTimeout(() => { btn.innerHTML = originalText; }, 3000);
+  }
+}
+
+async function generateImageSize(size) {
+  const prompt = S.lastVisualPrompts?.dalle || currentAdViewData?.visual_prompt;
+  if (!prompt) { alert('Generate the main image first.'); return; }
+  const imageUrl = await generateImageDALLE(prompt, size);
+  if (imageUrl) {
+    const link = document.createElement('a');
+    link.href = imageUrl;
+    link.download = `ad-image-${size.replace(':','x')}.jpg`;
+    link.target = '_blank';
+    link.click();
+  }
 }
 
 async function deleteAd(adId) {
@@ -5531,10 +5659,45 @@ function openAdView(adId) {
   // ── IMAGE ZONE ───────────────────────────────────────────────
   const imageZone = document.getElementById('adv-image-zone');
   if (imageZone) {
-    imageZone.innerHTML = ad.image_url
-      ? `<img src="${escHtml(ad.image_url)}" style="width:100%;border-radius:6px;border:1px solid var(--border);" onerror="this.style.display='none'">
-         <a href="${escHtml(ad.image_url)}" download target="_blank" style="display:block;margin-top:4px;font-size:10px;color:var(--volt);text-decoration:none;">⬇ Download</a>`
-      : `<div style="background:var(--bg-elevated);border:1px dashed var(--border);border-radius:8px;padding:20px;text-align:center;"><div style="color:var(--t3);font-size:11px;">No image yet</div></div>`;
+    if (ad.image_url) {
+      imageZone.innerHTML = `
+        <div>
+          <img src="${escHtml(ad.image_url)}" style="width:100%;border-radius:8px;border:1px solid var(--border);display:block;" onerror="this.style.display='none'">
+          <div style="display:flex;gap:6px;margin-top:8px;">
+            <a href="${escHtml(ad.image_url)}" download="ad-image-feed.jpg" target="_blank"
+              style="flex:1;background:var(--volt);color:#000;border:none;border-radius:6px;
+              padding:6px;font-size:11px;font-weight:600;text-decoration:none;text-align:center;">
+              ⬇ Download Feed
+            </a>
+            <button onclick="generateImageForCurrentAd()"
+              style="background:transparent;border:1px solid var(--border);border-radius:6px;
+              padding:6px 10px;font-size:11px;color:var(--t2);cursor:pointer;">
+              🔄 Regenerate
+            </button>
+          </div>
+          <div style="margin-top:6px;font-size:10px;color:var(--t3);">
+            Also generate:
+            <span onclick="generateImageSize('9:16')" style="color:var(--volt);cursor:pointer;text-decoration:underline;">Stories (9:16)</span> ·
+            <span onclick="generateImageSize('1:1')" style="color:var(--volt);cursor:pointer;text-decoration:underline;">Square (1:1)</span>
+          </div>
+        </div>`;
+    } else {
+      imageZone.innerHTML = `
+        <div style="background:var(--bg-elevated);border:1px solid var(--border);
+          border-radius:10px;padding:20px;text-align:center;">
+          <div style="font-size:12px;color:var(--t2);margin-bottom:12px;">
+            No image generated yet
+          </div>
+          <div style="font-size:11px;color:var(--t3);margin-bottom:12px;">
+            Sizes needed: 1080×1350 · 1080×1920 · 1080×1080
+          </div>
+          <button onclick="generateImageForCurrentAd()"
+            style="background:var(--volt);color:#000;border:none;border-radius:8px;
+            padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;width:100%;">
+            🎨 Generate Image (~$0.05)
+          </button>
+        </div>`;
+    }
   }
 
   // ── FACEBOOK PREVIEW ─────────────────────────────────────────
