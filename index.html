@@ -1706,6 +1706,10 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
             <div style="font-size:12px;color:var(--t2);">Saved to Ad Library automatically</div>
           </div>
           <div style="margin-left:auto;display:flex;gap:8px;">
+            <button onclick="editInPipeline()"
+              style="background:transparent;border:1px solid var(--border);border-radius:6px;padding:6px 14px;font-size:12px;color:var(--t2);cursor:pointer;">
+              ✏️ Edit in Pipeline
+            </button>
             <button onclick="go('adLibrary')"
               style="background:transparent;border:1px solid var(--border);border-radius:6px;padding:6px 14px;font-size:12px;color:var(--t2);cursor:pointer;">
               Ad Library
@@ -4175,48 +4179,78 @@ async function runVisualSilent() {
 
 function showDiscoveryResults() {
   document.getElementById('discovery-building').style.display = 'none';
+
+  // Open full Ad View directly if we have a saved ad ID
+  if (S.lastAdId) {
+    discoveryAdId = S.lastAdId;
+    openAdView(S.lastAdId);
+    return;
+  }
+
+  // Fallback — no ad ID saved
   document.getElementById('discovery-results').style.display = 'block';
-  discoveryAdId = S.lastAdId;
   const previewEl = document.getElementById('discovery-ad-preview');
-  if (!previewEl) return;
-  const hook = S.lastBuiltAd?.hook || extractHookFromContent(S.adCopy || '');
-  const score = S.lastAdScore;
-  const scoreColor = score >= 90 ? 'var(--green)' : score >= 70 ? 'var(--yellow)' : 'var(--t3)';
-  previewEl.innerHTML = `<div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px;">
-    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">
-      <div>
-        <div style="font-size:15px;font-weight:700;color:var(--t1);">"${escHtml(hook)}"</div>
-        <div style="font-size:11px;color:var(--t3);margin-top:4px;">${S.selectedSegment?.name || ''} · ${new Date().toLocaleDateString('en-CA')}</div>
-      </div>
-      ${score ? `<div style="font-size:20px;font-weight:700;color:${scoreColor};">${score}/100</div>` : ''}
-    </div>
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px;">
-      <div style="background:var(--bg-elevated);border-radius:6px;padding:8px;">
-        <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;">Objective</div>
-        <div style="font-size:12px;font-weight:600;color:var(--t1);">${S.campaignObjective || 'Leads'}</div>
-      </div>
-      <div style="background:var(--bg-elevated);border-radius:6px;padding:8px;">
-        <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;">Form Type</div>
-        <div style="font-size:12px;font-weight:600;color:var(--t1);">${S.formType === 'intent' ? 'Higher Intent' : 'More Volume'}</div>
-      </div>
-      <div style="background:var(--bg-elevated);border-radius:6px;padding:8px;">
-        <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;">Budget</div>
-        <div style="font-size:12px;font-weight:600;color:var(--t1);">${S.budget || 'Not set'}/mo</div>
-      </div>
-    </div>
-    <div style="background:var(--bg-elevated);border-radius:8px;padding:12px;font-size:12px;color:var(--t2);line-height:1.7;max-height:120px;overflow:hidden;">${escHtml((S.adCopy || '').slice(0, 300))}...</div>
-    <div style="margin-top:12px;display:flex;gap:8px;">
-      <button onclick="openDiscoveryAdView()" style="flex:1;background:var(--volt);color:#000;border:none;border-radius:6px;padding:8px;font-size:12px;font-weight:700;cursor:pointer;">View Complete Campaign →</button>
-      <button onclick="generateDiscoveryImage()" id="discovery-generate-img-btn" style="background:transparent;border:1px solid var(--volt);color:var(--volt);border-radius:6px;padding:8px 12px;font-size:12px;font-weight:600;cursor:pointer;">🎨 Generate Image<div style="font-size:10px;font-weight:400;opacity:0.7;margin-top:1px;">~$0.05 · 1 credit</div></button>
-      <button onclick="go('adLibrary')" style="background:transparent;border:1px solid var(--border);border-radius:6px;padding:8px 12px;font-size:12px;color:var(--t2);cursor:pointer;">Ad Library</button>
-    </div>
-    <button onclick="go('data')" style="width:100%;margin-top:8px;background:transparent;border:1px solid var(--border);border-radius:6px;padding:8px;font-size:12px;color:var(--t2);cursor:pointer;">✏️ Edit in Pipeline →</button>
-  </div>`;
+  if (previewEl) {
+    previewEl.innerHTML = `
+      <div style="text-align:center;padding:20px;">
+        <div style="font-size:32px;margin-bottom:8px;">✅</div>
+        <div style="font-size:15px;font-weight:700;color:var(--t1);margin-bottom:8px;">Campaign Built Successfully</div>
+        <div style="font-size:12px;color:var(--t2);margin-bottom:16px;">Saved to Ad Library automatically</div>
+        <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
+          <button onclick="go('adLibrary')"
+            style="background:var(--volt);color:#000;border:none;border-radius:8px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;">
+            View in Ad Library →
+          </button>
+          <button onclick="editInPipeline()"
+            style="background:transparent;border:1px solid var(--border);border-radius:8px;padding:10px 20px;font-size:13px;color:var(--t2);cursor:pointer;">
+            ✏️ Edit in Pipeline →
+          </button>
+        </div>
+      </div>`;
+  }
 }
 
 function openDiscoveryAdView() {
   if (discoveryAdId) openAdView(discoveryAdId);
   else go('adLibrary');
+}
+
+function editInPipeline() {
+  if (discoveryAnswers.campaign_goal) {
+    const typeMap = { promotion:'promotion', new_clients:'product', seasonal:'promotion', awareness:'awareness', relaunch:'product' };
+    selectCampaignType(typeMap[discoveryAnswers.campaign_goal] || 'product');
+  }
+
+  selectObjective('leads');
+  selectInstantForm(true);
+  selectFormType(['8_plus','5_7'].includes(discoveryAnswers.close_rate) ? 'volume' : 'intent');
+
+  const budgetMap = { '300_450':'$400/mo', '450_900':'$600/mo', '900_2100':'$1,200/mo', '2100_plus':'$2,500/mo' };
+  const budgetField = document.getElementById('s1-budget') || document.getElementById('d-budget');
+  if (budgetField && discoveryAnswers.monthly_budget) {
+    budgetField.value = budgetMap[discoveryAnswers.monthly_budget] || '';
+  }
+
+  if (discoveryAnswers.promotion_details) {
+    const promoField = document.getElementById('promotion-details');
+    if (promoField) { promoField.value = discoveryAnswers.promotion_details; S.promotionDetails = discoveryAnswers.promotion_details; }
+    selectCampaignType('promotion');
+  }
+
+  if (S.audienceSegments?.length && !S.selectedSegment) {
+    S.selectedSegment = S.audienceSegments[0];
+    updateSegmentIndicators();
+  }
+
+  go('data');
+
+  setTimeout(() => {
+    const note = document.createElement('div');
+    note.style.cssText = 'background:rgba(0,212,160,0.1);border:1px solid var(--volt);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--volt);margin:0 0 12px;';
+    note.textContent = '✅ Pre-filled from Ad Discovery — review and adjust if needed';
+    const container = document.getElementById('s1-content-info');
+    if (container) { container.insertBefore(note, container.firstChild); setTimeout(() => note.remove(), 5000); }
+  }, 300);
 }
 
 async function generateDiscoveryImage() {
