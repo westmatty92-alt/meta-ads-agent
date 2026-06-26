@@ -502,6 +502,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
 @keyframes bar1{0%,100%{height:5px;}50%{height:10px;}}
 @keyframes bar2{0%,100%{height:10px;}50%{height:5px;}}
 @keyframes bar3{0%,100%{height:14px;}50%{height:7px;}}
+@keyframes slideProgress{0%{transform:translateX(-200%);}100%{transform:translateX(400%);}}
 </style>
 </head>
 <body>
@@ -3911,10 +3912,10 @@ async function generateAdImage(provider) {
           style="width:100%;background:var(--volt);color:#000;border:none;border-radius:6px;padding:7px;font-size:11px;font-weight:700;cursor:pointer;">
           + Add to Ad Library
         </button>
-        <a href="${finalUrl}" download="baseleap-ad-${(sizeFormatMap[size]||'feed')}-${sizePixelMap[size]?.replace('×','x')||size}-${_imgTs}.png" target="_blank"
-          style="width:100%;background:transparent;border:1px solid var(--border);border-radius:6px;padding:7px;font-size:11px;color:var(--t2);text-decoration:none;text-align:center;display:block;">
+        <button onclick="downloadImageBlob('${finalUrl}', 'baseleap-ad-${(sizeFormatMap[size]||'feed')}-${sizePixelMap[size]?.replace('×','x')||size}-${_imgTs}.png')"
+          style="width:100%;background:transparent;border:1px solid var(--border);border-radius:6px;padding:7px;font-size:11px;color:var(--t2);cursor:pointer;text-align:center;">
           ⬇ Download
-        </a>
+        </button>
       </div>`;
     container?.appendChild(imgCard);
     const _variationBtn = document.getElementById('generate-variation-btn-container');
@@ -3924,9 +3925,9 @@ async function generateAdImage(provider) {
       await sb.from('generated_ads').update({ visual_prompt: prompt }).eq('id', S.lastAdId);
     }
 
-    // Refresh Ad View carousel if open for this ad
+    // Refresh Ad View carousel if open
     const advImageZone = document.getElementById('adv-image-zone');
-    if (advImageZone && currentAdViewId === S.lastAdId && currentAdViewData) {
+    if (advImageZone && currentAdViewData) {
       advImageZone.innerHTML = renderAdImageCarousel(currentAdViewData);
     }
   } else {
@@ -4028,18 +4029,12 @@ async function generateImageForCurrentAd() {
   const ad = currentAdViewData;
   if (!ad) return;
 
-  const btn = event?.target?.closest('button') || event?.target;
-  if (!btn) return;
-  const originalText = btn.innerHTML;
-  btn.innerHTML = '⏳ Generating...';
-  btn.disabled = true;
-
   if (!KEYS.openai) {
     alert('OpenAI API key required. Add it in Settings.');
-    btn.innerHTML = originalText;
-    btn.disabled = false;
     return;
   }
+
+  updateAdImageStatus('⏳ Preparing visual concept...');
 
   let prompt = S.lastVisualPrompts?.dalle || ad.visual_prompt || null;
 
@@ -4050,7 +4045,7 @@ async function generateImageForCurrentAd() {
   const season = getCurrentSeason();
 
   if (!prompt && KEYS.claude) {
-    btn.innerHTML = '⏳ Creating visual concept...';
+    updateAdImageStatus('⏳ Creating visual concept...');
     try {
       const colorLine = brandColors ? `color palette=${brandColors}` : 'color palette=warm cream neutral tones';
       const aestheticLine = brandStyle ? `aesthetic=${brandStyle}` : 'aesthetic=premium minimal clean';
@@ -4099,17 +4094,17 @@ aspect ratio 4:5, photorealistic editorial quality`
 
   if (!prompt) {
     alert('Could not generate image prompt. Please run Stage 4 Visual first.');
-    btn.innerHTML = originalText;
-    btn.disabled = false;
+    const imageZone = document.getElementById('adv-image-zone');
+    if (imageZone) imageZone.innerHTML = renderAdImageCarousel(ad);
     return;
   }
 
-  btn.innerHTML = '⏳ Generating image...';
+  updateAdImageStatus('⏳ Generating image (~30s)...');
   const finalPromptForGen = buildSizeSpecificPrompt('4:5', prompt);
   const imageUrl = await generateImageDALLE(finalPromptForGen, '4:5');
 
   if (imageUrl) {
-    btn.innerHTML = '⏳ Applying brand kit...';
+    updateAdImageStatus('⏳ Applying brand kit...');
     const brandedUrl = await applyBrandOverlay(imageUrl);
     const finalUrl = brandedUrl || imageUrl;
 
@@ -4133,9 +4128,9 @@ aspect ratio 4:5, photorealistic editorial quality`
     console.log('[generateImageForCurrentAd] success — branded:', finalUrl !== imageUrl);
 
   } else {
-    btn.innerHTML = '❌ Failed — Try Again';
-    btn.disabled = false;
-    setTimeout(() => { btn.innerHTML = originalText; }, 3000);
+    const imageZone = document.getElementById('adv-image-zone');
+    if (imageZone) imageZone.innerHTML = renderAdImageCarousel(ad);
+    alert('Image generation failed. Check your OpenAI API key or try again.');
   }
 }
 
@@ -6192,13 +6187,52 @@ async function applyBrandOverlay(imageUrl) {
   });
 }
 
-function renderAdImageCarousel(ad) {
-  const images = [];
-  if (ad.image_url) images.push({ url: ad.image_url, size: '1080×1350', label: '1080×1350 — Feed', format: 'feed' });
-  if (ad.image_urls?.['9:16']) images.push({ url: ad.image_urls['9:16'], size: '1080×1920', label: '1080×1920 — Stories', format: 'stories' });
-  if (ad.image_urls?.['1:1']) images.push({ url: ad.image_urls['1:1'], size: '1080×1080', label: '1080×1080 — Square', format: 'square' });
+async function downloadImageBlob(url, filename) {
+  try {
+    const resp = await fetch(url);
+    const blob = await resp.blob();
+    const blobUrl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 30000);
+  } catch(e) {
+    console.warn('[downloadImageBlob] failed:', e.message);
+    window.open(url, '_blank');
+  }
+}
 
-  window._carouselImages = images;
+function updateAdImageStatus(text) {
+  const zone = document.getElementById('adv-image-zone');
+  if (!zone) return;
+  const existing = zone.querySelector('#adv-gen-status-card');
+  if (existing) {
+    const textEl = existing.querySelector('.adv-status-text');
+    if (textEl) textEl.textContent = text;
+    return;
+  }
+  zone.innerHTML = `<div id="adv-gen-status-card" style="padding:24px 16px;text-align:center;">
+    <div class="adv-status-text" style="font-size:12px;color:var(--t2);margin-bottom:16px;">${text}</div>
+    <div style="height:4px;background:var(--bg-elevated);border-radius:2px;overflow:hidden;position:relative;">
+      <div style="position:absolute;top:0;height:100%;width:40%;background:var(--volt);border-radius:2px;animation:slideProgress 1.4s ease-in-out infinite;"></div>
+    </div>
+  </div>`;
+}
+
+function renderAdImageCarousel(ad) {
+  let images;
+  if (window._carouselImages?.length) {
+    images = window._carouselImages;
+  } else {
+    images = [];
+    if (ad.image_url) images.push({ url: ad.image_url, size: '1080×1350', label: '1080×1350 — Feed', format: 'feed' });
+    if (ad.image_urls?.['9:16']) images.push({ url: ad.image_urls['9:16'], size: '1080×1920', label: '1080×1920 — Stories', format: 'stories' });
+    if (ad.image_urls?.['1:1']) images.push({ url: ad.image_urls['1:1'], size: '1080×1080', label: '1080×1080 — Square', format: 'square' });
+    window._carouselImages = images;
+  }
   window._carouselIndex = 0;
 
   if (images.length === 0) {
@@ -6249,10 +6283,10 @@ function renderAdImageCarousel(ad) {
       <div style="font-size:10px;font-weight:700;color:var(--volt);margin-bottom:4px;">📐 Size-Specific Compositions</div>
       <div style="font-size:10px;color:var(--t3);line-height:1.5;">Feed (1080×1350): lifestyle 3/4 shot, environmental context, text in lower half. Stories (1080×1920): close crop face &amp; shoulders, large hook top, CTA bottom — built for swipe speed.</div>
     </div>` : ''}
-    <a id="adv-download-btn" href="${escHtml(images[0].url)}" download="ad-feed.png" target="_blank"
-      style="display:block;background:var(--volt);color:#000;border-radius:6px;padding:8px;font-size:12px;font-weight:700;text-decoration:none;text-align:center;margin-bottom:6px;">
+    <button id="adv-download-btn" onclick="downloadImageBlob('${escHtml(images[0].url)}', 'ad-${images[0].format}.png')"
+      style="display:block;width:100%;background:var(--volt);color:#000;border:none;border-radius:6px;padding:8px;font-size:12px;font-weight:700;cursor:pointer;text-align:center;margin-bottom:6px;">
       ⬇ Download ${images[0].label}
-    </a>
+    </button>
     ${images.length < 3 ? `
     <button onclick="generateMoreSizes()"
       style="width:100%;background:transparent;border:1px solid var(--border);border-radius:6px;padding:7px;font-size:11px;color:var(--t2);cursor:pointer;margin-bottom:6px;">
@@ -6274,7 +6308,7 @@ function carouselGo(index) {
   const dl = document.getElementById('adv-download-btn');
   if (img) img.src = images[index].url;
   if (label) label.textContent = images[index].label;
-  if (dl) { dl.href = images[index].url; dl.download = 'ad-' + images[index].format + '.png'; dl.textContent = '⬇ Download ' + images[index].label; }
+  if (dl) { dl.onclick = () => downloadImageBlob(images[index].url, 'ad-' + images[index].format + '.png'); dl.textContent = '⬇ Download ' + images[index].label; }
   images.forEach((_, i) => {
     const dot = document.getElementById('adv-dot-' + i);
     if (dot) { dot.style.width = i === index ? '20px' : '6px'; dot.style.background = i === index ? 'var(--volt)' : 'var(--border)'; }
@@ -6345,13 +6379,7 @@ async function downloadAdPackage() {
   const bizSlug = (S.brandSnapshot?.business_name || 'ad').replace(/\s+/g, '-');
   for (let i = 0; i < images.length; i++) {
     await new Promise(r => setTimeout(r, 700));
-    const a = document.createElement('a');
-    a.href = images[i].url;
-    a.download = `${bizSlug}-${images[i].format}-${images[i].size.replace('×','x')}.png`;
-    a.target = '_blank';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    await downloadImageBlob(images[i].url, `${bizSlug}-${images[i].format}-${images[i].size.replace('×','x')}.png`);
   }
   if (btn) {
     btn.textContent = `✅ Downloaded ${images.length} image${images.length > 1 ? 's' : ''}`;
@@ -6834,6 +6862,8 @@ async function openAdView(adId) {
   if (formAccordionTitle) formAccordionTitle.textContent = getFormAccordionLabel(_currentObj);
 
   // ── IMAGE ZONE (carousel) ─────────────────────────────────────
+  window._carouselImages = null;
+  window._carouselIndex = 0;
   const imageZone = document.getElementById('adv-image-zone');
   if (imageZone) imageZone.innerHTML = renderAdImageCarousel(ad);
 
