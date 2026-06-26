@@ -1348,7 +1348,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px;">
             <div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;">
               <div onclick="toggleAccordion('adv-instant-form')" style="padding:12px 14px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;">
-                <div style="font-size:12px;font-weight:600;color:var(--t1);">📋 Instant Form</div>
+                <div id="adv-form-title" style="font-size:12px;font-weight:600;color:var(--t1);">📋 Instant Form</div>
                 <span id="adv-instant-form-arrow" style="color:var(--t3);font-size:12px;">▼</span>
               </div>
               <div id="adv-instant-form" style="display:none;padding:0 14px 12px;max-height:300px;overflow-y:auto;">
@@ -6359,9 +6359,20 @@ async function downloadAdPackage() {
   }
 }
 
+function getFormAccordionLabel(objective) {
+  const labels = {
+    leads:       '📋 Instant Form',
+    conversions: '🔄 Conversion Setup',
+    traffic:     '🌐 Landing Page Setup',
+    awareness:   '📣 Reach Setup'
+  };
+  return labels[objective] || '📋 Instant Form';
+}
+
 function changeAdObjective() {
   const ad = currentAdViewData;
-  if (!ad) return;
+  if (!ad) { console.warn('[changeAdObjective] no currentAdViewData'); return; }
+  console.log('[changeAdObjective] opening picker for:', ad.id);
   const current = ad.campaign_objective || S.campaignObjective || 'leads';
   const picker = document.createElement('div');
   picker.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--bg-surface);border:1px solid var(--border);border-radius:12px;padding:20px;z-index:9999;width:340px;box-shadow:0 20px 60px rgba(0,0,0,0.5);';
@@ -6393,11 +6404,12 @@ function changeAdObjective() {
         Regenerate Campaign →
       </button>
     </div>`;
-  document.body.appendChild(picker);
   window._newObjective = current;
+  document.body.appendChild(picker);
 }
 
 function selectNewObjective(value, el) {
+  console.log('[selectNewObjective] selected:', value);
   window._newObjective = value;
   const parent = el.parentElement;
   parent.querySelectorAll('[data-objective]').forEach(item => {
@@ -6409,8 +6421,9 @@ function selectNewObjective(value, el) {
 }
 
 async function applyNewObjective() {
+  console.log('[applyNewObjective] objective:', window._newObjective);
   const newObj = window._newObjective;
-  if (!newObj) return;
+  if (!newObj) { console.warn('[applyNewObjective] no objective selected'); return; }
   document.querySelector('.obj-picker')?.remove();
 
   const ad = currentAdViewData;
@@ -6426,6 +6439,8 @@ async function applyNewObjective() {
 
   const badge = document.getElementById('adv-objective-badge');
   if (badge) badge.textContent = objConfig.label;
+  const formTitle = document.getElementById('adv-form-title');
+  if (formTitle) formTitle.textContent = getFormAccordionLabel(newObj);
 
   ['adv-campaign-setup-content','adv-form-content','adv-budget-content','adv-checklist-content'].forEach(id => {
     const el = document.getElementById(id);
@@ -6500,10 +6515,103 @@ Include: creative upload sizes (1080×1350, 1080×1920), UTM parameters, ad prev
 
       const formEl = document.getElementById('adv-form-content');
       if (formEl) {
-        const s = newBrief.match(/##\s*INSTANT FORM\n([\s\S]*?)(?=\n##|$)/i)?.[1]?.trim();
-        if (s) {
-          const formData = extractInstantForm(s, ad, S.brandSnapshot);
-          formEl.innerHTML = renderInstantForm(formData);
+        if (newObj === 'leads') {
+          const s = newBrief.match(/##\s*INSTANT FORM\n([\s\S]*?)(?=\n##|$)/i)?.[1]?.trim();
+          if (s) {
+            const formData = extractInstantForm(s, ad, S.brandSnapshot);
+            formEl.innerHTML = renderInstantForm(formData);
+          }
+
+        } else if (newObj === 'conversions') {
+          const serpCity2   = S.serpIntelligence?.city || S.brandSnapshot?.location?.split(',')[0] || 'Ontario';
+          const websiteUrl2 = S.brandSnapshot?.website_url || S.brandSnapshot?.website || '';
+          formEl.innerHTML = `
+            <div style="display:flex;flex-direction:column;gap:12px;">
+              <div style="background:rgba(0,212,160,0.08);border:1px solid rgba(0,212,160,0.2);border-radius:8px;padding:12px;">
+                <div style="font-size:11px;font-weight:700;color:var(--volt);margin-bottom:4px;">Objective: Conversions</div>
+                <div style="font-size:12px;color:var(--t2);line-height:1.6;">Send traffic to your booking/purchase page and optimize for the conversion event. Requires Meta Pixel installed and firing on the confirmation page.</div>
+              </div>
+              <div style="background:var(--bg-elevated);border-radius:8px;padding:12px;">
+                <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Conversion Event</div>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                  ${['Purchase','Schedule','Lead','Complete Registration'].map((event, i) => `
+                  <div style="background:${i===0?'rgba(0,212,160,0.15)':'var(--bg-primary)'};border:${i===0?'1px solid var(--volt)':'1px solid var(--border)'};border-radius:6px;padding:5px 10px;font-size:11px;color:${i===0?'var(--volt)':'var(--t3)'};">${event}</div>`).join('')}
+                </div>
+                <div style="font-size:10px;color:var(--t3);margin-top:6px;">For mobile services with payment at booking → use <strong style="color:var(--t1);">Purchase</strong></div>
+              </div>
+              <div style="background:var(--bg-elevated);border-radius:8px;padding:12px;">
+                <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Setup Checklist</div>
+                ${[
+                  { label: 'Meta Pixel installed on website', status: S.clientDiscovery?.has_pixel === 'yes_verified' ? '✅' : '⚠️' },
+                  { label: 'Pixel firing on booking confirmation page', status: '⬜' },
+                  { label: 'Purchase event set up in Events Manager', status: '⬜' },
+                  { label: 'Destination URL: ' + (websiteUrl2 || 'Add in Base Profile'), status: websiteUrl2 ? '✅' : '⚠️' },
+                  { label: 'Conversions API (CAPI) connected', status: '⬜' }
+                ].map(item => `
+                <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);">
+                  <span style="font-size:14px;">${item.status}</span>
+                  <span style="font-size:12px;color:var(--t2);">${item.label}</span>
+                </div>`).join('')}
+              </div>
+              <div style="background:rgba(245,200,66,0.08);border:1px solid rgba(245,200,66,0.2);border-radius:8px;padding:10px 12px;">
+                <div style="font-size:11px;font-weight:600;color:var(--yellow);margin-bottom:4px;">⚠️ No Instant Form needed</div>
+                <div style="font-size:12px;color:var(--t2);line-height:1.5;">Conversions objective sends people directly to your booking page. The pixel fires when they complete the booking. No Meta form is used.</div>
+              </div>
+            </div>`;
+
+        } else if (newObj === 'traffic') {
+          const websiteUrl3 = S.brandSnapshot?.website_url || S.brandSnapshot?.website || '';
+          const utmUrl = websiteUrl3 + '?utm_source=facebook&utm_medium=paid&utm_campaign=traffic-' + new Date().getFullYear() + '-' + String(new Date().getMonth()+1).padStart(2,'0') + '&utm_content=traffic-ad';
+          formEl.innerHTML = `
+            <div style="display:flex;flex-direction:column;gap:12px;">
+              <div style="background:rgba(0,212,160,0.08);border:1px solid rgba(0,212,160,0.2);border-radius:8px;padding:12px;">
+                <div style="font-size:11px;font-weight:700;color:var(--volt);margin-bottom:4px;">Objective: Traffic</div>
+                <div style="font-size:12px;color:var(--t2);line-height:1.6;">Drive people to your website or booking page. Best used to build retargeting audiences before switching to Conversions.</div>
+              </div>
+              <div style="background:var(--bg-elevated);border-radius:8px;padding:12px;">
+                <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Destination URL</div>
+                <div style="font-size:13px;font-weight:600;color:var(--volt);word-break:break-all;">${websiteUrl3 || '⚠️ Add website URL in Base Profile'}</div>
+              </div>
+              <div style="background:var(--bg-elevated);border-radius:8px;padding:12px;">
+                <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">UTM Parameters to Add</div>
+                <div style="font-family:monospace;font-size:11px;color:var(--t2);background:var(--bg-primary);border-radius:4px;padding:8px;line-height:1.8;word-break:break-all;">${utmUrl}</div>
+                <button onclick="navigator.clipboard.writeText(this.previousElementSibling.textContent.trim());this.textContent='✅ Copied';setTimeout(()=>this.textContent='Copy UTM URL',1500)"
+                  style="margin-top:6px;background:transparent;border:1px solid var(--border);border-radius:4px;padding:3px 8px;font-size:10px;color:var(--t3);cursor:pointer;">
+                  Copy UTM URL
+                </button>
+              </div>
+              <div style="background:rgba(245,200,66,0.08);border:1px solid rgba(245,200,66,0.2);border-radius:8px;padding:10px 12px;">
+                <div style="font-size:11px;font-weight:600;color:var(--yellow);margin-bottom:4px;">⚠️ No Instant Form needed</div>
+                <div style="font-size:12px;color:var(--t2);line-height:1.5;">Traffic objective sends people to your website directly. Install the Meta Pixel to build a retargeting audience from these visitors.</div>
+              </div>
+            </div>`;
+
+        } else if (newObj === 'awareness') {
+          formEl.innerHTML = `
+            <div style="display:flex;flex-direction:column;gap:12px;">
+              <div style="background:rgba(0,212,160,0.08);border:1px solid rgba(0,212,160,0.2);border-radius:8px;padding:12px;">
+                <div style="font-size:11px;font-weight:700;color:var(--volt);margin-bottom:4px;">Objective: Awareness</div>
+                <div style="font-size:12px;color:var(--t2);line-height:1.6;">Maximize brand reach and frequency. Best for new markets or before a launch. Does not optimize for leads or sales.</div>
+              </div>
+              <div style="background:var(--bg-elevated);border-radius:8px;padding:12px;">
+                <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Recommended Settings</div>
+                ${[
+                  'Frequency cap: Show to each person max 2x per week',
+                  'Audience size: Minimum 50,000 people for efficient reach',
+                  'Placement: Advantage+ (let Meta optimize reach)',
+                  'Creative: Video performs better than image for awareness',
+                  'Duration: Run for minimum 4 weeks before evaluating'
+                ].map(item => `
+                <div style="display:flex;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);">
+                  <span style="color:var(--volt);flex-shrink:0;">•</span>
+                  <span style="font-size:12px;color:var(--t2);">${item}</span>
+                </div>`).join('')}
+              </div>
+              <div style="background:rgba(245,200,66,0.08);border:1px solid rgba(245,200,66,0.2);border-radius:8px;padding:10px 12px;">
+                <div style="font-size:11px;font-weight:600;color:var(--yellow);margin-bottom:4px;">⚠️ No Instant Form or conversion tracking</div>
+                <div style="font-size:12px;color:var(--t2);line-height:1.5;">Awareness campaigns measure Reach and Impressions only. Switch to Leads or Conversions once your audience knows your brand.</div>
+              </div>
+            </div>`;
         }
       }
 
@@ -6538,6 +6646,34 @@ Include: creative upload sizes (1080×1350, 1080×1920), UTM parameters, ad prev
         if (currentAdViewData) currentAdViewData.campaign_objective = newObj;
         const adInLib = adLibrary.find(a => a.id === currentAdViewId);
         if (adInLib) { adInLib.campaign_objective = newObj; adInLib.campaign_brief = newBrief; }
+      }
+
+      // FIX 3 — Rewrite Meta Ad Fields for new objective
+      const adCopy = ad.primary_text || ad.content || '';
+      if (adCopy && KEYS.claude) {
+        try {
+          const newFields = await extractMetaFieldsWithAI(
+            adCopy + '\n\nNEW OBJECTIVE: ' + newObj.toUpperCase() +
+            '\nRewrite all fields optimized for ' + newObj + ' objective.' +
+            '\nCTA should match: ' + objConfig.cta,
+            ad
+          );
+          if (newFields) {
+            populateMetaFields(newFields);
+            if (currentAdViewId) {
+              await sb.from('generated_ads').update({
+                meta_primary_text: newFields.primary_text,
+                meta_headline_1:   newFields.headline_1,
+                meta_headline_2:   newFields.headline_2,
+                meta_headline_3:   newFields.headline_3,
+                meta_description:  newFields.description,
+                meta_cta:          newFields.cta
+              }).eq('id', currentAdViewId);
+            }
+          }
+        } catch(metaErr) {
+          console.warn('[applyNewObjective] meta fields rewrite failed:', metaErr.message);
+        }
       }
 
       appendAdViewChatMessage('assistant',
@@ -6668,10 +6804,10 @@ async function openAdView(adId) {
 
   // ── OBJECTIVE BADGE ──────────────────────────────────────────
   const objBadge = document.getElementById('adv-objective-badge');
-  if (objBadge) {
-    const obj = ad.campaign_objective || S.campaignObjective || 'leads';
-    objBadge.textContent = obj.charAt(0).toUpperCase() + obj.slice(1);
-  }
+  const _currentObj = ad.campaign_objective || S.campaignObjective || 'leads';
+  if (objBadge) objBadge.textContent = _currentObj.charAt(0).toUpperCase() + _currentObj.slice(1);
+  const formAccordionTitle = document.getElementById('adv-form-title');
+  if (formAccordionTitle) formAccordionTitle.textContent = getFormAccordionLabel(_currentObj);
 
   // ── IMAGE ZONE (carousel) ─────────────────────────────────────
   const imageZone = document.getElementById('adv-image-zone');
