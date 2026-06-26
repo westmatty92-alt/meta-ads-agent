@@ -5728,13 +5728,21 @@ function extractExclusions(campaignBrief) {
 
 function extractFirstHeadline(text) {
   if (!text) return null;
+  const stripLabel = h => h
+    .replace(/^(?:Hook\s*[\d×x][\s:—–-]*|Framework[\s:—–-]+|Mirror[\s:—–-]+|Option\s*\d+[\s:—–-]*|Variation\s*\d+[\s:—–-]*)/i, '')
+    .replace(/\*\*/g, '')
+    .trim();
   const section = text.match(/##\s*HEADLINE[S]?[^\n]*\n([\s\S]*?)(?=##|$)/i);
   if (section) {
     const lines = section[1].split('\n')
-      .map(l => l.replace(/^[-*\d.)\s]+/, '').replace(/\*\*/g, '').trim())
-      .filter(l => l.length > 3);
-    return lines[0] || null;
+      .map(l => stripLabel(l.replace(/^[-*\d.)\s]+/, '')))
+      .filter(l => l.length > 3 && l.length < 60);
+    if (lines[0]) return lines[0];
   }
+  const quoted = text.match(/["""]([^"""]{5,55})["""]/);
+  if (quoted) return quoted[1].trim();
+  const bold = text.match(/\*\*([^*]{5,55})\*\*/);
+  if (bold) return bold[1].trim();
   return null;
 }
 
@@ -5752,6 +5760,24 @@ function extractCTA(text) {
   return 'Book Now';
 }
 
+function extractShortPrimaryText(rawCopy) {
+  if (!rawCopy) return '';
+  const clean = rawCopy
+    .replace(/#{1,3}\s[^\n]*/g, '')
+    .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/\*([^*]+)\*/g, '$1')
+    .replace(/^>\s*/gm, '')
+    .replace(/\([^)]*(?:visual|direction|stories|reels|mobile|feed|hook)[^)]*\)/gi, '')
+    .replace(/---/g, '')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+  const shortMatch = clean.match(/(?:SHORT|PRIMARY TEXT[^:]*)\n+([\s\S]*?)(?=\n##|\n---|\n\nPRIMARY|\n\nHEADLINE|$)/i);
+  if (shortMatch?.[1]?.trim().length > 20) return shortMatch[1].trim();
+  const firstPara = clean.split('\n\n').find(p => p.trim().length > 30 && !p.match(/^(Hook|Framework|Mirror|CTA|Headline|Visual|SHORT|PRIMARY)/i));
+  if (firstPara) return firstPara.trim().slice(0, 500);
+  return clean.slice(0, 400);
+}
+
 function extractAllHeadlines(text) {
   if (!text) return [];
   const section = text.match(/##\s*HEADLINE[S]?[^\n]*\n([\s\S]*?)(?=##|$)/i);
@@ -5760,6 +5786,21 @@ function extractAllHeadlines(text) {
     .map(l => l.replace(/^[-*\d.)]\s*/, '').replace(/\*\*/g, '').trim())
     .filter(l => l.length > 3 && l.length < 60)
     .slice(0, 3);
+}
+
+async function generateAdDescription(ad) {
+  if (!KEYS.claude) return null;
+  const serpCity = S.serpIntelligence?.city || S.brandSnapshot?.location?.split(',')[0]?.trim() || 'Ontario';
+  const businessName = S.brandSnapshot?.business_name || 'local business';
+  const cta = extractCTA(ad.primary_text || ad.content || '') || 'Book Now';
+  const hook = ad.hook || extractHookFromContent(ad.primary_text || ad.content || '') || '';
+  const industry = S.brandSnapshot?.industry || S.brandSnapshot?.business_type || 'local service';
+  const desc = await ai(
+    'You write concise Meta ad descriptions (under 30 words). Return ONLY the description text, no quotes, no labels.',
+    [{ role: 'user', content: `Write a one-line Meta ad description.\nBusiness: ${businessName}\nCity: ${serpCity}\nHook: ${hook}\nCTA: ${cta}\nService: ${industry}\nMake it trust-building and specific. Under 30 words.` }]
+  );
+  if (!desc || desc.startsWith('⚠️')) return null;
+  return desc.trim().replace(/^[""]|[""]$/g, '').slice(0, 120);
 }
 
 function extractDemographicsFromBrief(brief) {
@@ -6044,6 +6085,17 @@ function carouselPrev() {
 
 async function generateMoreSizes() {
   const statusEl = document.getElementById('image-gen-status');
+
+  const existingImages = window._carouselImages || [];
+  const existingSizes = existingImages.map(i => i.format);
+  const allSizes = [
+    { ratio: '4:5', format: 'feed', label: 'Feed' },
+    { ratio: '9:16', format: 'stories', label: 'Stories' },
+    { ratio: '1:1', format: 'square', label: 'Square' }
+  ];
+  const missing = allSizes.filter(s => !existingSizes.includes(s.format));
+  if (missing.length === 0) { alert('All 3 sizes already generated.'); return; }
+
   let prompt = S.lastVisualPrompts?.dalle || S.lastVisualPrompts?.flux ||
                currentAdViewData?.visual_prompt || S.lastGeneratedPrompt || null;
 
@@ -6053,9 +6105,10 @@ async function generateMoreSizes() {
     if (!KEYS.claude) { alert('Claude API key required.'); return; }
     if (statusEl) { statusEl.style.display = 'block'; statusEl.innerHTML = '⏳ Generating visual prompt...'; }
     try {
+      const sizeList = missing.map(s => `${s.ratio} (${s.label})`).join(', ');
       const newPrompt = await ai('', [{
         role: 'user',
-        content: `Write a GPT Image 2 prompt for this ad.\nBusiness: ${S.brandSnapshot?.business_name || 'local service'}\nLocation: ${S.brandSnapshot?.location?.split(',')[0] || 'Ontario'}\nHook: ${ad.hook || extractHookFromContent(ad.primary_text || '')}\nBrand colors: ${getBrandColors() || 'warm neutrals'}\nStyle: ${getBrandStyle() || 'premium minimal clean'}\nWrite ONLY the image prompt. Under 200 words.`
+        content: `Write a GPT Image 2 prompt for a Meta ad.\nBusiness: ${S.brandSnapshot?.business_name || 'local service'}\nLocation: ${S.brandSnapshot?.location?.split(',')[0] || 'Ontario'}\nHook: ${ad.hook || extractHookFromContent(ad.primary_text || '')}\nBrand colors: ${getBrandColors() || 'warm neutrals'}\nStyle: ${getBrandStyle() || 'premium minimal clean'}\nAspect ratios needed: ${sizeList}\nWrite a composition that works across these formats. Describe subject placement, lighting, and visual elements. Write ONLY the image prompt. Under 200 words.`
       }]);
       if (!newPrompt || newPrompt.startsWith('⚠️')) { if (statusEl) statusEl.innerHTML = '❌ Could not generate prompt'; return; }
       S.lastGeneratedPrompt = newPrompt;
@@ -6066,17 +6119,6 @@ async function generateMoreSizes() {
       return;
     }
   }
-
-  const existingImages = window._carouselImages || [];
-  const existingSizes = existingImages.map(i => i.format);
-  const allSizes = [
-    { ratio: '4:5', format: 'feed', label: 'Feed' },
-    { ratio: '9:16', format: 'stories', label: 'Stories' },
-    { ratio: '1:1', format: 'square', label: 'Square' }
-  ];
-  const missing = allSizes.filter(s => !existingSizes.includes(s.format));
-
-  if (missing.length === 0) { alert('All 3 sizes already generated.'); return; }
 
   for (const sizeInfo of missing) {
     if (statusEl) { statusEl.style.display = 'block'; statusEl.innerHTML = `⏳ Generating ${sizeInfo.label} (${sizeInfo.ratio})...`; }
@@ -6149,27 +6191,19 @@ async function openAdView(adId) {
   if (imageZone) imageZone.innerHTML = renderAdImageCarousel(ad);
 
   // ── META AD FIELDS ────────────────────────────────────────────
+  // SQL: ALTER TABLE generated_ads ADD COLUMN IF NOT EXISTS meta_description text;
+  // SQL: ALTER TABLE base_profiles ADD COLUMN IF NOT EXISTS website_url text;
   const businessName = S.brandSnapshot?.business_name || S.bizName || 'Your Business';
   const serpCity = S.serpIntelligence?.city || S.brandSnapshot?.location?.split(',')[0]?.trim() || 'Local area';
 
-  const cleanPrimaryText = rawCopy
-    .replace(/#{1,3}\s[^\n]*/g, '')
-    .replace(/\*\*([^*]+)\*\*/g, '$1')
-    .replace(/\*([^*]+)\*/g, '$1')
-    .replace(/^>\s*/gm, '')
-    .replace(/\([^)]*(?:visual|direction|stories|reels|mobile|feed|hook)[^)]*\)/gi, '')
-    .replace(/---/g, '')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
-
-  const shortMatch = cleanPrimaryText.match(/(?:SHORT|PRIMARY TEXT[^:]*SHORT)[^\n]*\n+([\s\S]*?)(?=\n##|\n---|\n\nPRIMARY|$)/i);
-  const shortPrimaryText = shortMatch?.[1]?.trim() || cleanPrimaryText.split('\n\n').find(p => p.length > 20) || cleanPrimaryText.slice(0, 400);
+  const shortPrimaryText = extractShortPrimaryText(rawCopy);
 
   const headlines = extractAllHeadlines(rawCopy);
-  const primaryHeadline = headlines[0] || businessName;
-  const description = extractDescription(rawCopy) || `Professional service · ${serpCity} · Results guaranteed`;
+  const primaryHeadline = headlines[0] || extractFirstHeadline(rawCopy) || `${businessName} · ${serpCity}`;
+  const description = extractDescription(rawCopy);
   const cta = extractCTA(rawCopy) || 'Book Now';
-  const websiteUrl = S.brandSnapshot?.website || S.brandSnapshot?.url || 'Add website in Base Profile';
+  const websiteUrl = S.brandSnapshot?.website || S.brandSnapshot?.website_url || S.brandSnapshot?.url
+                     || document.getElementById('bp-website')?.value?.trim() || '';
 
   const metaPrimaryEl = document.getElementById('adv-meta-primary-text');
   if (metaPrimaryEl) metaPrimaryEl.textContent = shortPrimaryText;
@@ -6186,13 +6220,39 @@ async function openAdView(adId) {
   }
 
   const metaDescEl = document.getElementById('adv-meta-description');
-  if (metaDescEl) metaDescEl.textContent = description;
+  if (metaDescEl) {
+    const savedDesc = ad.meta_description;
+    if (savedDesc) {
+      metaDescEl.textContent = savedDesc;
+    } else if (description) {
+      metaDescEl.textContent = description;
+    } else {
+      metaDescEl.textContent = 'Writing description…';
+      generateAdDescription(ad).then(genDesc => {
+        if (genDesc && metaDescEl.isConnected) {
+          metaDescEl.textContent = genDesc;
+          sb.from('generated_ads').update({ meta_description: genDesc }).eq('id', adId).then(() => {
+            ad.meta_description = genDesc;
+          });
+        } else if (metaDescEl.isConnected) {
+          metaDescEl.textContent = `${businessName} · ${serpCity}`;
+        }
+      });
+    }
+  }
 
   const metaCtaEl = document.getElementById('adv-meta-cta');
   if (metaCtaEl) metaCtaEl.textContent = cta;
 
   const metaUrlEl = document.getElementById('adv-meta-url');
-  if (metaUrlEl) metaUrlEl.textContent = websiteUrl;
+  if (metaUrlEl) {
+    if (websiteUrl) {
+      metaUrlEl.textContent = websiteUrl;
+      metaUrlEl.style.color = 'var(--volt)';
+    } else {
+      metaUrlEl.innerHTML = `<span style="color:var(--red);">&#9888; No website &mdash; <a href="#" onclick="go('baseProfile');return false;" style="color:var(--red);text-decoration:underline;">Add in Base Profile</a></span>`;
+    }
+  }
 
   window._advHeadlines = headlines;
   const headlinesList = document.getElementById('adv-meta-headlines-list');
