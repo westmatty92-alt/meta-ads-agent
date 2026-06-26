@@ -1340,7 +1340,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
                 <span id="adv-campaign-setup-arrow" style="color:var(--t3);font-size:12px;">▼</span>
               </div>
               <div id="adv-campaign-setup" style="display:none;padding:0 14px 12px;">
-                <div id="adv-campaign-setup-content" style="font-size:12px;color:var(--t2);line-height:1.8;"></div>
+                <div id="adv-campaign-setup-content" style="font-size:12px;color:var(--t2);line-height:1.8;max-height:400px;overflow-y:auto;padding-right:4px;"></div>
               </div>
             </div>
           </div>
@@ -1353,7 +1353,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
                 <span id="adv-instant-form-arrow" style="color:var(--t3);font-size:12px;">▼</span>
               </div>
               <div id="adv-instant-form" style="display:none;padding:0 14px 12px;max-height:300px;overflow-y:auto;">
-                <div id="adv-form-content" style="font-size:12px;color:var(--t2);line-height:1.8;"></div>
+                <div id="adv-form-content" style="font-size:12px;color:var(--t2);line-height:1.8;max-height:350px;overflow-y:auto;"></div>
               </div>
             </div>
             <div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;">
@@ -1398,20 +1398,47 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
             </div>
           </div>
 
+          <!-- LAUNCH PLAN ACCORDION -->
+          <div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:16px;">
+            <div onclick="toggleAccordion('adv-launch-plan')" style="padding:12px 14px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;">
+              <div style="font-size:12px;font-weight:700;color:var(--t1);">🚀 Launch Plan</div>
+              <span id="adv-launch-plan-arrow" style="color:var(--t3);font-size:12px;">▼</span>
+            </div>
+            <div id="adv-launch-plan" style="display:none;padding:0 14px 16px;">
+              <div id="adv-launch-plan-content">
+                <div style="text-align:center;padding:16px;">
+                  <button onclick="generateLaunchPlan()" style="background:var(--volt);color:#000;border:none;border-radius:8px;padding:10px 20px;font-size:12px;font-weight:700;cursor:pointer;">🚀 Generate My Launch Plan</button>
+                  <div style="font-size:11px;color:var(--t3);margin-top:8px;">AI creates a personalised week-by-week plan based on your budget, pixel status, and objective</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
         </div>
 
-        <!-- FIXED CHAT ZONE AT BOTTOM -->
-        <div style="flex-shrink:0;border-top:2px solid var(--border);display:flex;flex-direction:column;height:280px;padding:12px 20px;">
-          <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;flex-shrink:0;">💬 Ad Chat</div>
-          <div id="adv-chat-history" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:6px;padding:8px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:8px;margin-bottom:8px;">
-            <div style="color:var(--t3);font-size:11px;text-align:center;padding:6px;">Ask about this ad — variations, strategy, follow-up ads, targeting questions...</div>
+        <!-- COLLAPSIBLE CHAT ZONE AT BOTTOM -->
+        <div style="flex-shrink:0;border-top:2px solid var(--border);">
+          <div onclick="toggleAdChat()" style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;cursor:pointer;background:var(--bg-surface);">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span style="font-size:13px;">💬</span>
+              <span style="font-size:12px;font-weight:600;color:var(--t2);">AD CHAT</span>
+              <span id="adv-chat-count" style="font-size:10px;color:var(--t3);"></span>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;">
+              <span id="adv-chat-toggle-hint" style="font-size:10px;color:var(--t3);">Click to expand</span>
+              <span id="adv-chat-arrow" style="font-size:11px;color:var(--t3);">▲</span>
+            </div>
           </div>
-          <div style="display:flex;gap:8px;flex-shrink:0;">
-            <input type="text" id="adv-chat-input"
-              placeholder="e.g. Make a version for men / Why this hook? / What audience should I test first?"
-              style="flex:1;background:var(--bg-elevated);border:1px solid var(--border);border-radius:8px;padding:9px 14px;color:var(--t1);font-size:12px;"
-              onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendAdViewChat();}">
-            <button onclick="sendAdViewChat()" style="background:var(--volt);color:#000;border:none;border-radius:8px;padding:9px 18px;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0;">Send →</button>
+          <div id="adv-chat-body" style="display:none;flex-direction:column;">
+            <div id="adv-chat-history" style="overflow-y:auto;padding:12px 16px;display:flex;flex-direction:column;gap:8px;max-height:280px;min-height:100px;">
+            </div>
+            <div style="padding:10px 16px;border-top:1px solid var(--border);display:flex;gap:8px;">
+              <input type="text" id="adv-chat-input"
+                placeholder="Ask about this ad — variations, strategy, targeting..."
+                style="flex:1;background:var(--bg-elevated);border:1px solid var(--border);border-radius:6px;padding:8px 12px;font-size:12px;color:var(--t1);"
+                onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendAdViewChat();}">
+              <button onclick="sendAdViewChat()" style="background:var(--volt);color:#000;border:none;border-radius:6px;padding:8px 16px;font-size:12px;font-weight:700;cursor:pointer;">Send →</button>
+            </div>
           </div>
         </div>
 
@@ -6308,7 +6335,8 @@ function carouselGo(index) {
   const dl = document.getElementById('adv-download-btn');
   if (img) img.src = images[index].url;
   if (label) label.textContent = images[index].label;
-  if (dl) { dl.onclick = () => downloadImageBlob(images[index].url, 'ad-' + images[index].format + '.png'); dl.textContent = '⬇ Download ' + images[index].label; }
+  const biz = (S.brandSnapshot?.business_name || 'ad').replace(/\s+/g, '-');
+  if (dl) { dl.onclick = () => downloadImageBlob(images[index].url, biz + '-' + images[index].format + '.png'); dl.textContent = '⬇ Download ' + images[index].label; }
   images.forEach((_, i) => {
     const dot = document.getElementById('adv-dot-' + i);
     if (dot) { dot.style.width = i === index ? '20px' : '6px'; dot.style.background = i === index ? 'var(--volt)' : 'var(--border)'; }
@@ -6677,12 +6705,7 @@ Include: creative upload sizes (1080×1350, 1080×1920), UTM parameters, ad prev
         const s = newBrief.match(/##\s*LAUNCH CHECKLIST\n([\s\S]*?)(?=\n##|$)/i)?.[1]?.trim();
         if (s) {
           const items = s.split('\n').map(l => l.replace(/^[-*\d.]\s*/,'').trim()).filter(l => l.length > 3);
-          checklistEl.innerHTML = items.map(item =>
-            `<label style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px;cursor:pointer;">
-              <input type="checkbox" style="margin-top:2px;accent-color:var(--volt);">
-              <span style="font-size:12px;color:var(--t2);">${item}</span>
-            </label>`
-          ).join('');
+          checklistEl.innerHTML = renderLaunchChecklist(items, currentAdViewId);
         }
       }
 
@@ -6744,6 +6767,137 @@ Include: creative upload sizes (1080×1350, 1080×1920), UTM parameters, ad prev
 
 // SQL: ALTER TABLE generated_ads ADD COLUMN IF NOT EXISTS campaign_objective text;
 // SQL: ALTER TABLE generated_ads ADD COLUMN IF NOT EXISTS product_name text;
+// SQL: ALTER TABLE generated_ads ADD COLUMN IF NOT EXISTS checklist_state jsonb DEFAULT '{}'::jsonb;
+// SQL: ALTER TABLE generated_ads ADD COLUMN IF NOT EXISTS launch_plan text;
+
+function renderLaunchChecklist(items, adId) {
+  if (!items?.length) return '<div style="color:var(--t3);font-size:12px;">No checklist generated yet</div>';
+  return `<div style="display:flex;flex-direction:column;gap:6px;">
+    <div style="font-size:10px;color:var(--t3);margin-bottom:4px;">Check off each item as you complete it</div>
+    ${items.map((item, i) => `
+      <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;padding:8px;border-radius:6px;background:var(--bg-elevated);"
+        onmouseover="this.style.background='var(--bg-primary)'"
+        onmouseout="this.style.background='var(--bg-elevated)'">
+        <input type="checkbox" id="check-${adId}-${i}"
+          onchange="saveChecklistItem('${adId}',${i},this.checked)"
+          style="margin-top:2px;accent-color:var(--volt);width:14px;height:14px;flex-shrink:0;cursor:pointer;">
+        <span id="check-label-${adId}-${i}" style="font-size:12px;color:var(--t2);line-height:1.5;">${escHtml(item)}</span>
+      </label>`).join('')}
+    <div id="checklist-complete-banner-${adId}"
+      style="display:none;background:rgba(0,212,160,0.1);border:1px solid rgba(0,212,160,0.3);border-radius:8px;padding:10px 12px;text-align:center;margin-top:6px;">
+      <div style="font-size:13px;font-weight:700;color:var(--volt);">✅ Ready to Launch</div>
+      <div style="font-size:11px;color:var(--t2);margin-top:2px;">All items complete — publish your campaign</div>
+    </div>
+  </div>`;
+}
+
+async function saveChecklistItem(adId, index, checked) {
+  const label = document.getElementById('check-label-' + adId + '-' + index);
+  if (label) { label.style.textDecoration = checked ? 'line-through' : 'none'; label.style.color = checked ? 'var(--t3)' : 'var(--t2)'; }
+  const { data: adRow } = await sb.from('generated_ads').select('checklist_state').eq('id', adId).single();
+  const state = adRow?.checklist_state || {};
+  state[index] = checked;
+  await sb.from('generated_ads').update({ checklist_state: state }).eq('id', adId);
+  const allChecks = document.querySelectorAll(`[id^="check-${adId}-"]`);
+  const allComplete = [...allChecks].every(c => c.checked);
+  const banner = document.getElementById('checklist-complete-banner-' + adId);
+  if (banner) banner.style.display = allComplete ? 'block' : 'none';
+}
+
+async function generateLaunchPlan() {
+  const ad = currentAdViewData;
+  if (!ad) return;
+  const btn = event?.target;
+  if (btn) { btn.textContent = '⏳ Creating your plan...'; btn.disabled = true; }
+
+  const serpCity = S.serpIntelligence?.city || S.brandSnapshot?.location?.split(',')[0] || 'Ontario';
+  const objective = ad.campaign_objective || 'leads';
+  const hasPixel = S.clientDiscovery?.has_pixel || 'unknown';
+  const hasCRM = S.clientDiscovery?.has_crm || 'unknown';
+  const hasBookingPage = S.clientDiscovery?.has_booking_page || 'unknown';
+  const budget = S.clientDiscovery?.monthly_budget || '450_900';
+  const businessName = S.brandSnapshot?.business_name || 'your business';
+  const isFirstMover = !S.competitorAds?.length;
+  const budgetLabel = { '300_450':'$10-15 CAD/day','450_900':'$15-30 CAD/day','900_2100':'$30-70 CAD/day','2100_plus':'$70-150 CAD/day' }[budget] || '$15-30 CAD/day';
+
+  const plan = await ai(
+    `You write practical step-by-step marketing plans for Canadian small business owners who are not marketers. Be specific, simple, and actionable. Use checkboxes (□) for tasks. Use real numbers. Never use jargon without explaining it.`,
+    [{ role: 'user', content: `Create a practical week-by-week Meta Ads launch plan.
+
+BUSINESS: ${businessName}
+LOCATION: ${serpCity}, Ontario
+OBJECTIVE: ${objective}
+BUDGET: ${budgetLabel}
+PIXEL STATUS: ${hasPixel}
+HAS BOOKING PAGE: ${hasBookingPage}
+HAS CRM: ${hasCRM}
+FIRST MOVER: ${isFirstMover}
+AD HOOK: ${(ad.hook || '').replace(/[*_#>]/g,'').slice(0,50)}
+AD SCORE: ${ad.score || 84}/100
+
+Write a launch plan with these exact sections:
+
+## BEFORE YOU SPEND $1 (Setup — 1-2 hours)
+List 5-7 specific setup tasks they must complete first. Each task starts with □.
+${hasPixel !== 'yes_verified' ? 'Include pixel installation as first task.' : ''}
+
+## WEEK 1 — TESTING (${budgetLabel})
+Day by day — what to do and when. Include publish day, first check (day 3), first lead follow-up. Specific CTR targets and actions if low.
+
+## WEEK 2 — FIRST RESULTS
+What success looks like. Specific numbers that trigger each action. What to do if working or not.
+
+## MILESTONE: FIRST 3 BOOKINGS
+□ What to do when you hit 3 bookings from ads
+□ How to upload your Meta CSV to Pulse Dashboard
+□ What Pulse will tell you to do next
+
+## WEEK 3-4 — SCALE OR PIVOT
+If working: exact steps to scale. If not: exact steps to diagnose and fix.
+
+## MONTH 2+ — RETARGETING
+When to start, who to target, what copy to use. Pixel event count needed before lookalike.
+
+Keep each section under 8 bullets. Be direct. Write as a trusted advisor sitting next to them.` }]
+  );
+
+  if (plan) {
+    const contentEl = document.getElementById('adv-launch-plan-content');
+    if (contentEl) contentEl.innerHTML = renderMarkdown(plan);
+    if (currentAdViewId) await sb.from('generated_ads').update({ launch_plan: plan }).eq('id', currentAdViewId);
+    const accordion = document.getElementById('adv-launch-plan');
+    const arrow = document.getElementById('adv-launch-plan-arrow');
+    if (accordion) accordion.style.display = 'block';
+    if (arrow) arrow.textContent = '▲';
+  } else if (btn) {
+    btn.textContent = '❌ Failed — Try Again';
+    btn.disabled = false;
+  }
+}
+
+function toggleAdChat() {
+  const body = document.getElementById('adv-chat-body');
+  const arrow = document.getElementById('adv-chat-arrow');
+  const hint = document.getElementById('adv-chat-toggle-hint');
+  if (!body) return;
+  const isOpen = body.style.display !== 'none';
+  body.style.display = isOpen ? 'none' : 'flex';
+  body.style.flexDirection = 'column';
+  if (arrow) arrow.textContent = isOpen ? '▲' : '▼';
+  if (hint) hint.textContent = isOpen ? 'Click to expand' : 'Click to collapse';
+  if (!isOpen) {
+    const history = document.getElementById('adv-chat-history');
+    if (history) setTimeout(() => { history.scrollTop = history.scrollHeight; }, 50);
+  }
+}
+
+function updateAdChatCount() {
+  const countEl = document.getElementById('adv-chat-count');
+  const history = document.getElementById('adv-chat-history');
+  if (!countEl || !history) return;
+  const count = history.children.length;
+  countEl.textContent = count > 0 ? '(' + count + ' messages)' : '';
+}
 
 function getBudgetRecommendation(ad) {
   if (ad.budget_recommendation && ad.budget_recommendation.length > 100) {
@@ -7071,12 +7225,21 @@ async function openAdView(adId) {
       'Add UTM tracking parameters to URL',
       'Review ad in Ad Preview before publishing'
     ];
-    checklistEl.innerHTML = items.map(item =>
-      `<label style="display:flex;align-items:flex-start;gap:8px;margin-bottom:6px;cursor:pointer;">
-         <input type="checkbox" style="margin-top:2px;accent-color:var(--volt);">
-         <span style="font-size:12px;color:var(--t2);">${escHtml(item)}</span>
-       </label>`
-    ).join('');
+    checklistEl.innerHTML = renderLaunchChecklist(items, adId);
+    if (ad.checklist_state) {
+      Object.entries(ad.checklist_state).forEach(([idx, checked]) => {
+        const cb = document.getElementById('check-' + adId + '-' + idx);
+        const lbl = document.getElementById('check-label-' + adId + '-' + idx);
+        if (cb) cb.checked = checked;
+        if (lbl && checked) { lbl.style.textDecoration = 'line-through'; lbl.style.color = 'var(--t3)'; }
+      });
+    }
+  }
+
+  // ── LAUNCH PLAN ───────────────────────────────────────────────
+  if (ad.launch_plan) {
+    const planEl = document.getElementById('adv-launch-plan-content');
+    if (planEl) planEl.innerHTML = renderMarkdown(ad.launch_plan);
   }
 
   // ── STRATEGY NOTE ────────────────────────────────────────────
@@ -7092,9 +7255,16 @@ async function openAdView(adId) {
   if (chatEl) {
     chatEl.innerHTML = '';
     if (adViewChatHistory.length === 0) {
-      chatEl.innerHTML = '<div style="color:var(--t3);font-size:11px;text-align:center;padding:6px;">Ask about this ad — variations, strategy, follow-up ads, targeting questions...</div>';
+      chatEl.innerHTML = '<div style="color:var(--t3);font-size:11px;text-align:center;padding:8px;">Ask about this ad — variations, strategy, follow-up ads, targeting questions...</div>';
     } else {
       adViewChatHistory.forEach(msg => appendAdViewChatMessage(msg.role, msg.content));
+      const chatBody = document.getElementById('adv-chat-body');
+      const chatArrow = document.getElementById('adv-chat-arrow');
+      const chatHint = document.getElementById('adv-chat-toggle-hint');
+      if (chatBody) { chatBody.style.display = 'flex'; chatBody.style.flexDirection = 'column'; }
+      if (chatArrow) chatArrow.textContent = '▼';
+      if (chatHint) chatHint.textContent = 'Click to collapse';
+      updateAdChatCount();
     }
   }
 
@@ -7213,6 +7383,9 @@ function appendAdViewChatMessage(role, content, id) {
   }
   chatEl.appendChild(el);
   chatEl.scrollTo(0, chatEl.scrollHeight);
+  const chatBody = document.getElementById('adv-chat-body');
+  if (chatBody && chatBody.style.display === 'none') toggleAdChat();
+  updateAdChatCount();
 }
 
 async function sendAdViewChat() {
