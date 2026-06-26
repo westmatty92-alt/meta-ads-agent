@@ -5760,22 +5760,47 @@ function extractCTA(text) {
   return 'Book Now';
 }
 
-function extractShortPrimaryText(rawCopy) {
-  if (!rawCopy) return '';
-  const clean = rawCopy
-    .replace(/#{1,3}\s[^\n]*/g, '')
-    .replace(/\*\*([^*]+)\*\*/g, '$1')
-    .replace(/\*([^*]+)\*/g, '$1')
-    .replace(/^>\s*/gm, '')
-    .replace(/\([^)]*(?:visual|direction|stories|reels|mobile|feed|hook)[^)]*\)/gi, '')
-    .replace(/---/g, '')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
-  const shortMatch = clean.match(/(?:SHORT|PRIMARY TEXT[^:]*)\n+([\s\S]*?)(?=\n##|\n---|\n\nPRIMARY|\n\nHEADLINE|$)/i);
-  if (shortMatch?.[1]?.trim().length > 20) return shortMatch[1].trim();
-  const firstPara = clean.split('\n\n').find(p => p.trim().length > 30 && !p.match(/^(Hook|Framework|Mirror|CTA|Headline|Visual|SHORT|PRIMARY)/i));
-  if (firstPara) return firstPara.trim().slice(0, 500);
-  return clean.slice(0, 400);
+async function extractMetaFieldsWithAI(adCopy, ad) {
+  if (!adCopy || adCopy.length < 50 || !KEYS.claude) return null;
+  const serpCity = S.serpIntelligence?.city || S.brandSnapshot?.location?.split(',')[0]?.trim() || 'Ontario';
+  const businessName = S.brandSnapshot?.business_name || '';
+  const promotion = S.promotionDetails || ad.campaign_type || '';
+  try {
+    const result = await ai(
+      `You extract structured Meta ad fields from raw ad copy. Return ONLY a valid JSON object — no markdown fences, no explanation, no extra text. Every string value must be plain text with no markdown symbols.`,
+      [{
+        role: 'user',
+        content: `Extract Meta ad fields from the ad copy below and return as JSON.
+
+AD COPY:
+${adCopy.slice(0, 3000)}
+
+CONTEXT:
+Business: ${businessName}
+City: ${serpCity}
+Promotion: ${promotion}
+
+Return this exact JSON structure with no other text:
+{
+  "primary_text": "The body copy paragraph(s) that go above the image in a Facebook feed ad. 3-5 sentences. No markdown. No stage directions like (visual: ...). No section headers. No hook labels. Real copy a person would read.",
+  "headline_1": "First headline. Under 40 characters. Benefit-driven and specific.",
+  "headline_2": "Second headline. Under 40 characters. Different angle from headline 1.",
+  "headline_3": "Third headline. Under 40 characters. Different angle again.",
+  "description": "One sentence under the headline. Under 125 characters. Specific to this business and city — never generic placeholder text. Sounds like a real person wrote it.",
+  "cta": "CTA button label only. One of: Book Now, Learn More, Get Offer, Sign Up, Get Quote, Call Now, Shop Now.",
+  "hook": "The opening hook line only. Under 10 words."
+}`
+      }]
+    );
+    if (!result || result.startsWith('⚠️')) return null;
+    const cleaned = result.replace(/```json\s*|```/g, '').trim();
+    const match = cleaned.match(/\{[\s\S]*\}/);
+    if (!match) return null;
+    return JSON.parse(match[0]);
+  } catch(e) {
+    console.warn('[extractMetaFields] failed:', e.message);
+    return null;
+  }
 }
 
 function extractAllHeadlines(text) {
@@ -5788,19 +5813,55 @@ function extractAllHeadlines(text) {
     .slice(0, 3);
 }
 
-async function generateAdDescription(ad) {
-  if (!KEYS.claude) return null;
-  const serpCity = S.serpIntelligence?.city || S.brandSnapshot?.location?.split(',')[0]?.trim() || 'Ontario';
-  const businessName = S.brandSnapshot?.business_name || 'local business';
-  const cta = extractCTA(ad.primary_text || ad.content || '') || 'Book Now';
-  const hook = ad.hook || extractHookFromContent(ad.primary_text || ad.content || '') || '';
-  const industry = S.brandSnapshot?.industry || S.brandSnapshot?.business_type || 'local service';
-  const desc = await ai(
-    'You write concise Meta ad descriptions (under 30 words). Return ONLY the description text, no quotes, no labels.',
-    [{ role: 'user', content: `Write a one-line Meta ad description.\nBusiness: ${businessName}\nCity: ${serpCity}\nHook: ${hook}\nCTA: ${cta}\nService: ${industry}\nMake it trust-building and specific. Under 30 words.` }]
-  );
-  if (!desc || desc.startsWith('⚠️')) return null;
-  return desc.trim().replace(/^[""]|[""]$/g, '').slice(0, 120);
+function populateMetaFields(fields) {
+  if (!fields) return;
+
+  const primaryEl = document.getElementById('adv-meta-primary-text');
+  if (primaryEl) {
+    primaryEl.textContent = fields.primary_text || '';
+    primaryEl.style.color = 'var(--t1)';
+  }
+
+  const h1 = (fields.headline_1 || '').slice(0, 40);
+  const headlineEl = document.getElementById('adv-meta-headline');
+  if (headlineEl) {
+    headlineEl.textContent = h1;
+    headlineEl.style.color = 'var(--t1)';
+  }
+  const charCountEl = document.getElementById('adv-headline-charcount');
+  if (charCountEl) {
+    charCountEl.textContent = `${h1.length}/40 chars`;
+    charCountEl.style.color = h1.length > 38 ? 'var(--yellow)' : 'var(--t3)';
+  }
+
+  const descEl = document.getElementById('adv-meta-description');
+  if (descEl) {
+    descEl.textContent = fields.description || '';
+    descEl.style.color = 'var(--t2)';
+  }
+
+  const ctaEl = document.getElementById('adv-meta-cta');
+  if (ctaEl) ctaEl.textContent = fields.cta || 'Book Now';
+
+  const headlines = [fields.headline_1, fields.headline_2, fields.headline_3].filter(Boolean);
+  window._advHeadlines = headlines;
+  const headlinesList = document.getElementById('adv-meta-headlines-list');
+  if (headlinesList && headlines.length) {
+    headlinesList.innerHTML = headlines.map((h, i) => {
+      const trimmed = h.slice(0, 40);
+      return `<div style="display:flex;justify-content:space-between;align-items:center;background:var(--bg-elevated);border-radius:6px;padding:6px 10px;margin-bottom:4px;">
+        <div style="flex:1;">
+          <span style="font-size:10px;color:var(--t3);">H${i+1}: </span>
+          <span style="font-size:12px;color:var(--t1);">${escHtml(trimmed)}</span>
+          <span style="font-size:10px;color:${trimmed.length > 38 ? 'var(--yellow)' : 'var(--t3)'};">(${trimmed.length}/40)</span>
+        </div>
+        <button onclick="copyHeadlineVariant(${i})"
+          style="background:transparent;border:1px solid var(--border);border-radius:4px;padding:1px 7px;font-size:10px;color:var(--t3);cursor:pointer;flex-shrink:0;margin-left:8px;">
+          Copy
+        </button>
+      </div>`;
+    }).join('');
+  }
 }
 
 function extractDemographicsFromBrief(brief) {
@@ -6191,58 +6252,15 @@ async function openAdView(adId) {
   if (imageZone) imageZone.innerHTML = renderAdImageCarousel(ad);
 
   // ── META AD FIELDS ────────────────────────────────────────────
-  // SQL: ALTER TABLE generated_ads ADD COLUMN IF NOT EXISTS meta_description text;
-  // SQL: ALTER TABLE base_profiles ADD COLUMN IF NOT EXISTS website_url text;
+  // SQL: ALTER TABLE generated_ads ADD COLUMN IF NOT EXISTS meta_primary_text text;
+  // SQL: ALTER TABLE generated_ads ADD COLUMN IF NOT EXISTS meta_headline_1 text;
+  // SQL: ALTER TABLE generated_ads ADD COLUMN IF NOT EXISTS meta_headline_2 text;
+  // SQL: ALTER TABLE generated_ads ADD COLUMN IF NOT EXISTS meta_headline_3 text;
+  // SQL: ALTER TABLE generated_ads ADD COLUMN IF NOT EXISTS meta_cta text;
   const businessName = S.brandSnapshot?.business_name || S.bizName || 'Your Business';
   const serpCity = S.serpIntelligence?.city || S.brandSnapshot?.location?.split(',')[0]?.trim() || 'Local area';
-
-  const shortPrimaryText = extractShortPrimaryText(rawCopy);
-
-  const headlines = extractAllHeadlines(rawCopy);
-  const primaryHeadline = headlines[0] || extractFirstHeadline(rawCopy) || `${businessName} · ${serpCity}`;
-  const description = extractDescription(rawCopy);
-  const cta = extractCTA(rawCopy) || 'Book Now';
   const websiteUrl = S.brandSnapshot?.website || S.brandSnapshot?.website_url || S.brandSnapshot?.url
                      || document.getElementById('bp-website')?.value?.trim() || '';
-
-  const metaPrimaryEl = document.getElementById('adv-meta-primary-text');
-  if (metaPrimaryEl) metaPrimaryEl.textContent = shortPrimaryText;
-
-  const metaHeadlineEl = document.getElementById('adv-meta-headline');
-  if (metaHeadlineEl) {
-    metaHeadlineEl.textContent = primaryHeadline;
-    const charCount = document.getElementById('adv-headline-charcount');
-    if (charCount) {
-      const count = primaryHeadline.length;
-      charCount.textContent = `${count}/40 chars`;
-      charCount.style.color = count > 40 ? 'var(--red)' : 'var(--t3)';
-    }
-  }
-
-  const metaDescEl = document.getElementById('adv-meta-description');
-  if (metaDescEl) {
-    const savedDesc = ad.meta_description;
-    if (savedDesc) {
-      metaDescEl.textContent = savedDesc;
-    } else if (description) {
-      metaDescEl.textContent = description;
-    } else {
-      metaDescEl.textContent = 'Writing description…';
-      generateAdDescription(ad).then(genDesc => {
-        if (genDesc && metaDescEl.isConnected) {
-          metaDescEl.textContent = genDesc;
-          sb.from('generated_ads').update({ meta_description: genDesc }).eq('id', adId).then(() => {
-            ad.meta_description = genDesc;
-          });
-        } else if (metaDescEl.isConnected) {
-          metaDescEl.textContent = `${businessName} · ${serpCity}`;
-        }
-      });
-    }
-  }
-
-  const metaCtaEl = document.getElementById('adv-meta-cta');
-  if (metaCtaEl) metaCtaEl.textContent = cta;
 
   const metaUrlEl = document.getElementById('adv-meta-url');
   if (metaUrlEl) {
@@ -6254,21 +6272,56 @@ async function openAdView(adId) {
     }
   }
 
-  window._advHeadlines = headlines;
-  const headlinesList = document.getElementById('adv-meta-headlines-list');
-  if (headlinesList && headlines.length) {
-    headlinesList.innerHTML = headlines.map((h, i) => `
-      <div style="display:flex;justify-content:space-between;align-items:center;background:var(--bg-elevated);border-radius:6px;padding:6px 10px;">
-        <div>
-          <span style="font-size:10px;color:var(--t3);">H${i+1}: </span>
-          <span style="font-size:12px;color:var(--t1);">${escHtml(h)}</span>
-          <span style="font-size:10px;color:${h.length > 40 ? 'var(--red)' : 'var(--t3)'};">(${h.length}/40)</span>
-        </div>
-        <button onclick="copyHeadlineVariant(${i})"
-          style="background:transparent;border:1px solid var(--border);border-radius:4px;padding:1px 7px;font-size:10px;color:var(--t3);cursor:pointer;flex-shrink:0;margin-left:8px;">
-          Copy
-        </button>
-      </div>`).join('');
+  // Show loading placeholders while AI extracts fields
+  ['adv-meta-primary-text','adv-meta-headline','adv-meta-description','adv-meta-headlines-list'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.style.color = 'var(--t3)'; el.textContent = 'Loading…'; }
+  });
+
+  if (ad.meta_primary_text && ad.meta_headline_1) {
+    populateMetaFields({
+      primary_text: ad.meta_primary_text,
+      headline_1:   ad.meta_headline_1,
+      headline_2:   ad.meta_headline_2,
+      headline_3:   ad.meta_headline_3,
+      description:  ad.meta_description,
+      cta:          ad.meta_cta || 'Book Now',
+      hook:         ad.hook
+    });
+  } else {
+    extractMetaFieldsWithAI(rawCopy, ad).then(async fields => {
+      if (fields) {
+        populateMetaFields(fields);
+        if (currentAdViewId) {
+          await sb.from('generated_ads').update({
+            meta_primary_text: fields.primary_text,
+            meta_headline_1:   fields.headline_1,
+            meta_headline_2:   fields.headline_2,
+            meta_headline_3:   fields.headline_3,
+            meta_description:  fields.description,
+            meta_cta:          fields.cta
+          }).eq('id', currentAdViewId);
+          Object.assign(ad, {
+            meta_primary_text: fields.primary_text,
+            meta_headline_1:   fields.headline_1,
+            meta_headline_2:   fields.headline_2,
+            meta_headline_3:   fields.headline_3,
+            meta_description:  fields.description,
+            meta_cta:          fields.cta
+          });
+        }
+      } else {
+        populateMetaFields({
+          primary_text: rawCopy.replace(/#{1,3}[^\n]*/g,'').replace(/\*\*/g,'').trim().slice(0, 400),
+          headline_1:   `${businessName} — ${serpCity}`,
+          headline_2:   businessName,
+          headline_3:   `${businessName} · Book Now`,
+          description:  `${businessName} · ${serpCity}`,
+          cta:          'Book Now',
+          hook:         ''
+        });
+      }
+    });
   }
 
   // ── TARGETING ────────────────────────────────────────────────
