@@ -5788,6 +5788,94 @@ function extractDemographicsFromBrief(brief) {
   };
 }
 
+function extractInstantForm(campaignBrief, ad, brandSnapshot) {
+  const businessName = brandSnapshot?.business_name || 'us';
+  const city = brandSnapshot?.location?.split(',')[0]?.trim() || 'your area';
+  const industry = brandSnapshot?.industry || ad?.industry || 'service';
+  const isBeauty = /beauty|whiten|salon|spa|skin|lash/i.test(industry);
+  const isReno   = /reno|construct|build|paint|roof/i.test(industry);
+
+  const formSection = campaignBrief?.match(/##\s*INSTANT FORM[\s\S]*?(?=\n##|$)/i)?.[0] || '';
+  const formType    = formSection.match(/(?:form type|type)[:\s]+(higher intent|more volume)/i)?.[1] || 'Higher Intent';
+  const introMatch  = formSection.match(/(?:intro|context card|headline)[:\s]*([^\n]+)/i);
+  const thankYouMatch = formSection.match(/(?:thank you|closing|confirmation)[:\s]*([^\n]+(?:\n[^\n#]+)*)/i);
+
+  const beautyQs = [
+    { q: 'Which service are you most interested in?', type: 'Multiple Choice', answers: ['Teeth Whitening', 'Touch-up Session', 'Package Deal', 'Gift for Someone'] },
+    { q: 'When are you looking to book?', type: 'Multiple Choice', answers: ['This week', 'This month', 'Next month', 'Just exploring'] },
+    { q: 'What\'s your main goal?', type: 'Short Answer', answers: ['e.g. "Whiter smile for my wedding / event / photos"'] },
+    { q: 'Full Name', type: 'Auto-fill', answers: ['Pre-filled from Facebook profile'] },
+    { q: 'Phone Number', type: 'Auto-fill', answers: ['Pre-filled from Facebook profile'] },
+    { q: 'Email Address', type: 'Auto-fill', answers: ['Pre-filled from Facebook profile'] }
+  ];
+  const renoQs = [
+    { q: 'What type of project are you planning?', type: 'Multiple Choice', answers: ['Full renovation', 'Single room', 'Exterior work', 'Just getting a quote'] },
+    { q: 'What\'s your estimated timeline?', type: 'Multiple Choice', answers: ['Within 1 month', '1-3 months', '3-6 months', 'Still planning'] },
+    { q: 'Do you own your home?', type: 'Multiple Choice', answers: ['Yes — I own it', 'Renting — with permission', 'Other'] },
+    { q: 'Full Name', type: 'Auto-fill', answers: ['Pre-filled from Facebook profile'] },
+    { q: 'Phone Number', type: 'Auto-fill', answers: ['Pre-filled from Facebook profile'] },
+    { q: 'Email Address', type: 'Auto-fill', answers: ['Pre-filled from Facebook profile'] }
+  ];
+  const genericQs = [
+    { q: 'What brings you here today?', type: 'Multiple Choice', answers: ['Ready to book', 'Getting more info', 'Comparing options', 'Gift for someone'] },
+    { q: 'When are you looking to get started?', type: 'Multiple Choice', answers: ['As soon as possible', 'Within 2 weeks', 'This month', 'Just browsing'] },
+    { q: 'Full Name', type: 'Auto-fill', answers: ['Pre-filled from Facebook profile'] },
+    { q: 'Phone Number', type: 'Auto-fill', answers: ['Pre-filled from Facebook profile'] },
+    { q: 'Email Address', type: 'Auto-fill', answers: ['Pre-filled from Facebook profile'] }
+  ];
+
+  return {
+    formType,
+    introHeadline: introMatch?.[1]?.trim() || `Book Your ${isBeauty ? 'Whitening Session' : 'Consultation'} in ${city}`,
+    introBody: `We come to you. Professional service delivered to your door.\nTakes 30 seconds to claim your spot.`,
+    questions: isBeauty ? beautyQs : isReno ? renoQs : genericQs,
+    thankYou: thankYouMatch?.[1]?.trim() || `Thanks! We'll reach out within 24 hours to confirm your booking.`,
+    thankYouCTA: 'Visit Our Page',
+    caslConsent: `By submitting, you agree to receive follow-up communications from ${businessName}.`
+  };
+}
+
+function renderInstantForm(formData) {
+  if (!formData) return '<div style="color:var(--t3);font-size:12px;">No form data available</div>';
+  const typeColor = formData.formType?.toLowerCase().includes('higher') ? 'var(--green)' : 'var(--yellow)';
+  return `
+    <div style="margin-bottom:14px;">
+      <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(0,212,160,0.1);border:1px solid rgba(0,212,160,0.2);border-radius:6px;padding:4px 10px;">
+        <span style="font-size:12px;font-weight:700;color:${typeColor};">${formData.formType || 'Higher Intent'}</span>
+      </div>
+      <div style="font-size:11px;color:var(--t3);margin-top:4px;">
+        ${formData.formType?.toLowerCase().includes('higher') ? 'Adds a review step — filters serious buyers, reduces no-shows' : 'No review step — maximizes lead volume'}
+      </div>
+    </div>
+    <div style="background:var(--bg-elevated);border-radius:8px;padding:12px 14px;margin-bottom:14px;border-left:3px solid var(--volt);">
+      <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Intro Screen (Context Card)</div>
+      <div style="font-size:13px;font-weight:700;color:var(--t1);margin-bottom:4px;">${escHtml(formData.introHeadline)}</div>
+      <div style="font-size:11px;color:var(--t2);line-height:1.6;">${escHtml(formData.introBody)}</div>
+    </div>
+    <div style="margin-bottom:14px;">
+      <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Questions (${formData.questions?.length || 0} total)</div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        ${(formData.questions || []).map((q, i) => `
+          <div style="background:var(--bg-elevated);border-radius:8px;padding:10px 12px;">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">
+              <div style="font-size:12px;font-weight:600;color:var(--t1);">Q${i+1}: ${escHtml(q.q)}</div>
+              <span style="font-size:10px;color:var(--t3);background:var(--bg-primary);border-radius:4px;padding:1px 6px;margin-left:8px;white-space:nowrap;flex-shrink:0;">${q.type}</span>
+            </div>
+            ${q.answers?.length ? `<div style="display:flex;flex-direction:column;gap:3px;">${q.answers.map(a => `<div style="display:flex;align-items:center;gap:6px;"><div style="width:14px;height:14px;border-radius:50%;border:2px solid var(--border);flex-shrink:0;"></div><span style="font-size:11px;color:var(--t2);">${escHtml(a)}</span></div>`).join('')}</div>` : ''}
+          </div>`).join('')}
+      </div>
+    </div>
+    <div style="background:var(--bg-elevated);border-radius:8px;padding:12px 14px;margin-bottom:14px;border-left:3px solid var(--green);">
+      <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Thank You Screen</div>
+      <div style="font-size:12px;color:var(--t1);margin-bottom:6px;line-height:1.5;">${escHtml(formData.thankYou)}</div>
+      <div style="display:inline-block;background:#1877f2;color:#fff;border-radius:6px;padding:4px 12px;font-size:11px;font-weight:600;">${escHtml(formData.thankYouCTA)}</div>
+    </div>
+    <div style="background:rgba(245,200,66,0.08);border:1px solid rgba(245,200,66,0.2);border-radius:8px;padding:10px 12px;">
+      <div style="font-size:10px;color:var(--yellow);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">⚠️ CASL Consent (required for Canada)</div>
+      <div style="font-size:11px;color:var(--t2);line-height:1.5;">${escHtml(formData.caslConsent)}</div>
+    </div>`;
+}
+
 function getBrandColors() {
   const colors = S.brandSnapshot?.colors || S.brandSnapshot?.brand_colors || S.brandSnapshot?.colour_palette || null;
   if (colors) {
@@ -6237,15 +6325,13 @@ async function openAdView(adId) {
   // ── INSTANT FORM ─────────────────────────────────────────────
   const formEl = document.getElementById('adv-form-content');
   if (formEl) {
-    const formSection = extractSection(brief, 'INSTANT FORM') ?? extractSection(brief, 'LEAD FORM');
-    if (formSection) {
-      formEl.innerHTML = renderMarkdown(formSection);
-    } else {
-      const bizNameForm = escHtml(S.brandSnapshot?.business_name || 'this business');
-      const defaultForm = `**Context Card Headline:** Transform your results with ${bizNameForm}\n\n**Form Questions:**\n- What service are you most interested in?\n- When are you looking to get started?\n- What's the best number to reach you?\n\n**Thank You Screen:** We'll call you within 1 business day to confirm your free consultation.\n\n**CASL Consent:** By submitting, you consent to receive communications from ${bizNameForm}. You may unsubscribe at any time.`;
-      formEl.innerHTML = renderMarkdown(defaultForm);
-    }
+    const formData = extractInstantForm(ad.campaign_brief, ad, S.brandSnapshot);
+    formEl.innerHTML = renderInstantForm(formData);
   }
+  const formAccordion = document.getElementById('adv-instant-form');
+  if (formAccordion) formAccordion.style.display = 'block';
+  const formArrow = document.getElementById('adv-instant-form-arrow');
+  if (formArrow) formArrow.textContent = '▲';
 
   // ── BUDGET ───────────────────────────────────────────────────
   const budgetEl = document.getElementById('adv-budget-content');
