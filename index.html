@@ -3616,6 +3616,71 @@ function selectImageSize(size) {
   });
 }
 
+function buildSizeSpecificPrompt(size, basePrompt) {
+  const businessName = S.brandSnapshot?.business_name || 'local service business';
+  const location     = S.serpIntelligence?.city || S.brandSnapshot?.location?.split(',')[0]?.trim() || 'Ontario';
+  const season       = getCurrentSeason();
+  const brandColors  = getBrandColors();
+  const brandStyle   = getBrandStyle();
+  const hook         = (S.lastBuiltAd?.hook || extractHookFromContent(S.adCopy || '') || '').replace(/[*_#>]/g,'').trim().slice(0, 40);
+  const offer        = S.selectedProduct?.name || S.promotionDetails || '';
+
+  if (size === '9:16') {
+    return `Vertical mobile Stories advertisement, full-bleed 9:16 portrait,
+business="${businessName}", location="${location} Canada",
+
+COMPOSITION — this is a STORIES/REELS format:
+- TOP 25%: Large bold hook text only — "${hook || 'Your transformation starts here'}"
+  in very large white serif font, high contrast, centered,
+  stark and impactful. Nothing else in this zone.
+- MIDDLE 50%: Subject fills frame — confident woman 28-44,
+  close crop face and shoulders, warm ${season} light, radiant natural smile,
+  looking directly at camera or slightly away.
+  Background completely blurred (f/1.4 bokeh), intimate and personal.
+- BOTTOM 25%: Brand color solid or gradient panel.
+  "${offer || businessName}" in clean sans-serif white.
+  Pill CTA button: "Book Now →" full width near bottom edge.
+
+CRITICAL DIFFERENCES from Feed format:
+- Hook text is MUCH larger — Stories is read in 2 seconds
+- Subject is close-cropped face and shoulders only — no wide shots
+- Less environmental context, more intimate and direct
+- Bottom CTA must be in thumb-reach zone (bottom 15% of frame)
+- NO wide establishing shots — Stories is personal and immediate
+
+color palette=${brandColors || 'warm cream neutral'},
+aesthetic=${brandStyle || 'premium minimal feminine'},
+LOGO: top-right corner small 12% width transparent,
+NOT=wide landscape composition Feed-style layout small text wide establishing shot,
+photorealistic vertical Stories advertisement quality`;
+  }
+
+  if (size === '4:5') {
+    return `Premium lifestyle advertisement, Feed portrait format 4:5,
+business="${businessName}", location="${location} Canada",
+
+COMPOSITION — this is a FEED format:
+- UPPER 55%: Lifestyle hero scene — woman in warm ${season}
+  home or salon environment, soft natural light, relaxed authentic moment.
+  Full body or 3/4 shot with environmental context visible.
+  Warm tones, editorial lifestyle quality.
+- LOWER 45%: Gradient overlay from transparent to
+  ${brandColors?.match(/#[0-9A-Fa-f]{6}/)?.[0] || '#1a1a2e'}.
+  Hook text: "${hook || 'Your transformation starts here'}" large elegant serif white centered.
+  ${offer ? `Offer text: "${offer}" smaller weight below hook.` : ''}
+  CTA button: pill shape bottom center "Book Now →".
+
+LOGO: bottom-left corner 20% width transparent PNG,
+color palette=${brandColors || 'warm cream neutral tones'},
+aesthetic=${brandStyle || 'premium minimal feminine clean'},
+NOT=Stories close crop format vertical text layout close-up only,
+photorealistic Feed advertisement editorial quality`;
+  }
+
+  // Square or Landscape — return base prompt unchanged (or with minor note)
+  return basePrompt || `Professional Meta ad creative for ${businessName} in ${location}, ${season} aesthetic, ${brandColors || 'warm neutral'} palette, photorealistic high quality, no watermarks`;
+}
+
 async function generateImageDALLE(prompt, size) {
   const openaiKey = document.getElementById('key-openai')?.value?.trim() || KEYS.openai;
   if (!openaiKey) {
@@ -3679,12 +3744,12 @@ async function generateAdImage(provider) {
     basePrompt = S.dallePrompt || `Professional Meta ad creative for ${S.product}, ${S.audience}, clean composition, high quality`;
   }
 
-  // Enrich with brand context
-  let prompt = basePrompt;
+  // Build size-specific composition, then enrich with brand context
+  let prompt = buildSizeSpecificPrompt(size, basePrompt);
   if (S.brandColors?.length) prompt += `. Brand colors: ${S.brandColors.map(c => `${c.label||'Color'} ${c.hex}`).join(', ')}`;
   if (S.brandVibe) prompt += `. Brand vibe: ${S.brandVibe}`;
   if (S.brandLogos?.transparent) prompt += '. Brand has transparent logo available for overlay';
-  prompt += '. Suitable for Facebook/Instagram ad, high production value, no watermarks.';
+  if (size !== '4:5' && size !== '9:16') prompt += '. Suitable for Facebook/Instagram ad, high production value, no watermarks.';
 
   const statusEl = document.getElementById('image-gen-status');
 
@@ -3732,7 +3797,7 @@ async function generateAdImage(provider) {
 
     const sizeFormatMap = { '4:5': 'feed', '9:16': 'stories', '1:1': 'square', 'landscape': 'landscape' };
     const sizePixelMap  = { '4:5': '1080×1350', '9:16': '1080×1920', '1:1': '1080×1080', 'landscape': '1200×628' };
-    const sizeLabelMap  = { '4:5': 'Feed (1080×1350)', '9:16': 'Stories/Reels (1080×1920)', '1:1': 'Square (1080×1080)', 'landscape': 'Landscape (1200×628)' };
+    const sizeLabelMap  = { '4:5': '1080×1350 — Feed', '9:16': '1080×1920 — Stories', '1:1': '1080×1080 — Square', 'landscape': '1200×628 — Landscape' };
 
     if (!window._carouselImages) window._carouselImages = [];
     const _newEntry = { url: finalUrl, size: sizePixelMap[size] || size, label: sizeLabelMap[size] || size, format: sizeFormatMap[size] || 'feed' };
@@ -3948,7 +4013,8 @@ aspect ratio 4:5, photorealistic editorial quality`
   }
 
   btn.innerHTML = '⏳ Generating image...';
-  const imageUrl = await generateImageDALLE(prompt, '4:5');
+  const finalPromptForGen = buildSizeSpecificPrompt('4:5', prompt);
+  const imageUrl = await generateImageDALLE(finalPromptForGen, '4:5');
 
   if (imageUrl) {
     btn.innerHTML = '⏳ Applying brand kit...';
@@ -6035,9 +6101,9 @@ async function applyBrandOverlay(imageUrl) {
 
 function renderAdImageCarousel(ad) {
   const images = [];
-  if (ad.image_url) images.push({ url: ad.image_url, size: '1080×1350', label: 'Feed (4:5)', format: 'feed' });
-  if (ad.image_urls?.['9:16']) images.push({ url: ad.image_urls['9:16'], size: '1080×1920', label: 'Stories/Reels (9:16)', format: 'stories' });
-  if (ad.image_urls?.['1:1']) images.push({ url: ad.image_urls['1:1'], size: '1080×1080', label: 'Square (1:1)', format: 'square' });
+  if (ad.image_url) images.push({ url: ad.image_url, size: '1080×1350', label: '1080×1350 — Feed', format: 'feed' });
+  if (ad.image_urls?.['9:16']) images.push({ url: ad.image_urls['9:16'], size: '1080×1920', label: '1080×1920 — Stories', format: 'stories' });
+  if (ad.image_urls?.['1:1']) images.push({ url: ad.image_urls['1:1'], size: '1080×1080', label: '1080×1080 — Square', format: 'square' });
 
   window._carouselImages = images;
   window._carouselIndex = 0;
@@ -6084,6 +6150,11 @@ function renderAdImageCarousel(ad) {
     <div style="display:flex;justify-content:center;gap:6px;margin-bottom:10px;">
       ${images.map((_, i) => `<div onclick="carouselGo(${i})" id="adv-dot-${i}"
         style="width:${i===0?'20':'6'}px;height:6px;border-radius:3px;background:${i===0?'var(--volt)':'var(--border)'};cursor:pointer;transition:all 0.2s;"></div>`).join('')}
+    </div>` : ''}
+    ${images.some(i=>i.format==='feed') && images.some(i=>i.format==='stories') ? `
+    <div style="background:rgba(0,212,160,0.06);border:1px solid rgba(0,212,160,0.15);border-radius:8px;padding:8px 12px;margin-bottom:10px;">
+      <div style="font-size:10px;font-weight:700;color:var(--volt);margin-bottom:4px;">📐 Size-Specific Compositions</div>
+      <div style="font-size:10px;color:var(--t3);line-height:1.5;">Feed (1080×1350): lifestyle 3/4 shot, environmental context, text in lower half. Stories (1080×1920): close crop face &amp; shoulders, large hook top, CTA bottom — built for swipe speed.</div>
     </div>` : ''}
     <a id="adv-download-btn" href="${escHtml(images[0].url)}" download="ad-feed.png" target="_blank"
       style="display:block;background:var(--volt);color:#000;border-radius:6px;padding:8px;font-size:12px;font-weight:700;text-decoration:none;text-align:center;margin-bottom:6px;">
