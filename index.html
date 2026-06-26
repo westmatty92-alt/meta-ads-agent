@@ -1420,126 +1420,218 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
     <!-- Dashboard panel -->
     <div class="spanel" id="panel-dashboard">
 
-      <!-- Header -->
+      <!-- DASHBOARD HEADER -->
       <div style="padding:20px 24px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">
         <div>
-          <div style="font-size:18px;font-weight:800;color:var(--t1);">📊 Dashboard</div>
-          <div id="dash-last-updated" style="font-size:11px;color:var(--t3);margin-top:2px;">No data uploaded yet</div>
+          <div style="font-size:20px;font-weight:800;color:var(--t1);">📊 Dashboard</div>
+          <div id="dash-last-updated" style="font-size:11px;color:var(--t3);margin-top:2px;">No data uploaded yet — upload a Meta CSV to populate</div>
         </div>
-        <div style="display:flex;gap:8px;">
-          <button onclick="uploadPerformanceCSV()" style="background:var(--volt);color:#000;border:none;border-radius:6px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;">📤 Upload Meta Data</button>
-          <button onclick="runQuickHealthCheck()" style="background:transparent;border:1px solid var(--border);border-radius:6px;padding:7px 14px;font-size:12px;color:var(--t2);cursor:pointer;">⚡ Health Check</button>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <select id="dash-product-filter" onchange="filterDashboardByProduct(this.value)"
+            style="background:var(--bg-elevated);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:12px;color:var(--t2);cursor:pointer;">
+            <option value="all">All Products</option>
+          </select>
+          <button onclick="document.getElementById('perf-csv-upload').click()"
+            style="background:var(--volt);color:#000;border:none;border-radius:6px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;">
+            📤 Upload Meta Data
+          </button>
+          <button onclick="runQuickHealthCheck()"
+            style="background:transparent;border:1px solid var(--border);border-radius:6px;padding:7px 14px;font-size:12px;color:var(--t2);cursor:pointer;">
+            ⚡ Health Check
+          </button>
         </div>
       </div>
 
-      <div style="padding:20px 24px;overflow-y:auto;height:calc(100vh - 120px);">
+      <div style="padding:20px 24px;overflow-y:auto;height:calc(100vh - 80px);display:flex;flex-direction:column;gap:20px;">
 
-        <!-- SECTION 1: Account Overview Stats -->
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;">
+        <!-- ROW 1: Account Overview Stats -->
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;">
           <div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:10px;padding:14px;">
-            <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Health Score</div>
-            <div id="dash-health-score" style="font-size:28px;font-weight:800;color:var(--volt);">—</div>
-            <div style="font-size:10px;color:var(--t3);margin-top:2px;">/100</div>
+            <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Total Spend</div>
+            <div id="dash-spend" style="font-size:26px;font-weight:800;color:var(--t1);">—</div>
+            <div style="font-size:10px;color:var(--t3);margin-top:2px;">CAD (30 days)</div>
           </div>
           <div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:10px;padding:14px;">
-            <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Campaigns</div>
-            <div id="dash-campaigns" style="font-size:28px;font-weight:800;color:var(--t1);">0</div>
-            <div style="font-size:10px;color:var(--t3);margin-top:2px;">active</div>
+            <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Total Leads</div>
+            <div id="dash-leads" style="font-size:26px;font-weight:800;color:var(--t1);">—</div>
+            <div style="font-size:10px;color:var(--t3);margin-top:2px;">form submissions</div>
           </div>
           <div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:10px;padding:14px;">
-            <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Ads in Library</div>
-            <div id="dash-ad-count" style="font-size:28px;font-weight:800;color:var(--t1);">0</div>
-            <div style="font-size:10px;color:var(--t3);margin-top:2px;">saved</div>
+            <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Avg Cost/Lead</div>
+            <div id="dash-cpl" style="font-size:26px;font-weight:800;color:var(--t1);">—</div>
+            <div style="font-size:10px;color:var(--t3);margin-top:2px;">CAD target: $20-60</div>
           </div>
           <div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:10px;padding:14px;">
-            <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Alerts</div>
-            <div id="dash-alerts-count" style="font-size:28px;font-weight:800;color:var(--t1);">0</div>
-            <div style="font-size:10px;color:var(--t3);margin-top:2px;">active</div>
+            <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Avg CTR</div>
+            <div id="dash-ctr" style="font-size:26px;font-weight:800;color:var(--t1);">—</div>
+            <div style="font-size:10px;color:var(--t3);margin-top:2px;">target: above 1.5%</div>
+          </div>
+          <div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:10px;padding:14px;">
+            <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Best Ad CTR</div>
+            <div id="dash-best-ctr" style="font-size:26px;font-weight:800;color:var(--green);">—</div>
+            <div id="dash-best-ad-name" style="font-size:10px;color:var(--t3);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">—</div>
           </div>
         </div>
 
-        <!-- SECTION 2: Active Alerts -->
-        <div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:20px;">
-          <div style="font-size:12px;font-weight:700;color:var(--t1);margin-bottom:10px;">🚨 Active Alerts</div>
-          <div id="dash-alerts-list">
-            <div style="font-size:12px;color:var(--t3);text-align:center;padding:12px;">No active alerts · run a health check or upload campaign data</div>
-          </div>
-        </div>
-
-        <!-- SECTION 3: 7-Day Performance Summary -->
-        <div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:20px;">
+        <!-- ROW 2: Active Alerts -->
+        <div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:10px;padding:16px;">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-            <div style="font-size:12px;font-weight:700;color:var(--t1);">📈 7-Day Performance</div>
-            <div id="dash-perf-date" style="font-size:10px;color:var(--t3);">No data — upload Meta CSV to populate</div>
+            <div style="font-size:13px;font-weight:700;color:var(--t1);">
+              🚨 Active Alerts
+              <span id="dash-alerts-count" style="background:var(--red);color:#fff;border-radius:10px;padding:1px 7px;font-size:10px;margin-left:6px;">0</span>
+            </div>
+            <div style="font-size:10px;color:var(--t3);">Top 5 most critical</div>
           </div>
-          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;">
-            <div style="background:var(--bg-elevated);border-radius:8px;padding:12px;">
-              <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Spend</div>
-              <div id="dash-spend" style="font-size:20px;font-weight:700;color:var(--t1);">—</div>
-              <div style="font-size:10px;color:var(--t3);">CAD</div>
-            </div>
-            <div style="background:var(--bg-elevated);border-radius:8px;padding:12px;">
-              <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Avg CTR</div>
-              <div id="dash-ctr" style="font-size:20px;font-weight:700;color:var(--t1);">—</div>
-              <div style="font-size:10px;color:var(--t3);">%</div>
-            </div>
-            <div style="background:var(--bg-elevated);border-radius:8px;padding:12px;">
-              <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Cost/Lead</div>
-              <div id="dash-cpl" style="font-size:20px;font-weight:700;color:var(--t1);">—</div>
-              <div style="font-size:10px;color:var(--t3);">CAD</div>
-            </div>
-            <div style="background:var(--bg-elevated);border-radius:8px;padding:12px;">
-              <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Leads</div>
-              <div id="dash-leads" style="font-size:20px;font-weight:700;color:var(--t1);">—</div>
-              <div style="font-size:10px;color:var(--t3);">total</div>
-            </div>
+          <div id="dash-alerts-list">
+            <div style="font-size:12px;color:var(--t3);text-align:center;padding:16px;">No alerts yet — upload campaign data or run a health check</div>
           </div>
         </div>
 
-        <!-- SECTION 4: Per-Ad Performance Table -->
-        <div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:20px;">
-          <div style="font-size:12px;font-weight:700;color:var(--t1);margin-bottom:12px;">📋 Ad Performance</div>
+        <!-- ROW 3: Charts Row -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+
+          <!-- LEFT: Demographics -->
+          <div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:10px;padding:16px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+              <div style="font-size:13px;font-weight:700;color:var(--t1);">👥 Audience Demographics</div>
+              <div id="dash-demo-source" style="font-size:10px;color:var(--t3);">Upload demographics CSV</div>
+            </div>
+
+            <!-- Age breakdown -->
+            <div style="margin-bottom:16px;">
+              <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Age</div>
+              <div id="dash-age-chart">
+                <div style="margin-bottom:6px;">
+                  <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--t2);margin-bottom:3px;"><span>18-24</span><span style="color:var(--t3);">—</span></div>
+                  <div style="background:var(--bg-elevated);border-radius:3px;height:5px;"><div id="age-bar-18_24" style="background:var(--volt);border-radius:3px;height:5px;width:0%;transition:width 0.5s ease;"></div></div>
+                </div>
+                <div style="margin-bottom:6px;">
+                  <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--t2);margin-bottom:3px;"><span>25-34</span><span style="color:var(--t3);">—</span></div>
+                  <div style="background:var(--bg-elevated);border-radius:3px;height:5px;"><div id="age-bar-25_34" style="background:var(--volt);border-radius:3px;height:5px;width:0%;transition:width 0.5s ease;"></div></div>
+                </div>
+                <div style="margin-bottom:6px;">
+                  <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--t2);margin-bottom:3px;"><span>35-44</span><span style="color:var(--t3);">—</span></div>
+                  <div style="background:var(--bg-elevated);border-radius:3px;height:5px;"><div id="age-bar-35_44" style="background:var(--volt);border-radius:3px;height:5px;width:0%;transition:width 0.5s ease;"></div></div>
+                </div>
+                <div style="margin-bottom:6px;">
+                  <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--t2);margin-bottom:3px;"><span>45-54</span><span style="color:var(--t3);">—</span></div>
+                  <div style="background:var(--bg-elevated);border-radius:3px;height:5px;"><div id="age-bar-45_54" style="background:var(--volt);border-radius:3px;height:5px;width:0%;transition:width 0.5s ease;"></div></div>
+                </div>
+                <div style="margin-bottom:6px;">
+                  <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--t2);margin-bottom:3px;"><span>55+</span><span style="color:var(--t3);">—</span></div>
+                  <div style="background:var(--bg-elevated);border-radius:3px;height:5px;"><div id="age-bar-55+" style="background:var(--volt);border-radius:3px;height:5px;width:0%;transition:width 0.5s ease;"></div></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Gender split -->
+            <div style="margin-bottom:16px;">
+              <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Gender</div>
+              <div id="dash-gender-chart">
+                <div style="display:flex;border-radius:6px;overflow:hidden;height:24px;background:var(--bg-elevated);">
+                  <div id="gender-female-bar" style="background:var(--volt);width:0%;transition:width 0.5s;display:flex;align-items:center;justify-content:center;">
+                    <span id="gender-female-pct" style="font-size:10px;color:#000;font-weight:700;display:none;">0%</span>
+                  </div>
+                  <div id="gender-male-bar" style="background:var(--bg-elevated);flex:1;display:flex;align-items:center;justify-content:center;">
+                    <span id="gender-male-pct" style="font-size:10px;color:var(--t3);">—</span>
+                  </div>
+                </div>
+                <div style="display:flex;justify-content:space-between;margin-top:4px;font-size:10px;color:var(--t3);">
+                  <span>Female</span><span>Male</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Device split -->
+            <div>
+              <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Device</div>
+              <div id="dash-device-chart">
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);">
+                  <span style="font-size:12px;color:var(--t2);">Mobile</span>
+                  <span id="device-mobile" style="font-size:12px;color:var(--t3);">—</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);">
+                  <span style="font-size:12px;color:var(--t2);">Desktop</span>
+                  <span id="device-desktop" style="font-size:12px;color:var(--t3);">—</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);">
+                  <span style="font-size:12px;color:var(--t2);">Tablet</span>
+                  <span id="device-tablet" style="font-size:12px;color:var(--t3);">—</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- RIGHT: Ad CTR Comparison Chart -->
+          <div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:10px;padding:16px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+              <div style="font-size:13px;font-weight:700;color:var(--t1);">📊 Ad Comparison</div>
+              <div style="display:flex;gap:4px;">
+                <button onclick="switchAdChart('ctr')" id="chart-btn-ctr"
+                  style="background:rgba(0,212,160,0.15);border:1px solid var(--volt);border-radius:4px;padding:3px 8px;font-size:10px;color:var(--volt);cursor:pointer;">CTR</button>
+                <button onclick="switchAdChart('cpl')" id="chart-btn-cpl"
+                  style="background:var(--bg-elevated);border:1px solid var(--border);border-radius:4px;padding:3px 8px;font-size:10px;color:var(--t3);cursor:pointer;">CPL</button>
+                <button onclick="switchAdChart('leads')" id="chart-btn-leads"
+                  style="background:var(--bg-elevated);border:1px solid var(--border);border-radius:4px;padding:3px 8px;font-size:10px;color:var(--t3);cursor:pointer;">Leads</button>
+                <button onclick="switchAdChart('spend')" id="chart-btn-spend"
+                  style="background:var(--bg-elevated);border:1px solid var(--border);border-radius:4px;padding:3px 8px;font-size:10px;color:var(--t3);cursor:pointer;">Spend</button>
+              </div>
+            </div>
+            <div id="dash-ad-comparison-chart">
+              <div style="font-size:12px;color:var(--t3);text-align:center;padding:40px 0;">Upload campaign CSV to see ad comparison</div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- ROW 4: Per-Ad Performance Table -->
+        <div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:10px;padding:16px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <div style="font-size:13px;font-weight:700;color:var(--t1);">📋 Ad Performance Table</div>
+            <div style="font-size:10px;color:var(--t3);">Click any row to open the ad</div>
+          </div>
           <div id="dash-ad-table">
-            <div style="font-size:12px;color:var(--t3);text-align:center;padding:20px;">No performance data yet · Upload Meta CSV or launch your first campaign</div>
+            <div style="font-size:12px;color:var(--t3);text-align:center;padding:20px;">No performance data — upload a Meta CSV export</div>
           </div>
         </div>
 
-        <!-- SECTION 5: CSV Upload Panel -->
-        <div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:20px;">
-          <div style="font-size:12px;font-weight:700;color:var(--t1);margin-bottom:6px;">📤 Upload Meta Campaign Data</div>
-          <div style="font-size:11px;color:var(--t3);margin-bottom:14px;">Export from Meta Ads Manager → Reports → Export CSV</div>
+        <!-- ROW 5: CSV Upload -->
+        <div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:10px;padding:16px;">
+          <div style="font-size:13px;font-weight:700;color:var(--t1);margin-bottom:4px;">📤 Upload Meta Campaign Data</div>
+          <div style="font-size:11px;color:var(--t3);margin-bottom:14px;">Export from Meta Ads Manager → Reports → Export Table Data → CSV</div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
             <div style="background:var(--bg-elevated);border:1px solid var(--border);border-radius:8px;padding:12px;">
-              <div style="font-size:11px;font-weight:600;color:var(--t1);margin-bottom:4px;">Performance Data</div>
-              <div style="font-size:10px;color:var(--t3);margin-bottom:10px;">Spend, CTR, Leads, CPC, CPM, Reach</div>
+              <div style="font-size:11px;font-weight:600;color:var(--t1);margin-bottom:2px;">Performance Data</div>
+              <div style="font-size:10px;color:var(--t3);margin-bottom:10px;">Spend · CTR · Leads · CPC · CPM · Reach · Frequency</div>
               <input type="file" id="perf-csv-upload" accept=".csv" style="display:none;" onchange="handlePerformanceCSV(this)">
-              <button onclick="document.getElementById('perf-csv-upload').click()" style="width:100%;background:var(--volt);color:#000;border:none;border-radius:6px;padding:8px;font-size:11px;font-weight:700;cursor:pointer;">Upload Performance CSV</button>
+              <button onclick="document.getElementById('perf-csv-upload').click()"
+                style="width:100%;background:var(--volt);color:#000;border:none;border-radius:6px;padding:8px;font-size:11px;font-weight:700;cursor:pointer;">
+                Upload Performance CSV
+              </button>
               <div id="perf-csv-status" style="font-size:10px;color:var(--t3);margin-top:6px;text-align:center;"></div>
             </div>
             <div style="background:var(--bg-elevated);border:1px solid var(--border);border-radius:8px;padding:12px;">
-              <div style="font-size:11px;font-weight:600;color:var(--t1);margin-bottom:4px;">Demographics Data</div>
-              <div style="font-size:10px;color:var(--t3);margin-bottom:10px;">Age, Gender, Location, Device breakdown</div>
+              <div style="font-size:11px;font-weight:600;color:var(--t1);margin-bottom:2px;">Demographics Data</div>
+              <div style="font-size:10px;color:var(--t3);margin-bottom:10px;">Age · Gender · Location · Device breakdown</div>
               <input type="file" id="demo-csv-upload" accept=".csv" style="display:none;" onchange="handleDemographicsCSV(this)">
-              <button onclick="document.getElementById('demo-csv-upload').click()" style="width:100%;background:transparent;border:1px solid var(--volt);color:var(--volt);border-radius:6px;padding:8px;font-size:11px;font-weight:700;cursor:pointer;">Upload Demographics CSV</button>
+              <button onclick="document.getElementById('demo-csv-upload').click()"
+                style="width:100%;background:transparent;border:1px solid var(--volt);color:var(--volt);border-radius:6px;padding:8px;font-size:11px;font-weight:700;cursor:pointer;">
+                Upload Demographics CSV
+              </button>
               <div id="demo-csv-status" style="font-size:10px;color:var(--t3);margin-top:6px;text-align:center;"></div>
             </div>
           </div>
-          <div style="margin-top:12px;background:rgba(0,212,160,0.05);border:1px solid rgba(0,212,160,0.15);border-radius:8px;padding:10px 12px;">
-            <div style="font-size:10px;font-weight:600;color:var(--volt);margin-bottom:6px;">How to export from Meta Ads Manager:</div>
-            <div style="font-size:11px;color:var(--t2);line-height:1.6;">
+          <div style="margin-top:12px;background:rgba(0,212,160,0.05);border:1px solid rgba(0,212,160,0.1);border-radius:8px;padding:10px 12px;">
+            <div style="font-size:10px;font-weight:600;color:var(--volt);margin-bottom:6px;">How to export from Meta Ads Manager</div>
+            <div style="font-size:11px;color:var(--t2);line-height:1.8;">
               1. Go to Meta Ads Manager → Campaigns<br>
-              2. Select your campaign(s)<br>
-              3. Click Reports → Export Table Data → CSV<br>
-              4. For demographics: Breakdown → By Age and Gender → Export<br>
-              5. Upload both files above
+              2. Select your campaign(s) → click Columns → Customize Columns<br>
+              3. Add: Impressions, Reach, Clicks, CTR, Amount Spent, CPM, CPC, Results, Cost per Result, Frequency<br>
+              4. Click Export → Export Table Data → CSV<br>
+              5. For demographics: Breakdown → By Age and Gender → Export separately<br>
+              6. Upload both files above
             </div>
           </div>
-        </div>
-
-        <!-- SECTION 6: Demographics (populated after CSV upload) -->
-        <div id="dash-demographics-section" style="display:none;background:var(--bg-surface);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:20px;">
-          <div style="font-size:12px;font-weight:700;color:var(--t1);margin-bottom:12px;">👥 Audience Demographics</div>
-          <div id="dash-demographics-content"></div>
         </div>
 
       </div>
@@ -8483,10 +8575,9 @@ async function handlePerformanceCSV(input) {
   el('dash-ctr', avgCTR + '%');
   el('dash-cpl', '$' + avgCPL);
   el('dash-leads', totals.leads);
-  el('dash-campaigns', new Set(mapped.map(r => r.campaign_name)).size);
-  el('dash-perf-date', 'Uploaded: ' + new Date().toLocaleDateString('en-CA'));
   el('dash-last-updated', 'Last updated: ' + new Date().toLocaleString('en-CA'));
   renderAdPerformanceTable(mapped);
+  renderAdComparisonChart(mapped, 'ctr');
   await matchPerformanceToAds(mapped);
   generatePerformanceAlerts(mapped);
   if (currentBizId && currentUser?.id) {
@@ -8514,31 +8605,78 @@ async function handlePerformanceCSV(input) {
 
 function renderAdPerformanceTable(data) {
   const tableEl = document.getElementById('dash-ad-table');
-  if (!tableEl || !data.length) return;
-  tableEl.innerHTML = `<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:12px;">
-    <thead><tr style="border-bottom:1px solid var(--border);">
-      <th style="text-align:left;padding:8px;color:var(--t3);font-size:10px;text-transform:uppercase;letter-spacing:1px;">Ad / Campaign</th>
-      <th style="text-align:right;padding:8px;color:var(--t3);font-size:10px;text-transform:uppercase;letter-spacing:1px;">Spend</th>
-      <th style="text-align:right;padding:8px;color:var(--t3);font-size:10px;text-transform:uppercase;letter-spacing:1px;">CTR</th>
-      <th style="text-align:right;padding:8px;color:var(--t3);font-size:10px;text-transform:uppercase;letter-spacing:1px;">Leads</th>
-      <th style="text-align:right;padding:8px;color:var(--t3);font-size:10px;text-transform:uppercase;letter-spacing:1px;">CPL</th>
-      <th style="text-align:center;padding:8px;color:var(--t3);font-size:10px;text-transform:uppercase;letter-spacing:1px;">Status</th>
-    </tr></thead>
-    <tbody>${data.map(row => {
-      const ctr = parseFloat(row.ctr) || 0;
-      const cpl = parseFloat(row.cost_per_lead) || 0;
-      let statusColor = 'var(--yellow)', statusLabel = '🟡 Testing';
-      if (ctr >= 1.5 && cpl > 0 && cpl < 50) { statusColor = 'var(--green)'; statusLabel = '🟢 Scale'; }
-      else if (ctr < 0.8 || (cpl > 80 && cpl > 0)) { statusColor = 'var(--red)'; statusLabel = '🔴 Kill'; }
-      return `<tr style="border-bottom:1px solid var(--border);cursor:pointer;" onclick="findAndOpenAdByName('${(row.campaign_name||'').replace(/'/g,"\\'")}')">
-        <td style="padding:10px 8px;color:var(--t1);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${row.campaign_name || row.ad_name || 'Unknown'}</td>
-        <td style="padding:10px 8px;color:var(--t2);text-align:right;">$${parseFloat(row.spend||0).toFixed(0)}</td>
-        <td style="padding:10px 8px;text-align:right;color:${ctr>=1.5?'var(--green)':ctr<0.8?'var(--red)':'var(--t2)'};">${ctr.toFixed(2)}%</td>
-        <td style="padding:10px 8px;color:var(--t2);text-align:right;">${row.leads||0}</td>
-        <td style="padding:10px 8px;text-align:right;color:${cpl>80?'var(--red)':cpl>0?'var(--green)':'var(--t3)'};">${cpl>0?'$'+cpl.toFixed(0):'—'}</td>
-        <td style="padding:10px 8px;text-align:center;"><span style="font-size:11px;font-weight:600;color:${statusColor};">${statusLabel}</span></td>
-      </tr>`;
-    }).join('')}</tbody></table></div>`;
+  if (!tableEl || !data?.length) return;
+
+  tableEl.innerHTML = `
+    <div style="overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;font-size:12px;">
+        <thead>
+          <tr style="border-bottom:2px solid var(--border);">
+            <th style="text-align:left;padding:8px 10px;color:var(--t3);font-size:10px;text-transform:uppercase;letter-spacing:1px;min-width:180px;">Ad</th>
+            <th style="text-align:right;padding:8px;color:var(--t3);font-size:10px;text-transform:uppercase;letter-spacing:1px;">Spend</th>
+            <th style="text-align:right;padding:8px;color:var(--t3);font-size:10px;text-transform:uppercase;letter-spacing:1px;">Reach</th>
+            <th style="text-align:right;padding:8px;color:var(--t3);font-size:10px;text-transform:uppercase;letter-spacing:1px;">CTR</th>
+            <th style="text-align:right;padding:8px;color:var(--t3);font-size:10px;text-transform:uppercase;letter-spacing:1px;">Leads</th>
+            <th style="text-align:right;padding:8px;color:var(--t3);font-size:10px;text-transform:uppercase;letter-spacing:1px;">CPL</th>
+            <th style="text-align:right;padding:8px;color:var(--t3);font-size:10px;text-transform:uppercase;letter-spacing:1px;">Freq</th>
+            <th style="text-align:center;padding:8px;color:var(--t3);font-size:10px;text-transform:uppercase;letter-spacing:1px;">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${data.map(row => {
+            const ctr    = parseFloat(row.ctr) || 0;
+            const cpl    = parseFloat(row.cost_per_lead) || 0;
+            const freq   = parseFloat(row.frequency) || 0;
+            const spend  = parseFloat(row.spend) || 0;
+            const leads  = parseInt(row.leads) || 0;
+            const reach  = parseInt(row.reach) || 0;
+
+            const matchedAd = (S.adLibrary || []).find(ad => {
+              const adHook   = (ad.hook || ad.headline || '').toLowerCase();
+              const campName = (row.campaign_name || '').toLowerCase();
+              return campName.includes(adHook.slice(0,15)) || adHook.includes(campName.slice(0,15));
+            });
+
+            const displayName = matchedAd
+              ? (matchedAd.hook || matchedAd.headline || 'Ad').replace(/[*_#>]/g,'').trim().slice(0,40)
+              : (row.campaign_name || 'Unknown').slice(0,40);
+            const thumbnail = matchedAd?.image_url;
+            const adId      = matchedAd?.id;
+
+            let statusLabel = '🟡 Testing', statusColor = 'var(--yellow)';
+            if (ctr >= 1.5 && (cpl < 50 || leads === 0)) { statusLabel = '🟢 Scale'; statusColor = 'var(--green)'; }
+            else if (ctr < 0.8 && spend > 10)            { statusLabel = '🔴 Kill';  statusColor = 'var(--red)'; }
+
+            const ctrColor = ctr >= 1.5 ? 'var(--green)' : ctr >= 0.8 ? 'var(--t2)' : 'var(--red)';
+
+            return `
+              <tr style="border-bottom:1px solid var(--border);cursor:${adId ? 'pointer' : 'default'};transition:background 0.1s;"
+                onmouseover="this.style.background='var(--bg-elevated)'"
+                onmouseout="this.style.background='transparent'"
+                onclick="${adId ? `openAdView('${adId}')` : ''}">
+                <td style="padding:10px;">
+                  <div style="display:flex;align-items:center;gap:8px;">
+                    ${thumbnail
+                      ? `<img src="${thumbnail}" style="width:36px;height:36px;border-radius:4px;object-fit:cover;flex-shrink:0;border:1px solid var(--border);">`
+                      : `<div style="width:36px;height:36px;border-radius:4px;background:var(--bg-elevated);border:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px;">🎨</div>`}
+                    <div>
+                      <div style="font-size:12px;color:var(--t1);font-weight:600;line-height:1.3;">${displayName}</div>
+                      <div style="font-size:10px;color:var(--t3);margin-top:1px;">${row.campaign_name || ''}</div>
+                    </div>
+                  </div>
+                </td>
+                <td style="padding:10px 8px;color:var(--t2);text-align:right;">${spend > 0 ? '$' + spend.toFixed(0) : '—'}</td>
+                <td style="padding:10px 8px;color:var(--t2);text-align:right;">${reach > 0 ? reach.toLocaleString() : '—'}</td>
+                <td style="padding:10px 8px;text-align:right;font-weight:${ctr > 0 ? '600' : '400'};color:${ctr > 0 ? ctrColor : 'var(--t3)'};">${ctr > 0 ? ctr.toFixed(2) + '%' : '—'}</td>
+                <td style="padding:10px 8px;color:var(--t2);text-align:right;">${leads > 0 ? leads : '—'}</td>
+                <td style="padding:10px 8px;text-align:right;color:${cpl > 0 ? (cpl < 50 ? 'var(--green)' : cpl > 80 ? 'var(--red)' : 'var(--t2)') : 'var(--t3)'};">${cpl > 0 ? '$' + cpl.toFixed(0) : '—'}</td>
+                <td style="padding:10px 8px;text-align:right;color:${freq > 3 ? 'var(--red)' : 'var(--t2)'};">${freq > 0 ? freq.toFixed(1) + 'x' : '—'}</td>
+                <td style="padding:10px 8px;text-align:center;"><span style="font-size:11px;font-weight:600;color:${statusColor};">${statusLabel}</span></td>
+              </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>`;
 }
 
 async function matchPerformanceToAds(perfData) {
@@ -8558,26 +8696,79 @@ async function matchPerformanceToAds(perfData) {
 
 function generatePerformanceAlerts(data) {
   const alerts = [];
+
   data.forEach(row => {
-    const ctr = parseFloat(row.ctr) || 0;
-    const freq = parseFloat(row.frequency) || 0;
-    const cpl = parseFloat(row.cost_per_lead) || 0;
-    if (ctr < 0.8 && parseFloat(row.impressions) > 500)
-      alerts.push({ message: `⚠️ Low CTR: "${row.campaign_name}" at ${ctr.toFixed(2)}% — consider new hook` });
-    if (freq > 3.0)
-      alerts.push({ message: `⚠️ High frequency: "${row.campaign_name}" at ${freq.toFixed(1)} — rotate creative` });
-    if (cpl > 80 && parseFloat(row.leads) > 3)
-      alerts.push({ message: `⚠️ High CPL: "${row.campaign_name}" at $${cpl.toFixed(0)} CAD — pause and review` });
-    if (ctr >= 1.5 && cpl > 0 && cpl < 45)
-      alerts.push({ message: `✅ Scale this: "${row.campaign_name}" — CTR ${ctr.toFixed(2)}% CPL $${cpl.toFixed(0)}` });
+    const matchedAd = (S.adLibrary || []).find(ad => {
+      const adName   = (ad.hook || ad.headline || ad.segment_name || '').toLowerCase();
+      const campName = (row.campaign_name || '').toLowerCase();
+      return campName.includes(adName.slice(0,15)) || adName.includes(campName.slice(0,15));
+    });
+
+    const displayName = matchedAd
+      ? (matchedAd.hook || matchedAd.headline || 'Ad').replace(/[*_#>]/g,'').slice(0,35)
+      : (row.campaign_name || 'Unknown ad');
+
+    const ctr         = parseFloat(row.ctr) || 0;
+    const freq        = parseFloat(row.frequency) || 0;
+    const cpl         = parseFloat(row.cost_per_lead) || 0;
+    const impressions = parseFloat(row.impressions) || 0;
+    const spend       = parseFloat(row.spend) || 0;
+
+    if (impressions < 100 && spend === 0) return;
+
+    if (ctr < 0.8 && impressions > 500) {
+      alerts.push({ type: 'error', priority: 3,
+        message: `Low CTR on "${displayName}" — ${ctr.toFixed(2)}% after ${impressions.toLocaleString()} impressions. Try a new hook.`,
+        action: 'pause', adId: matchedAd?.id });
+    }
+    if (freq > 3.0) {
+      alerts.push({ type: 'warning', priority: 2,
+        message: `High frequency on "${displayName}" — ${freq.toFixed(1)}x per person. Rotate creative soon.`,
+        action: 'rotate', adId: matchedAd?.id });
+    }
+    if (cpl > 80 && parseFloat(row.leads) > 3) {
+      alerts.push({ type: 'error', priority: 3,
+        message: `High cost per lead on "${displayName}" — $${cpl.toFixed(0)} CAD. Pause and review targeting.`,
+        action: 'pause', adId: matchedAd?.id });
+    }
+    if (ctr >= 1.5 && cpl > 0 && cpl < 45) {
+      alerts.push({ type: 'success', priority: 1,
+        message: `Scale "${displayName}" — CTR ${ctr.toFixed(2)}%, CPL $${cpl.toFixed(0)} CAD. Increase budget 20%.`,
+        action: 'scale', adId: matchedAd?.id });
+    }
   });
+
+  alerts.sort((a, b) => b.priority - a.priority);
+  const top5 = alerts.slice(0, 5);
+
   const alertsEl = document.getElementById('dash-alerts-list');
-  const countEl = document.getElementById('dash-alerts-count');
+  const countEl  = document.getElementById('dash-alerts-count');
   if (countEl) countEl.textContent = alerts.length;
+
   if (alertsEl) {
-    alertsEl.innerHTML = alerts.length
-      ? alerts.map(a => `<div style="padding:8px 0;border-bottom:1px solid var(--border);font-size:12px;color:var(--t2);line-height:1.5;">${a.message}</div>`).join('')
-      : '<div style="font-size:12px;color:var(--t3);text-align:center;padding:12px;">No alerts — campaign running well</div>';
+    if (!top5.length) {
+      alertsEl.innerHTML = `<div style="font-size:12px;color:var(--t3);text-align:center;padding:16px;">No alerts — run a health check or upload campaign CSV data</div>`;
+    } else {
+      alertsEl.innerHTML = top5.map(a => {
+        const colors = {
+          error:   { bg: 'rgba(255,80,80,0.08)',  border: 'rgba(255,80,80,0.2)',  dot: 'var(--red)' },
+          warning: { bg: 'rgba(245,200,66,0.08)', border: 'rgba(245,200,66,0.2)', dot: 'var(--yellow)' },
+          success: { bg: 'rgba(0,212,160,0.08)',  border: 'rgba(0,212,160,0.2)', dot: 'var(--green)' }
+        }[a.type] || {};
+        return `
+          <div style="background:${colors.bg};border:1px solid ${colors.border};border-radius:8px;padding:10px 12px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;gap:8px;">
+            <div style="display:flex;align-items:flex-start;gap:8px;">
+              <div style="width:8px;height:8px;border-radius:50%;background:${colors.dot};flex-shrink:0;margin-top:4px;"></div>
+              <div style="font-size:12px;color:var(--t1);line-height:1.5;">${a.message}</div>
+            </div>
+            ${a.adId ? `
+            <button onclick="openAdView('${a.adId}')"
+              style="background:transparent;border:1px solid var(--border);border-radius:4px;padding:2px 8px;font-size:10px;color:var(--t3);cursor:pointer;flex-shrink:0;white-space:nowrap;">
+              View Ad →
+            </button>` : ''}
+          </div>`;
+      }).join('');
+    }
   }
 }
 
@@ -8587,6 +8778,135 @@ function findAndOpenAdByName(campaignName) {
     (ad.hook || ad.headline || '').toLowerCase().includes(campaignName.toLowerCase().slice(0,15))
   );
   if (matched) { openAdView(matched.id); } else { go('adLibrary'); }
+}
+
+function renderAdComparisonChart(data, metric) {
+  const chartEl = document.getElementById('dash-ad-comparison-chart');
+  if (!chartEl || !data?.length) return;
+
+  const metricConfig = {
+    ctr:   { label: 'CTR (%)',         key: 'ctr',            format: v => v.toFixed(2) + '%', goodThreshold: 1.5,  color: 'var(--volt)' },
+    cpl:   { label: 'Cost/Lead (CAD)', key: 'cost_per_lead',  format: v => '$' + v.toFixed(0), goodThreshold: 50,   color: 'var(--green)', lowerIsBetter: true },
+    leads: { label: 'Total Leads',     key: 'leads',          format: v => v.toString(),        goodThreshold: 5,    color: 'var(--volt)' },
+    spend: { label: 'Spend (CAD)',     key: 'spend',          format: v => '$' + v.toFixed(0), goodThreshold: 100,  color: 'var(--t2)' }
+  };
+
+  const cfg    = metricConfig[metric] || metricConfig.ctr;
+  const maxVal = Math.max(...data.map(r => parseFloat(r[cfg.key]) || 0), 0.1);
+
+  chartEl.innerHTML = data.slice(0, 8).map(row => {
+    const val = parseFloat(row[cfg.key]) || 0;
+    const pct = (val / maxVal) * 100;
+
+    const matchedAd = (S.adLibrary || []).find(ad => {
+      const adHook   = (ad.hook || '').toLowerCase();
+      const campName = (row.campaign_name || '').toLowerCase();
+      return campName.includes(adHook.slice(0,12)) || adHook.includes(campName.slice(0,12));
+    });
+
+    const displayName = matchedAd
+      ? (matchedAd.hook || '').replace(/[*_#>]/g,'').trim().slice(0,30)
+      : (row.campaign_name || 'Ad').slice(0,30);
+
+    const isGood  = cfg.lowerIsBetter ? val > 0 && val < cfg.goodThreshold : val >= cfg.goodThreshold;
+    const barColor = isGood ? 'var(--green)' : val > 0 ? cfg.color : 'var(--bg-elevated)';
+
+    return `
+      <div style="margin-bottom:10px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+          <div style="font-size:11px;color:var(--t2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:65%;">${displayName}</div>
+          <div style="font-size:11px;font-weight:700;color:${barColor};">${val > 0 ? cfg.format(val) : '—'}</div>
+        </div>
+        <div style="background:var(--bg-elevated);border-radius:4px;height:8px;">
+          <div style="background:${barColor};border-radius:4px;height:8px;width:${pct}%;transition:width 0.5s ease;"></div>
+        </div>
+      </div>`;
+  }).join('');
+
+  window._dashChartMetric = metric;
+
+  ['ctr','cpl','leads','spend'].forEach(m => {
+    const btn = document.getElementById('chart-btn-' + m);
+    if (btn) {
+      btn.style.background = m === metric ? 'rgba(0,212,160,0.15)' : 'var(--bg-elevated)';
+      btn.style.border     = m === metric ? '1px solid var(--volt)' : '1px solid var(--border)';
+      btn.style.color      = m === metric ? 'var(--volt)' : 'var(--t3)';
+    }
+  });
+}
+
+function switchAdChart(metric) {
+  renderAdComparisonChart(S.performanceData || [], metric);
+}
+
+function renderDemographicsCharts(ageBreakdown, genderBreakdown, deviceBreakdown) {
+  const ageGroups = ['18-24','25-34','35-44','45-54','55+'];
+  const ageTotal  = Object.values(ageBreakdown).reduce((a, b) => a + b, 0) || 1;
+
+  ageGroups.forEach(age => {
+    const count = ageBreakdown[age] || 0;
+    const pct   = Math.round((count / ageTotal) * 100);
+    const barId = 'age-bar-' + age.replace('-','_');
+    const bar   = document.getElementById(barId);
+    const row   = bar?.closest('div[style*="margin-bottom:6px"]');
+    if (bar) bar.style.width = pct + '%';
+    if (row) {
+      const pctEl = row.querySelector('span:last-child');
+      if (pctEl) {
+        pctEl.textContent  = pct > 0 ? pct + '%' : '—';
+        pctEl.style.color  = pct > 30 ? 'var(--volt)' : 'var(--t3)';
+      }
+    }
+  });
+
+  const genderTotal  = (genderBreakdown.female || 0) + (genderBreakdown.male || 0) || 1;
+  const femalePct    = Math.round((genderBreakdown.female / genderTotal) * 100);
+  const malePct      = 100 - femalePct;
+
+  const femaleBar    = document.getElementById('gender-female-bar');
+  const femalePctEl  = document.getElementById('gender-female-pct');
+  const malePctEl    = document.getElementById('gender-male-pct');
+
+  if (femaleBar)   femaleBar.style.width = femalePct + '%';
+  if (femalePctEl) { femalePctEl.textContent = femalePct + '%'; femalePctEl.style.display = femalePct > 15 ? 'block' : 'none'; }
+  if (malePctEl)   malePctEl.textContent = malePct + '% Male';
+
+  if (deviceBreakdown) {
+    const deviceTotal = Object.values(deviceBreakdown).reduce((a, b) => a + b, 0) || 1;
+    ['mobile','desktop','tablet'].forEach(device => {
+      const el  = document.getElementById('device-' + device);
+      const pct = Math.round(((deviceBreakdown[device] || 0) / deviceTotal) * 100);
+      if (el)  el.textContent = pct > 0 ? pct + '%' : '—';
+    });
+  }
+
+  const sourceEl = document.getElementById('dash-demo-source');
+  if (sourceEl) sourceEl.textContent = 'From uploaded demographics CSV · ' + new Date().toLocaleDateString('en-CA');
+}
+
+function populateProductFilter(data) {
+  const filterEl = document.getElementById('dash-product-filter');
+  if (!filterEl) return;
+
+  const products = [...new Set(
+    (S.adLibrary || []).map(ad => ad.campaign_type || ad.segment_name || '').filter(Boolean)
+  )];
+
+  filterEl.innerHTML = '<option value="all">All Products</option>' +
+    products.map(p => `<option value="${p}">${p}</option>`).join('');
+}
+
+function filterDashboardByProduct(value) {
+  const filtered = value === 'all'
+    ? S.performanceData
+    : (S.performanceData || []).filter(row => {
+        const matchedAd = (S.adLibrary || []).find(ad =>
+          (ad.campaign_type || ad.segment_name || '').toLowerCase().includes(value.toLowerCase())
+        );
+        return matchedAd;
+      });
+  renderAdPerformanceTable(filtered || []);
+  renderAdComparisonChart(filtered || [], window._dashChartMetric || 'ctr');
 }
 
 async function handleDemographicsCSV(input) {
@@ -8602,73 +8922,84 @@ async function handleDemographicsCSV(input) {
     headers.forEach((h, i) => { obj[h] = r[i]?.trim().replace(/['"]/g,'') || ''; });
     return obj;
   });
-  const ageBreakdown = {};
+  const ageBreakdown    = {};
   const genderBreakdown = { male: 0, female: 0 };
+  const deviceBreakdown = { mobile: 0, desktop: 0, tablet: 0 };
   data.forEach(row => {
-    const age = row.age || row.age_group || '';
+    const age    = row.age || row.age_group || '';
     const gender = (row.gender || '').toLowerCase();
-    const reach = parseFloat(row.reach || row.impressions || 0);
+    const device = (row.device || row.platform || row.device_platform || '').toLowerCase();
+    const reach  = parseFloat(row.reach || row.impressions || 0);
     if (age) ageBreakdown[age] = (ageBreakdown[age] || 0) + reach;
-    if (gender.includes('male')) genderBreakdown.male += reach;
     if (gender.includes('female')) genderBreakdown.female += reach;
+    else if (gender.includes('male')) genderBreakdown.male += reach;
+    if (device.includes('mobile') || device.includes('android') || device.includes('iphone') || device.includes('ios'))
+      deviceBreakdown.mobile += reach;
+    else if (device.includes('desktop'))
+      deviceBreakdown.desktop += reach;
+    else if (device.includes('tablet') || device.includes('ipad'))
+      deviceBreakdown.tablet += reach;
   });
-  const demoSection = document.getElementById('dash-demographics-section');
-  const demoContent = document.getElementById('dash-demographics-content');
-  if (demoSection) demoSection.style.display = 'block';
-  if (demoContent) {
-    const total = Object.values(ageBreakdown).reduce((a,b) => a+b, 0) || 1;
-    const gTotal = genderBreakdown.male + genderBreakdown.female || 1;
-    demoContent.innerHTML = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-      <div>
-        <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Age Breakdown</div>
-        ${Object.entries(ageBreakdown).sort((a,b)=>b[1]-a[1]).map(([age,count]) => {
-          const pct = Math.round((count/total)*100);
-          return `<div style="margin-bottom:6px;"><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--t2);margin-bottom:2px;"><span>${age}</span><span>${pct}%</span></div><div style="background:var(--bg-elevated);border-radius:3px;height:4px;"><div style="background:var(--volt);border-radius:3px;height:4px;width:${pct}%;"></div></div></div>`;
-        }).join('')}
-      </div>
-      <div>
-        <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Gender</div>
-        <div style="margin-bottom:6px;"><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--t2);margin-bottom:2px;"><span>Female</span><span>${Math.round((genderBreakdown.female/gTotal)*100)}%</span></div><div style="background:var(--bg-elevated);border-radius:3px;height:4px;"><div style="background:var(--volt);border-radius:3px;height:4px;width:${Math.round((genderBreakdown.female/gTotal)*100)}%;"></div></div></div>
-        <div style="margin-bottom:6px;"><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--t2);margin-bottom:2px;"><span>Male</span><span>${Math.round((genderBreakdown.male/gTotal)*100)}%</span></div><div style="background:var(--bg-elevated);border-radius:3px;height:4px;"><div style="background:var(--border);border-radius:3px;height:4px;width:${Math.round((genderBreakdown.male/gTotal)*100)}%;"></div></div></div>
-      </div>
-    </div>`;
-  }
+  renderDemographicsCharts(ageBreakdown, genderBreakdown, deviceBreakdown);
   if (statusEl) statusEl.textContent = '✅ Demographics imported';
-  S.demographicsData = { ageBreakdown, genderBreakdown };
+  S.demographicsData = { ageBreakdown, genderBreakdown, deviceBreakdown };
 }
 
 async function loadDashboardData() {
   if (!currentBizId || !currentUser?.id) return;
-  const adCountEl = document.getElementById('dash-ad-count');
-  if (adCountEl) adCountEl.textContent = adLibrary?.length || 0;
+
+  populateProductFilter();
+
   const { data: perfData } = await sb.from('ad_performance').select('*')
     .eq('business_id', currentBizId).order('uploaded_at', { ascending: false }).limit(50);
+
   if (perfData?.length) {
     S.performanceData = perfData;
     renderAdPerformanceTable(perfData);
+    renderAdComparisonChart(perfData, 'ctr');
+
     const totals = perfData.reduce((acc, row) => ({
-      spend: acc.spend + (row.spend || 0),
-      leads: acc.leads + (row.leads || 0),
-      clicks: acc.clicks + (row.clicks || 0),
+      spend:       acc.spend + (row.spend || 0),
+      leads:       acc.leads + (row.leads || 0),
+      clicks:      acc.clicks + (row.clicks || 0),
       impressions: acc.impressions + (row.impressions || 0)
     }), { spend: 0, leads: 0, clicks: 0, impressions: 0 });
+
     const avgCTR = totals.impressions > 0 ? ((totals.clicks / totals.impressions) * 100).toFixed(2) : 0;
     const avgCPL = totals.leads > 0 ? (totals.spend / totals.leads).toFixed(2) : 0;
+
     const el = (id, val) => { const e = document.getElementById(id); if (e) e.textContent = val; };
-    el('dash-spend', '$' + totals.spend.toFixed(0));
-    el('dash-ctr', avgCTR + '%');
-    el('dash-cpl', '$' + avgCPL);
-    el('dash-leads', totals.leads);
-    el('dash-campaigns', new Set(perfData.map(r => r.campaign_name)).size);
-    el('dash-perf-date', 'Last updated: ' + new Date(perfData[0].uploaded_at || Date.now()).toLocaleDateString('en-CA'));
+    el('dash-spend',    '$' + totals.spend.toFixed(0));
+    el('dash-ctr',      avgCTR + '%');
+    el('dash-cpl',      '$' + avgCPL);
+    el('dash-leads',    totals.leads);
+    el('dash-last-updated', 'Last updated: ' + new Date(perfData[0].uploaded_at || Date.now()).toLocaleDateString('en-CA'));
+
+    const bestAd = perfData.reduce((best, row) =>
+      (parseFloat(row.ctr) > parseFloat(best?.ctr || 0)) ? row : best, null);
+    if (bestAd) {
+      const bestAdEl   = document.getElementById('dash-best-ctr');
+      const bestNameEl = document.getElementById('dash-best-ad-name');
+      if (bestAdEl) bestAdEl.textContent = parseFloat(bestAd.ctr).toFixed(2) + '%';
+      if (bestNameEl) {
+        const matched = (S.adLibrary || []).find(ad =>
+          (bestAd.campaign_name || '').toLowerCase().includes((ad.hook || '').toLowerCase().slice(0,10))
+        );
+        bestNameEl.textContent = matched
+          ? (matched.hook || '').replace(/[*_#>]/g,'').slice(0,25)
+          : (bestAd.campaign_name || '').slice(0,25);
+      }
+    }
+
     generatePerformanceAlerts(perfData);
   }
-  if (S.lastAuditScore) {
-    const scoreEl = document.getElementById('dash-health-score');
-    if (scoreEl) {
-      scoreEl.textContent = S.lastAuditScore;
-      scoreEl.style.color = S.lastAuditScore >= 80 ? 'var(--green)' : S.lastAuditScore >= 60 ? 'var(--yellow)' : 'var(--red)';
-    }
+
+  if (S.demographicsData) {
+    renderDemographicsCharts(
+      S.demographicsData.ageBreakdown || {},
+      S.demographicsData.genderBreakdown || { male: 0, female: 0 },
+      S.demographicsData.deviceBreakdown || {}
+    );
   }
 }
 
