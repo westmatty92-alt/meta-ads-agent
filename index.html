@@ -4897,6 +4897,7 @@ async function saveToAdLibrary() {
     image_url:        S.lastImageUrl      || null,
     niche:            S.selectedSegment?.name || S.brandSnapshot?.industry || S.product || '',
     product_id:       S.currentProductId  || null,
+    product_name:     S.selectedProduct?.name || (typeof S.selectedProduct === 'string' ? S.selectedProduct : null) || document.getElementById('s1-product')?.value || null,
     campaign_brief:   S.lastCampaignBrief || null,
     campaign_type:    S.campaignType      || null,
     campaign_objective: S.campaignObjective || null,
@@ -6714,6 +6715,7 @@ Include: creative upload sizes (1080×1350, 1080×1920), UTM parameters, ad prev
 }
 
 // SQL: ALTER TABLE generated_ads ADD COLUMN IF NOT EXISTS campaign_objective text;
+// SQL: ALTER TABLE generated_ads ADD COLUMN IF NOT EXISTS product_name text;
 
 function getBudgetRecommendation(ad) {
   if (ad.budget_recommendation && ad.budget_recommendation.length > 100) {
@@ -9042,29 +9044,49 @@ function renderDemographicsCharts(ageBreakdown, genderBreakdown, deviceBreakdown
   if (sourceEl) sourceEl.textContent = 'From uploaded demographics CSV · ' + new Date().toLocaleDateString('en-CA');
 }
 
-function populateProductFilter(data) {
+function populateProductFilter() {
   const filterEl = document.getElementById('dash-product-filter');
   if (!filterEl) return;
 
-  const products = [...new Set(
-    (S.adLibrary || []).map(ad => ad.campaign_type || ad.segment_name || '').filter(Boolean)
-  )];
+  const productNames = (S.products || [])
+    .map(p => (typeof p === 'string' ? p : (p.name || p.title || p.label || '')))
+    .filter(Boolean);
+
+  if (!productNames.length) {
+    filterEl.innerHTML = `<option value="all">All Products</option>
+      <option disabled>— Add products in Base Profile —</option>`;
+    return;
+  }
 
   filterEl.innerHTML = '<option value="all">All Products</option>' +
-    products.map(p => `<option value="${p}">${p}</option>`).join('');
+    productNames.map(p => `<option value="${escHtml(p)}">${escHtml(p)}</option>`).join('');
 }
 
 function filterDashboardByProduct(value) {
-  const filtered = value === 'all'
-    ? S.performanceData
-    : (S.performanceData || []).filter(row => {
-        const matchedAd = (S.adLibrary || []).find(ad =>
-          (ad.campaign_type || ad.segment_name || '').toLowerCase().includes(value.toLowerCase())
-        );
-        return matchedAd;
-      });
-  renderAdPerformanceTable(filtered || []);
-  renderAdComparisonChart(filtered || [], window._dashChartMetric || 'ctr');
+  if (value === 'all') {
+    renderAdPerformanceTable(S.performanceData || []);
+    renderAdComparisonChart(S.performanceData || [], window._dashChartMetric || 'ctr');
+    return;
+  }
+
+  const matchingAdIds = (S.adLibrary || [])
+    .filter(ad => {
+      const adProduct = ad.product_name || ad.campaign_type || ad.segment_name || '';
+      return adProduct.toLowerCase().includes(value.toLowerCase());
+    })
+    .map(ad => ad.id);
+
+  const filtered = (S.performanceData || []).filter(row => {
+    const matchedAd = (S.adLibrary || []).find(ad => {
+      const adHook   = (ad.hook || ad.headline || '').toLowerCase();
+      const campName = (row.campaign_name || '').toLowerCase();
+      return campName.includes(adHook.slice(0,12)) || adHook.includes(campName.slice(0,12));
+    });
+    return matchedAd && matchingAdIds.includes(matchedAd.id);
+  });
+
+  renderAdPerformanceTable(filtered);
+  renderAdComparisonChart(filtered, window._dashChartMetric || 'ctr');
 }
 
 async function handleDemographicsCSV(input) {
@@ -9964,6 +9986,7 @@ async function saveBaseProfile() {
     setSt('Profile saved ✓', 'done');
     const ind = document.getElementById('bp-autosave-indicator');
     if (ind) { ind.textContent = '✓ Saved'; setTimeout(() => { if (ind.textContent === '✓ Saved') ind.textContent = ''; }, 2000); }
+    populateProductFilter();
   } catch(e) {
     setSt('Save failed: ' + e.message, '');
   }
