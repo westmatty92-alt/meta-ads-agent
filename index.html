@@ -3971,8 +3971,22 @@ async function generateAdImage(provider) {
     const _variationBtn = document.getElementById('generate-variation-btn-container');
     if (_variationBtn) _variationBtn.style.display = 'block';
 
-    if (S.lastAdId) {
-      await sb.from('generated_ads').update({ visual_prompt: prompt }).eq('id', S.lastAdId);
+    const _saveAdId = currentAdViewId || S.lastAdId;
+    if (_saveAdId) {
+      const _imageUrlsMap = {};
+      (window._carouselImages || []).forEach(img => {
+        const _sizeKey = img.format === 'feed' ? '4:5' : img.format === 'stories' ? '9:16' : img.format === 'square' ? '1:1' : img.format === 'landscape' ? 'landscape' : img.format;
+        _imageUrlsMap[_sizeKey] = img.url;
+      });
+      await sb.from('generated_ads').update({
+        image_url: window._carouselImages?.[0]?.url || finalUrl,
+        image_urls: _imageUrlsMap,
+        visual_prompt: prompt || null
+      }).eq('id', _saveAdId);
+      if (currentAdViewData) {
+        currentAdViewData.image_url = window._carouselImages?.[0]?.url || finalUrl;
+        currentAdViewData.image_urls = _imageUrlsMap;
+      }
     }
 
     // Refresh Ad View carousel if open
@@ -6377,8 +6391,6 @@ function carouselPrev() {
 }
 
 async function generateMoreSizes() {
-  const statusEl = document.getElementById('image-gen-status');
-
   const existingImages = window._carouselImages || [];
   const existingSizes = existingImages.map(i => i.format);
   const allSizes = [
@@ -6396,30 +6408,31 @@ async function generateMoreSizes() {
     const ad = currentAdViewData;
     if (!ad) { alert('No ad data found.'); return; }
     if (!KEYS.claude) { alert('Claude API key required.'); return; }
-    if (statusEl) { statusEl.style.display = 'block'; statusEl.innerHTML = '⏳ Generating visual prompt...'; }
+    updateAdImageStatus('⏳ Generating visual prompt...');
     try {
       const sizeList = missing.map(s => `${s.ratio} (${s.label})`).join(', ');
       const newPrompt = await ai('', [{
         role: 'user',
         content: `Write a GPT Image 2 prompt for a Meta ad.\nBusiness: ${S.brandSnapshot?.business_name || 'local service'}\nLocation: ${S.brandSnapshot?.location?.split(',')[0] || 'Ontario'}\nHook: ${ad.hook || extractHookFromContent(ad.primary_text || '')}\nBrand colors: ${getBrandColors() || 'warm neutrals'}\nStyle: ${getBrandStyle() || 'premium minimal clean'}\nAspect ratios needed: ${sizeList}\nWrite a composition that works across these formats. Describe subject placement, lighting, and visual elements. Write ONLY the image prompt. Under 200 words.`
       }]);
-      if (!newPrompt || newPrompt.startsWith('⚠️')) { if (statusEl) statusEl.innerHTML = '❌ Could not generate prompt'; return; }
+      if (!newPrompt || newPrompt.startsWith('⚠️')) { updateAdImageStatus('❌ Could not generate prompt'); return; }
       S.lastGeneratedPrompt = newPrompt;
       prompt = newPrompt;
     } catch(e) {
       console.warn('[generateMoreSizes] prompt gen failed:', e.message);
-      if (statusEl) statusEl.innerHTML = '❌ Prompt generation failed';
+      updateAdImageStatus('❌ Prompt generation failed');
       return;
     }
   }
 
   for (const sizeInfo of missing) {
-    if (statusEl) { statusEl.style.display = 'block'; statusEl.innerHTML = `⏳ Generating ${sizeInfo.label} (${sizeInfo.ratio})...`; }
+    updateAdImageStatus(`⏳ Generating ${sizeInfo.label} (${sizeInfo.ratio})...`);
     selectImageSize(sizeInfo.ratio);
     await generateAdImage('dalle');
     await new Promise(r => setTimeout(r, 2500));
   }
-  if (statusEl) statusEl.innerHTML = '✅ All sizes generated';
+  const _imageZone = document.getElementById('adv-image-zone');
+  if (_imageZone && currentAdViewData) _imageZone.innerHTML = renderAdImageCarousel(currentAdViewData);
 }
 
 async function downloadAdPackage() {
@@ -7039,8 +7052,19 @@ async function openAdView(adId) {
   if (formAccordionTitle) formAccordionTitle.textContent = getFormAccordionLabel(_currentObj);
 
   // ── IMAGE ZONE (carousel) ─────────────────────────────────────
-  window._carouselImages = null;
   window._carouselIndex = 0;
+  {
+    const _iu = ad.image_urls || {};
+    const _imgs = [];
+    const _seen = new Set();
+    const _addImg = (url, size, label, format) => { if (!url || _seen.has(url)) return; _seen.add(url); _imgs.push({ url, size, label, format }); };
+    _addImg(_iu['4:5'] || ad.image_url, '1080×1350', '1080×1350 — Feed', 'feed');
+    _addImg(_iu['9:16'], '1080×1920', '1080×1920 — Stories', 'stories');
+    _addImg(_iu['1:1'], '1080×1080', '1080×1080 — Square', 'square');
+    _addImg(_iu['landscape'], '1200×628', '1200×628 — Landscape', 'landscape');
+    if (!_seen.size && ad.image_url) _addImg(ad.image_url, '1080×1350', '1080×1350 — Feed', 'feed');
+    window._carouselImages = _imgs.length ? _imgs : null;
+  }
   const imageZone = document.getElementById('adv-image-zone');
   if (imageZone) imageZone.innerHTML = renderAdImageCarousel(ad);
 
