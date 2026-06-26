@@ -700,55 +700,6 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
         <!-- Alert banners stack (from health check) -->
         <div id="s1-alerts-stack"></div>
 
-        <!-- TOP: Health Score Card -->
-        <div class="s1-health-section">
-          <div class="s1-health-card">
-            <div class="s1-hc-score-block">
-              <div>
-                <div class="s1-hc-score-num" id="s1-score-num" style="color:var(--t2);">—</div>
-                <div class="s1-hc-score-label">/100 Health Score</div>
-              </div>
-              <div class="s1-hc-trend" id="s1-score-trend" style="display:none;"></div>
-            </div>
-            <div class="s1-hc-divider"></div>
-            <div class="s1-hc-dates">
-              <div class="s1-hc-date-row"><span class="s1-hc-date-lbl">Last audit:</span><span class="s1-hc-date-val" id="s1-last-audit">—</span></div>
-              <div class="s1-hc-date-row"><span class="s1-hc-date-lbl">Next audit:</span><span class="s1-hc-date-val" id="s1-next-audit">—</span></div>
-              <div class="s1-hc-date-row"><span class="s1-hc-date-lbl">Frequency:</span><span class="s1-hc-date-val" id="s1-audit-freq">Every 7 days</span></div>
-            </div>
-            <div class="s1-hc-divider"></div>
-            <div class="s1-hc-quick-stats">
-              <div class="s1-qs-card"><div class="s1-qs-val" id="s1-qs-spend">—</div><div class="s1-qs-lbl">Spend (30d)</div></div>
-              <div class="s1-qs-card"><div class="s1-qs-val" id="s1-qs-camps">—</div><div class="s1-qs-lbl">Campaigns</div></div>
-              <div class="s1-qs-card"><div class="s1-qs-val" id="s1-qs-alerts" style="color:var(--yellow);">0</div><div class="s1-qs-lbl">Alerts</div></div>
-            </div>
-            <div class="s1-hc-actions">
-              <button class="btn bp bsm" onclick="runAll()">▶ Run Full Pipeline</button>
-              <button class="btn bg bsm" onclick="runQuickHealthCheck()">⚡ Quick Health Check</button>
-            </div>
-          </div>
-        </div>
-
-        <!-- MIDDLE: Two columns -->
-        <div class="s1-mid-cols">
-          <div class="s1-col">
-            <div class="s1-col-hdr">Active Alerts</div>
-            <div id="s1-alerts-list"><div class="s1-empty-state">Run a health check to surface issues</div></div>
-          </div>
-          <div class="s1-col">
-            <div class="s1-col-hdr">Last 7 Days Performance<span class="s1-sync-ind" id="s1-sync-indicator"></span></div>
-            <div class="s1-perf-grid">
-              <div class="s1-mini-stat"><div class="s1-mini-lbl">Spend</div><div class="s1-mini-val" id="s1p-spend">—</div></div>
-              <div class="s1-mini-stat"><div class="s1-mini-lbl">Avg CTR</div><div class="s1-mini-val" id="s1p-ctr">—</div></div>
-              <div class="s1-mini-stat"><div class="s1-mini-lbl">Avg CPA</div><div class="s1-mini-val" id="s1p-cpa">—</div></div>
-              <div class="s1-mini-stat"><div class="s1-mini-lbl">Avg ROAS</div><div class="s1-mini-val" id="s1p-roas">—</div></div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Brand Intelligence card (shown when brandSnapshot exists) -->
-        <div id="s1-brand-intel" style="display:none;padding:10px 22px 0;flex-shrink:0;"></div>
-
         <!-- BOTTOM: Tabs -->
         <div class="s1-tabs-bar">
           <button class="s1-tab active" id="s1tab-info" onclick="switchS1Tab('info')">📋 Client Info</button>
@@ -1463,197 +1414,130 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
 
     <!-- Dashboard panel -->
     <div class="spanel" id="panel-dashboard">
-      <!-- Header with product + period selectors -->
-      <div class="shdr">
-        <div class="shdr-left">
-          <h2>📊 Dashboard</h2>
-          <p>Campaign performance across all products</p>
-        </div>
-        <div class="sacts" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-          <select id="dash-product-select" class="fsel" style="margin:0;font-size:11px;padding:3px 8px;" onchange="switchDashView(this.value)">
-            <option value="">All Products</option>
-          </select>
-          <select id="dash-period-select" class="fsel" style="margin:0;font-size:11px;padding:3px 8px;">
-            <option value="week">This Week</option>
-            <option value="month" selected>This Month</option>
-            <option value="quarter">This Quarter</option>
-            <option value="year">This Year</option>
-            <option value="all">All Time</option>
-          </select>
-          <button class="btn bp bsm" id="dash-sync-btn" onclick="syncFromGHL()">🔄 Sync from GHL</button>
-          <button class="btn bg bsm" onclick="go('data')">← Pipeline</button>
-        </div>
-      </div>
-      <div class="dash-sync-bar">
-        <span class="dash-timestamp" id="dash-last-sync">Last synced: never</span>
-        <span id="dash-sync-msg" style="font-size:11px;color:var(--green);display:none;"></span>
-      </div>
 
-      <!-- VIEW A: All Products (default) -->
-      <div class="dash-view-all dash-body" id="dash-view-all">
-        <div id="dash-empty" class="dash-empty-state">
-          <div class="big">📊</div>
-          <h3>No performance data yet</h3>
-          <p style="font-size:12px;">Upload a CSV in Stage 1, or click <strong>Sync from GHL</strong> to pull your campaign data.</p>
+      <!-- Header -->
+      <div style="padding:20px 24px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">
+        <div>
+          <div style="font-size:18px;font-weight:800;color:var(--t1);">📊 Dashboard</div>
+          <div id="dash-last-updated" style="font-size:11px;color:var(--t3);margin-top:2px;">No data uploaded yet</div>
         </div>
-        <div id="dash-content" style="display:none;">
-          <div id="dash-metrics" class="metrics-row"></div>
-          <div id="dash-charts" class="charts-grid"></div>
-          <div style="margin-bottom:24px;">
-            <div class="dash-section-hdr">
-              <span>Campaign Performance</span>
-              <span id="camp-count" style="font-size:10px;color:var(--t2);"></span>
-            </div>
-            <div style="overflow-x:auto;">
-              <table class="perf-table" id="camp-table">
-                <thead><tr id="camp-thead"></tr></thead>
-                <tbody id="camp-tbody"></tbody>
-              </table>
-            </div>
-          </div>
-          <div style="margin-bottom:24px;">
-            <div class="dash-section-hdr">
-              <span>🤖 AI Suggestions</span>
-              <button class="btn bp bsm" id="ai-sugg-btn" onclick="getAISuggestions()">🤖 Analyze &amp; Suggest</button>
-            </div>
-            <div id="ai-sugg-container" style="color:var(--t2);font-size:12px;text-align:center;padding:18px;">Click "Analyze &amp; Suggest" to get AI-powered recommendations for your campaigns.</div>
-          </div>
+        <div style="display:flex;gap:8px;">
+          <button onclick="uploadPerformanceCSV()" style="background:var(--volt);color:#000;border:none;border-radius:6px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;">📤 Upload Meta Data</button>
+          <button onclick="runQuickHealthCheck()" style="background:transparent;border:1px solid var(--border);border-radius:6px;padding:7px 14px;font-size:12px;color:var(--t2);cursor:pointer;">⚡ Health Check</button>
         </div>
       </div>
 
-      <!-- VIEW B: Single Product (hidden by default) -->
-      <div class="dash-view-product" id="dash-view-product" style="display:none;flex:1;flex-direction:column;overflow:hidden;">
-        <!-- Product header card -->
-        <div class="dash-product-header" style="margin:14px 22px 0;flex-shrink:0;">
-          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;">
-            <div>
-              <div id="dash-prod-name" style="font-family:var(--display);font-size:20px;font-weight:800;color:var(--text);letter-spacing:-.3px;line-height:1.2;">—</div>
-              <div style="display:flex;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap;">
-                <span id="dash-prod-type-badge" style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;background:var(--s3);border-radius:4px;padding:2px 7px;color:var(--t2);">Product</span>
-                <span id="dash-prod-price" style="font-size:12px;color:var(--t2);"></span>
-                <span id="dash-prod-connected" style="display:none;font-size:10px;font-weight:700;color:#00D4A0;background:rgba(0,212,160,.1);border:1px solid rgba(0,212,160,.3);border-radius:10px;padding:2px 8px;">✓ Active in Pipeline</span>
-              </div>
+      <div style="padding:20px 24px;overflow-y:auto;height:calc(100vh - 120px);">
+
+        <!-- SECTION 1: Account Overview Stats -->
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;">
+          <div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:10px;padding:14px;">
+            <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Health Score</div>
+            <div id="dash-health-score" style="font-size:28px;font-weight:800;color:var(--volt);">—</div>
+            <div style="font-size:10px;color:var(--t3);margin-top:2px;">/100</div>
+          </div>
+          <div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:10px;padding:14px;">
+            <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Campaigns</div>
+            <div id="dash-campaigns" style="font-size:28px;font-weight:800;color:var(--t1);">0</div>
+            <div style="font-size:10px;color:var(--t3);margin-top:2px;">active</div>
+          </div>
+          <div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:10px;padding:14px;">
+            <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Ads in Library</div>
+            <div id="dash-ad-count" style="font-size:28px;font-weight:800;color:var(--t1);">0</div>
+            <div style="font-size:10px;color:var(--t3);margin-top:2px;">saved</div>
+          </div>
+          <div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:10px;padding:14px;">
+            <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Alerts</div>
+            <div id="dash-alerts-count" style="font-size:28px;font-weight:800;color:var(--t1);">0</div>
+            <div style="font-size:10px;color:var(--t3);margin-top:2px;">active</div>
+          </div>
+        </div>
+
+        <!-- SECTION 2: Active Alerts -->
+        <div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:20px;">
+          <div style="font-size:12px;font-weight:700;color:var(--t1);margin-bottom:10px;">🚨 Active Alerts</div>
+          <div id="dash-alerts-list">
+            <div style="font-size:12px;color:var(--t3);text-align:center;padding:12px;">No active alerts · run a health check or upload campaign data</div>
+          </div>
+        </div>
+
+        <!-- SECTION 3: 7-Day Performance Summary -->
+        <div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:20px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <div style="font-size:12px;font-weight:700;color:var(--t1);">📈 7-Day Performance</div>
+            <div id="dash-perf-date" style="font-size:10px;color:var(--t3);">No data — upload Meta CSV to populate</div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;">
+            <div style="background:var(--bg-elevated);border-radius:8px;padding:12px;">
+              <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Spend</div>
+              <div id="dash-spend" style="font-size:20px;font-weight:700;color:var(--t1);">—</div>
+              <div style="font-size:10px;color:var(--t3);">CAD</div>
             </div>
-            <div style="display:flex;gap:10px;flex-wrap:wrap;">
-              <div class="mcard mc-neutral" style="min-width:90px;padding:10px 14px;">
-                <div class="mcard-lbl">Total Spend</div>
-                <div class="mcard-val gnum" id="dash-prod-spend">—</div>
-              </div>
-              <div class="mcard mc-neutral" style="min-width:90px;padding:10px 14px;">
-                <div class="mcard-lbl">Ads Generated</div>
-                <div class="mcard-val gnum" id="dash-prod-ad-count">—</div>
-              </div>
-              <div class="mcard mc-neutral" style="min-width:90px;padding:10px 14px;">
-                <div class="mcard-lbl">Last Audit</div>
-                <div class="mcard-val gnum" id="dash-prod-audit-score">—</div>
-              </div>
+            <div style="background:var(--bg-elevated);border-radius:8px;padding:12px;">
+              <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Avg CTR</div>
+              <div id="dash-ctr" style="font-size:20px;font-weight:700;color:var(--t1);">—</div>
+              <div style="font-size:10px;color:var(--t3);">%</div>
+            </div>
+            <div style="background:var(--bg-elevated);border-radius:8px;padding:12px;">
+              <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Cost/Lead</div>
+              <div id="dash-cpl" style="font-size:20px;font-weight:700;color:var(--t1);">—</div>
+              <div style="font-size:10px;color:var(--t3);">CAD</div>
+            </div>
+            <div style="background:var(--bg-elevated);border-radius:8px;padding:12px;">
+              <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Leads</div>
+              <div id="dash-leads" style="font-size:20px;font-weight:700;color:var(--t1);">—</div>
+              <div style="font-size:10px;color:var(--t3);">total</div>
             </div>
           </div>
         </div>
 
-        <!-- 6-tab bar -->
-        <div class="dash-product-tabs" style="margin:14px 22px 0;flex-shrink:0;">
-          <button class="dash-product-tab active" id="dash-ptab-perf"         onclick="switchDashProductTab('perf')">📈 Performance</button>
-          <button class="dash-product-tab"         id="dash-ptab-period"       onclick="switchDashProductTab('period')">📅 vs Last Period</button>
-          <button class="dash-product-tab"         id="dash-ptab-report"       onclick="switchDashProductTab('report')">📋 Report</button>
-          <button class="dash-product-tab"         id="dash-ptab-improvements" onclick="switchDashProductTab('improvements')">💡 Improvements</button>
-          <button class="dash-product-tab"         id="dash-ptab-adlib"        onclick="switchDashProductTab('adlib')">📚 Ad Library</button>
-          <button class="dash-product-tab"         id="dash-ptab-metadata"     onclick="switchDashProductTab('metadata')">🗂 Metadata</button>
+        <!-- SECTION 4: Per-Ad Performance Table -->
+        <div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:20px;">
+          <div style="font-size:12px;font-weight:700;color:var(--t1);margin-bottom:12px;">📋 Ad Performance</div>
+          <div id="dash-ad-table">
+            <div style="font-size:12px;color:var(--t3);text-align:center;padding:20px;">No performance data yet · Upload Meta CSV or launch your first campaign</div>
+          </div>
         </div>
 
-        <!-- Tab pane scroll area -->
-        <div style="flex:1;overflow-y:auto;padding:16px 22px;">
-
-          <!-- TAB 1: Performance (default) -->
-          <div id="dash-pane-perf" class="dash-ptab-pane">
-            <div class="metrics-row" id="dash-prod-metrics" style="margin-bottom:14px;"></div>
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
-              <div class="flbl" style="margin:0;white-space:nowrap;">Filter by Ad:</div>
-              <select id="dash-ad-select" class="fsel" style="margin:0;flex:1;" onchange="onDashAdSelected(this.value)">
-                <option value="">All Ads for this Product</option>
-              </select>
+        <!-- SECTION 5: CSV Upload Panel -->
+        <div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:20px;">
+          <div style="font-size:12px;font-weight:700;color:var(--t1);margin-bottom:6px;">📤 Upload Meta Campaign Data</div>
+          <div style="font-size:11px;color:var(--t3);margin-bottom:14px;">Export from Meta Ads Manager → Reports → Export CSV</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div style="background:var(--bg-elevated);border:1px solid var(--border);border-radius:8px;padding:12px;">
+              <div style="font-size:11px;font-weight:600;color:var(--t1);margin-bottom:4px;">Performance Data</div>
+              <div style="font-size:10px;color:var(--t3);margin-bottom:10px;">Spend, CTR, Leads, CPC, CPM, Reach</div>
+              <input type="file" id="perf-csv-upload" accept=".csv" style="display:none;" onchange="handlePerformanceCSV(this)">
+              <button onclick="document.getElementById('perf-csv-upload').click()" style="width:100%;background:var(--volt);color:#000;border:none;border-radius:6px;padding:8px;font-size:11px;font-weight:700;cursor:pointer;">Upload Performance CSV</button>
+              <div id="perf-csv-status" style="font-size:10px;color:var(--t3);margin-top:6px;text-align:center;"></div>
             </div>
-            <div style="margin-bottom:16px;">
-              <div class="dash-section-hdr"><span>Campaign Performance</span></div>
-              <div style="overflow-x:auto;">
-                <table class="perf-table" id="dash-prod-camp-table">
-                  <thead><tr id="dash-prod-camp-thead"></tr></thead>
-                  <tbody id="dash-prod-camp-tbody"></tbody>
-                </table>
-              </div>
-            </div>
-            <div class="dash-skeleton" id="dash-perf-skeleton">Performance data loads here once you have ad_performance records linked to this product</div>
-          </div>
-
-          <!-- TAB 2: vs Last Period -->
-          <div id="dash-pane-period" class="dash-ptab-pane" style="display:none;">
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
-              <div class="flbl" style="margin:0;">Compare:</div>
-              <select class="fsel" id="dash-period-compare" style="margin:0;">
-                <option value="wow">Week over Week</option>
-                <option value="mom" selected>Month over Month</option>
-                <option value="yoy">Year over Year</option>
-              </select>
-            </div>
-            <div class="dash-skeleton">Period comparison loads here in Command 2</div>
-          </div>
-
-          <!-- TAB 3: Report -->
-          <div id="dash-pane-report" class="dash-ptab-pane" style="display:none;">
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
-              <div class="flbl" style="margin:0;">Report Period:</div>
-              <select class="fsel" id="dash-report-period" style="margin:0;">
-                <option value="week">This Week</option>
-                <option value="month" selected>This Month</option>
-                <option value="quarter">This Quarter</option>
-                <option value="year">This Year</option>
-              </select>
-            </div>
-            <div class="dash-skeleton">Formatted report generates here in Command 2</div>
-          </div>
-
-          <!-- TAB 4: Improvements -->
-          <div id="dash-pane-improvements" class="dash-ptab-pane" style="display:none;">
-            <div class="dash-skeleton">AI improvement analysis loads here in Command 2</div>
-          </div>
-
-          <!-- TAB 5: Ad Library (functional) -->
-          <div id="dash-pane-adlib" class="dash-ptab-pane" style="display:none;">
-            <div class="adlib-empty" id="dash-prod-adlib-empty" style="display:none;">
-              <div class="big">📚</div>
-              <h3>No ads generated yet for this product</h3>
-              <p style="font-size:12px;">Complete Stage 4 (Visual) to save your first ad for this product.</p>
-            </div>
-            <div class="adlib-grid" id="dash-prod-adlib-grid"></div>
-          </div>
-
-          <!-- TAB 6: Metadata (functional) -->
-          <div id="dash-pane-metadata" class="dash-ptab-pane" style="display:none;">
-            <div class="dcard" style="max-width:540px;">
-              <h3>Product Details</h3>
-              <div class="flbl">Name</div>
-              <div id="dash-meta-name" style="font-size:13px;margin-bottom:8px;">—</div>
-              <div class="flbl">Type</div>
-              <div id="dash-meta-type" style="font-size:13px;margin-bottom:8px;">—</div>
-              <div class="flbl">Price</div>
-              <div id="dash-meta-price" style="font-size:13px;margin-bottom:8px;">—</div>
-              <div class="flbl">Description</div>
-              <div id="dash-meta-desc" style="font-size:13px;margin-bottom:8px;color:var(--t2);">—</div>
-              <div class="flbl">URL</div>
-              <div id="dash-meta-url" style="font-size:13px;margin-bottom:8px;word-break:break-all;">—</div>
-              <div class="flbl">Storage Folder</div>
-              <div id="dash-meta-folder" style="font-size:11px;color:var(--t2);font-family:var(--mono);margin-bottom:12px;">—</div>
-              <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
-                <span class="sbadge br" id="dash-meta-ad-count">0 ads</span>
-                <span class="sbadge br" id="dash-meta-perf-count">0 performance records</span>
-              </div>
-              <button class="btn bg bsm" onclick="go('baseProfile')">✏ Edit in Base Profile</button>
+            <div style="background:var(--bg-elevated);border:1px solid var(--border);border-radius:8px;padding:12px;">
+              <div style="font-size:11px;font-weight:600;color:var(--t1);margin-bottom:4px;">Demographics Data</div>
+              <div style="font-size:10px;color:var(--t3);margin-bottom:10px;">Age, Gender, Location, Device breakdown</div>
+              <input type="file" id="demo-csv-upload" accept=".csv" style="display:none;" onchange="handleDemographicsCSV(this)">
+              <button onclick="document.getElementById('demo-csv-upload').click()" style="width:100%;background:transparent;border:1px solid var(--volt);color:var(--volt);border-radius:6px;padding:8px;font-size:11px;font-weight:700;cursor:pointer;">Upload Demographics CSV</button>
+              <div id="demo-csv-status" style="font-size:10px;color:var(--t3);margin-top:6px;text-align:center;"></div>
             </div>
           </div>
+          <div style="margin-top:12px;background:rgba(0,212,160,0.05);border:1px solid rgba(0,212,160,0.15);border-radius:8px;padding:10px 12px;">
+            <div style="font-size:10px;font-weight:600;color:var(--volt);margin-bottom:6px;">How to export from Meta Ads Manager:</div>
+            <div style="font-size:11px;color:var(--t2);line-height:1.6;">
+              1. Go to Meta Ads Manager → Campaigns<br>
+              2. Select your campaign(s)<br>
+              3. Click Reports → Export Table Data → CSV<br>
+              4. For demographics: Breakdown → By Age and Gender → Export<br>
+              5. Upload both files above
+            </div>
+          </div>
+        </div>
 
-        </div><!-- end tab scroll area -->
-      </div><!-- end VIEW B -->
+        <!-- SECTION 6: Demographics (populated after CSV upload) -->
+        <div id="dash-demographics-section" style="display:none;background:var(--bg-surface);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:20px;">
+          <div style="font-size:12px;font-weight:700;color:var(--t1);margin-bottom:12px;">👥 Audience Demographics</div>
+          <div id="dash-demographics-content"></div>
+        </div>
 
+      </div>
     </div>
 
     <!-- Ad Discovery Panel -->
@@ -2896,7 +2780,7 @@ function go(name) {
   const nav=document.getElementById('nav-'+name);
   if(nav)nav.classList.add('active');
   if(name==='adLibrary'){ loadAdLibrary().then(renderAdLibrary); loadPerfData(); }
-  if(name==='dashboard'){ loadPerfData().then(()=>{ renderDashboard(); updateDashTimestamp(); }); populateProductDropdowns(); }
+  if(name==='dashboard'){ loadDashboardData(); }
   if(name==='data'){ populateProductSelect(); renderCustomerIntelligence(); }
   if(name==='research'){ renderS3ResearchBrief(); }
   if(name==='discovery'){ initDiscoveryPanel(); }
@@ -8179,6 +8063,265 @@ function checkAuditSchedule() {
     banner.style.display = 'none';
   }
 }
+
+function uploadPerformanceCSV() {
+  document.getElementById('perf-csv-upload')?.click();
+}
+
+async function handlePerformanceCSV(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const statusEl = document.getElementById('perf-csv-status');
+  if (statusEl) statusEl.textContent = '⏳ Parsing...';
+  const text = await file.text();
+  const rows = text.split('\n').map(r => r.split(','));
+  const headers = rows[0].map(h => h.trim().toLowerCase().replace(/['"]/g,'').replace(/\s+/g,'_'));
+  const data = rows.slice(1).filter(r => r.length > 3).map(r => {
+    const obj = {};
+    headers.forEach((h, i) => { obj[h] = r[i]?.trim().replace(/['"]/g,'') || ''; });
+    return obj;
+  });
+  if (!data.length) {
+    if (statusEl) statusEl.textContent = '❌ No data found in CSV';
+    return;
+  }
+  const mapped = data.map(row => ({
+    campaign_name: row.campaign_name || row['campaign_name'] || row.name || '',
+    ad_name: row.ad_name || '',
+    impressions: parseFloat(row.impressions || row.reach || 0),
+    reach: parseFloat(row.reach || 0),
+    clicks: parseFloat(row.clicks || row.link_clicks || 0),
+    ctr: parseFloat(row.ctr || 0),
+    spend: parseFloat(row.amount_spent || row.amount_spent_(cad) || 0),
+    cpm: parseFloat(row.cpm || 0),
+    cpc: parseFloat(row.cpc || 0),
+    leads: parseFloat(row.leads || row.results || 0),
+    cost_per_lead: parseFloat(row.cost_per_lead || row.cost_per_result || 0),
+    frequency: parseFloat(row.frequency || 0)
+  }));
+  const totals = mapped.reduce((acc, row) => ({
+    spend: acc.spend + row.spend,
+    leads: acc.leads + row.leads,
+    clicks: acc.clicks + row.clicks,
+    impressions: acc.impressions + row.impressions
+  }), { spend: 0, leads: 0, clicks: 0, impressions: 0 });
+  const avgCTR = totals.impressions > 0 ? ((totals.clicks / totals.impressions) * 100).toFixed(2) : 0;
+  const avgCPL = totals.leads > 0 ? (totals.spend / totals.leads).toFixed(2) : 0;
+  const el = (id, val) => { const e = document.getElementById(id); if (e) e.textContent = val; };
+  el('dash-spend', '$' + totals.spend.toFixed(0));
+  el('dash-ctr', avgCTR + '%');
+  el('dash-cpl', '$' + avgCPL);
+  el('dash-leads', totals.leads);
+  el('dash-campaigns', new Set(mapped.map(r => r.campaign_name)).size);
+  el('dash-perf-date', 'Uploaded: ' + new Date().toLocaleDateString('en-CA'));
+  el('dash-last-updated', 'Last updated: ' + new Date().toLocaleString('en-CA'));
+  renderAdPerformanceTable(mapped);
+  await matchPerformanceToAds(mapped);
+  generatePerformanceAlerts(mapped);
+  if (currentBizId && currentUser?.id) {
+    for (const row of mapped) {
+      await sb.from('ad_performance').upsert({
+        business_id: currentBizId,
+        user_id: currentUser.id,
+        campaign_name: row.campaign_name,
+        impressions: row.impressions,
+        reach: row.reach,
+        clicks: row.clicks,
+        ctr: row.ctr,
+        spend: row.spend,
+        cpm: row.cpm,
+        cpc: row.cpc,
+        leads: row.leads,
+        cost_per_lead: row.cost_per_lead,
+        frequency: row.frequency
+      }, { onConflict: 'business_id,campaign_name' });
+    }
+  }
+  if (statusEl) statusEl.textContent = '✅ ' + mapped.length + ' rows imported · ' + new Date().toLocaleDateString('en-CA');
+  S.performanceData = mapped;
+}
+
+function renderAdPerformanceTable(data) {
+  const tableEl = document.getElementById('dash-ad-table');
+  if (!tableEl || !data.length) return;
+  tableEl.innerHTML = `<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:12px;">
+    <thead><tr style="border-bottom:1px solid var(--border);">
+      <th style="text-align:left;padding:8px;color:var(--t3);font-size:10px;text-transform:uppercase;letter-spacing:1px;">Ad / Campaign</th>
+      <th style="text-align:right;padding:8px;color:var(--t3);font-size:10px;text-transform:uppercase;letter-spacing:1px;">Spend</th>
+      <th style="text-align:right;padding:8px;color:var(--t3);font-size:10px;text-transform:uppercase;letter-spacing:1px;">CTR</th>
+      <th style="text-align:right;padding:8px;color:var(--t3);font-size:10px;text-transform:uppercase;letter-spacing:1px;">Leads</th>
+      <th style="text-align:right;padding:8px;color:var(--t3);font-size:10px;text-transform:uppercase;letter-spacing:1px;">CPL</th>
+      <th style="text-align:center;padding:8px;color:var(--t3);font-size:10px;text-transform:uppercase;letter-spacing:1px;">Status</th>
+    </tr></thead>
+    <tbody>${data.map(row => {
+      const ctr = parseFloat(row.ctr) || 0;
+      const cpl = parseFloat(row.cost_per_lead) || 0;
+      let statusColor = 'var(--yellow)', statusLabel = '🟡 Testing';
+      if (ctr >= 1.5 && cpl > 0 && cpl < 50) { statusColor = 'var(--green)'; statusLabel = '🟢 Scale'; }
+      else if (ctr < 0.8 || (cpl > 80 && cpl > 0)) { statusColor = 'var(--red)'; statusLabel = '🔴 Kill'; }
+      return `<tr style="border-bottom:1px solid var(--border);cursor:pointer;" onclick="findAndOpenAdByName('${(row.campaign_name||'').replace(/'/g,"\\'")}')">
+        <td style="padding:10px 8px;color:var(--t1);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${row.campaign_name || row.ad_name || 'Unknown'}</td>
+        <td style="padding:10px 8px;color:var(--t2);text-align:right;">$${parseFloat(row.spend||0).toFixed(0)}</td>
+        <td style="padding:10px 8px;text-align:right;color:${ctr>=1.5?'var(--green)':ctr<0.8?'var(--red)':'var(--t2)'};">${ctr.toFixed(2)}%</td>
+        <td style="padding:10px 8px;color:var(--t2);text-align:right;">${row.leads||0}</td>
+        <td style="padding:10px 8px;text-align:right;color:${cpl>80?'var(--red)':cpl>0?'var(--green)':'var(--t3)'};">${cpl>0?'$'+cpl.toFixed(0):'—'}</td>
+        <td style="padding:10px 8px;text-align:center;"><span style="font-size:11px;font-weight:600;color:${statusColor};">${statusLabel}</span></td>
+      </tr>`;
+    }).join('')}</tbody></table></div>`;
+}
+
+async function matchPerformanceToAds(perfData) {
+  const ads = adLibrary || [];
+  if (!ads.length) return;
+  for (const row of perfData) {
+    const matched = ads.find(ad => {
+      const adName = (ad.hook || ad.headline || '').toLowerCase();
+      const campName = (row.campaign_name || '').toLowerCase();
+      return campName.includes(adName.slice(0,20)) || adName.includes(campName.slice(0,20));
+    });
+    if (matched?.id) {
+      await sb.from('generated_ads').update({ performance_data: row }).eq('id', matched.id);
+    }
+  }
+}
+
+function generatePerformanceAlerts(data) {
+  const alerts = [];
+  data.forEach(row => {
+    const ctr = parseFloat(row.ctr) || 0;
+    const freq = parseFloat(row.frequency) || 0;
+    const cpl = parseFloat(row.cost_per_lead) || 0;
+    if (ctr < 0.8 && parseFloat(row.impressions) > 500)
+      alerts.push({ message: `⚠️ Low CTR: "${row.campaign_name}" at ${ctr.toFixed(2)}% — consider new hook` });
+    if (freq > 3.0)
+      alerts.push({ message: `⚠️ High frequency: "${row.campaign_name}" at ${freq.toFixed(1)} — rotate creative` });
+    if (cpl > 80 && parseFloat(row.leads) > 3)
+      alerts.push({ message: `⚠️ High CPL: "${row.campaign_name}" at $${cpl.toFixed(0)} CAD — pause and review` });
+    if (ctr >= 1.5 && cpl > 0 && cpl < 45)
+      alerts.push({ message: `✅ Scale this: "${row.campaign_name}" — CTR ${ctr.toFixed(2)}% CPL $${cpl.toFixed(0)}` });
+  });
+  const alertsEl = document.getElementById('dash-alerts-list');
+  const countEl = document.getElementById('dash-alerts-count');
+  if (countEl) countEl.textContent = alerts.length;
+  if (alertsEl) {
+    alertsEl.innerHTML = alerts.length
+      ? alerts.map(a => `<div style="padding:8px 0;border-bottom:1px solid var(--border);font-size:12px;color:var(--t2);line-height:1.5;">${a.message}</div>`).join('')
+      : '<div style="font-size:12px;color:var(--t3);text-align:center;padding:12px;">No alerts — campaign running well</div>';
+  }
+}
+
+function findAndOpenAdByName(campaignName) {
+  const ads = adLibrary || [];
+  const matched = ads.find(ad =>
+    (ad.hook || ad.headline || '').toLowerCase().includes(campaignName.toLowerCase().slice(0,15))
+  );
+  if (matched) { openAdView(matched.id); } else { go('adLibrary'); }
+}
+
+async function handleDemographicsCSV(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const statusEl = document.getElementById('demo-csv-status');
+  if (statusEl) statusEl.textContent = '⏳ Parsing...';
+  const text = await file.text();
+  const rows = text.split('\n').map(r => r.split(','));
+  const headers = rows[0].map(h => h.trim().toLowerCase().replace(/['"]/g,'').replace(/\s+/g,'_'));
+  const data = rows.slice(1).filter(r => r.length > 2).map(r => {
+    const obj = {};
+    headers.forEach((h, i) => { obj[h] = r[i]?.trim().replace(/['"]/g,'') || ''; });
+    return obj;
+  });
+  const ageBreakdown = {};
+  const genderBreakdown = { male: 0, female: 0 };
+  data.forEach(row => {
+    const age = row.age || row.age_group || '';
+    const gender = (row.gender || '').toLowerCase();
+    const reach = parseFloat(row.reach || row.impressions || 0);
+    if (age) ageBreakdown[age] = (ageBreakdown[age] || 0) + reach;
+    if (gender.includes('male')) genderBreakdown.male += reach;
+    if (gender.includes('female')) genderBreakdown.female += reach;
+  });
+  const demoSection = document.getElementById('dash-demographics-section');
+  const demoContent = document.getElementById('dash-demographics-content');
+  if (demoSection) demoSection.style.display = 'block';
+  if (demoContent) {
+    const total = Object.values(ageBreakdown).reduce((a,b) => a+b, 0) || 1;
+    const gTotal = genderBreakdown.male + genderBreakdown.female || 1;
+    demoContent.innerHTML = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+      <div>
+        <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Age Breakdown</div>
+        ${Object.entries(ageBreakdown).sort((a,b)=>b[1]-a[1]).map(([age,count]) => {
+          const pct = Math.round((count/total)*100);
+          return `<div style="margin-bottom:6px;"><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--t2);margin-bottom:2px;"><span>${age}</span><span>${pct}%</span></div><div style="background:var(--bg-elevated);border-radius:3px;height:4px;"><div style="background:var(--volt);border-radius:3px;height:4px;width:${pct}%;"></div></div></div>`;
+        }).join('')}
+      </div>
+      <div>
+        <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Gender</div>
+        <div style="margin-bottom:6px;"><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--t2);margin-bottom:2px;"><span>Female</span><span>${Math.round((genderBreakdown.female/gTotal)*100)}%</span></div><div style="background:var(--bg-elevated);border-radius:3px;height:4px;"><div style="background:var(--volt);border-radius:3px;height:4px;width:${Math.round((genderBreakdown.female/gTotal)*100)}%;"></div></div></div>
+        <div style="margin-bottom:6px;"><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--t2);margin-bottom:2px;"><span>Male</span><span>${Math.round((genderBreakdown.male/gTotal)*100)}%</span></div><div style="background:var(--bg-elevated);border-radius:3px;height:4px;"><div style="background:var(--border);border-radius:3px;height:4px;width:${Math.round((genderBreakdown.male/gTotal)*100)}%;"></div></div></div>
+      </div>
+    </div>`;
+  }
+  if (statusEl) statusEl.textContent = '✅ Demographics imported';
+  S.demographicsData = { ageBreakdown, genderBreakdown };
+}
+
+async function loadDashboardData() {
+  if (!currentBizId || !currentUser?.id) return;
+  const adCountEl = document.getElementById('dash-ad-count');
+  if (adCountEl) adCountEl.textContent = adLibrary?.length || 0;
+  const { data: perfData } = await sb.from('ad_performance').select('*')
+    .eq('business_id', currentBizId).order('uploaded_at', { ascending: false }).limit(50);
+  if (perfData?.length) {
+    S.performanceData = perfData;
+    renderAdPerformanceTable(perfData);
+    const totals = perfData.reduce((acc, row) => ({
+      spend: acc.spend + (row.spend || 0),
+      leads: acc.leads + (row.leads || 0),
+      clicks: acc.clicks + (row.clicks || 0),
+      impressions: acc.impressions + (row.impressions || 0)
+    }), { spend: 0, leads: 0, clicks: 0, impressions: 0 });
+    const avgCTR = totals.impressions > 0 ? ((totals.clicks / totals.impressions) * 100).toFixed(2) : 0;
+    const avgCPL = totals.leads > 0 ? (totals.spend / totals.leads).toFixed(2) : 0;
+    const el = (id, val) => { const e = document.getElementById(id); if (e) e.textContent = val; };
+    el('dash-spend', '$' + totals.spend.toFixed(0));
+    el('dash-ctr', avgCTR + '%');
+    el('dash-cpl', '$' + avgCPL);
+    el('dash-leads', totals.leads);
+    el('dash-campaigns', new Set(perfData.map(r => r.campaign_name)).size);
+    el('dash-perf-date', 'Last updated: ' + new Date(perfData[0].uploaded_at || Date.now()).toLocaleDateString('en-CA'));
+    generatePerformanceAlerts(perfData);
+  }
+  if (S.lastAuditScore) {
+    const scoreEl = document.getElementById('dash-health-score');
+    if (scoreEl) {
+      scoreEl.textContent = S.lastAuditScore;
+      scoreEl.style.color = S.lastAuditScore >= 80 ? 'var(--green)' : S.lastAuditScore >= 60 ? 'var(--yellow)' : 'var(--red)';
+    }
+  }
+}
+
+// SQL: CREATE TABLE IF NOT EXISTS ad_performance (
+//   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+//   business_id uuid,
+//   user_id uuid REFERENCES auth.users(id),
+//   campaign_name text,
+//   impressions integer DEFAULT 0,
+//   reach integer DEFAULT 0,
+//   clicks integer DEFAULT 0,
+//   ctr decimal DEFAULT 0,
+//   spend decimal DEFAULT 0,
+//   cpm decimal DEFAULT 0,
+//   cpc decimal DEFAULT 0,
+//   leads integer DEFAULT 0,
+//   cost_per_lead decimal DEFAULT 0,
+//   frequency decimal DEFAULT 0,
+//   uploaded_at timestamptz DEFAULT now()
+// );
+// SQL: ALTER TABLE ad_performance ENABLE ROW LEVEL SECURITY;
+// SQL: CREATE POLICY "users_own_performance" ON ad_performance
+//   FOR ALL TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+// SQL: ALTER TABLE generated_ads ADD COLUMN IF NOT EXISTS performance_data jsonb;
 
 async function runQuickHealthCheck() {
   if (!perfData.length) { await loadPerfData(); }
