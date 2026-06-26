@@ -75,6 +75,7 @@ WITH CHECK (auth.uid() = user_id);
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@600;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
 :root{
   --bg:#0D1F2D;--surface:#1A1A2E;--s2:#16253A;--s3:#1E2F45;
@@ -1501,6 +1502,23 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
           </div>
         </div>
 
+        <!-- ROW 1.5: Performance Over Time -->
+        <div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:10px;padding:16px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+            <div style="font-size:13px;font-weight:700;color:var(--t1);">📈 Performance Over Time</div>
+            <div style="display:flex;gap:4px;">
+              <button onclick="switchTimeChart('spend')" id="time-btn-spend" style="background:rgba(0,212,160,0.15);border:1px solid var(--volt);border-radius:4px;padding:3px 8px;font-size:10px;color:var(--volt);cursor:pointer;">Spend</button>
+              <button onclick="switchTimeChart('leads')" id="time-btn-leads" style="background:var(--bg-elevated);border:1px solid var(--border);border-radius:4px;padding:3px 8px;font-size:10px;color:var(--t3);cursor:pointer;">Leads</button>
+              <button onclick="switchTimeChart('ctr')" id="time-btn-ctr" style="background:var(--bg-elevated);border:1px solid var(--border);border-radius:4px;padding:3px 8px;font-size:10px;color:var(--t3);cursor:pointer;">CTR</button>
+              <button onclick="switchTimeChart('cpl')" id="time-btn-cpl" style="background:var(--bg-elevated);border:1px solid var(--border);border-radius:4px;padding:3px 8px;font-size:10px;color:var(--t3);cursor:pointer;">CPL</button>
+            </div>
+          </div>
+          <div style="position:relative;height:200px;" id="time-chart-wrap">
+            <canvas id="dash-time-chart"></canvas>
+            <div id="time-chart-empty" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:12px;color:var(--t3);text-align:center;">Upload multiple CSV exports to see<br>performance trends over time</div>
+          </div>
+        </div>
+
         <!-- ROW 2: Active Alerts -->
         <div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:10px;padding:16px;">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
@@ -1554,18 +1572,20 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
 
             <!-- Gender split -->
             <div style="margin-bottom:16px;">
-              <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Gender</div>
-              <div id="dash-gender-chart">
-                <div style="display:flex;border-radius:6px;overflow:hidden;height:24px;background:var(--bg-elevated);">
-                  <div id="gender-female-bar" style="background:var(--volt);width:0%;transition:width 0.5s;display:flex;align-items:center;justify-content:center;">
-                    <span id="gender-female-pct" style="font-size:10px;color:#000;font-weight:700;display:none;">0%</span>
-                  </div>
-                  <div id="gender-male-bar" style="background:var(--bg-elevated);flex:1;display:flex;align-items:center;justify-content:center;">
-                    <span id="gender-male-pct" style="font-size:10px;color:var(--t3);">—</span>
-                  </div>
+              <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Gender Split</div>
+              <div style="display:flex;align-items:center;gap:16px;">
+                <div style="position:relative;width:80px;height:80px;flex-shrink:0;">
+                  <canvas id="dash-gender-chart"></canvas>
                 </div>
-                <div style="display:flex;justify-content:space-between;margin-top:4px;font-size:10px;color:var(--t3);">
-                  <span>Female</span><span>Male</span>
+                <div style="display:flex;flex-direction:column;gap:6px;">
+                  <div style="display:flex;align-items:center;gap:6px;">
+                    <div style="width:10px;height:10px;border-radius:50%;background:var(--volt);flex-shrink:0;"></div>
+                    <span style="font-size:11px;color:var(--t2);">Female: <strong id="gender-female-pct-label">—</strong></span>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:6px;">
+                    <div style="width:10px;height:10px;border-radius:50%;background:#1E3A5F;flex-shrink:0;"></div>
+                    <span style="font-size:11px;color:var(--t2);">Male: <strong id="gender-male-pct-label">—</strong></span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1606,7 +1626,10 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
               </div>
             </div>
             <div id="dash-ad-comparison-chart">
-              <div style="font-size:12px;color:var(--t3);text-align:center;padding:40px 0;">Upload campaign CSV to see ad comparison</div>
+              <div style="position:relative;height:220px;">
+                <canvas id="dash-ad-compare-chart"></canvas>
+                <div id="ad-compare-empty" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:12px;color:var(--t3);text-align:center;">Upload campaign CSV to compare ads</div>
+              </div>
             </div>
           </div>
 
@@ -8941,6 +8964,7 @@ async function handlePerformanceCSV(input) {
   el('dash-last-updated', 'Last updated: ' + new Date().toLocaleString('en-CA'));
   renderAdPerformanceTable(mapped);
   renderAdComparisonChart(mapped, 'ctr');
+  renderTimeChart(mapped, _timeChartMetric || 'spend');
   await matchPerformanceToAds(mapped);
   generatePerformanceAlerts(mapped);
   if (currentBizId && currentUser?.id) {
@@ -9143,58 +9167,161 @@ function findAndOpenAdByName(campaignName) {
   if (matched) { openAdView(matched.id); } else { go('adLibrary'); }
 }
 
-function renderAdComparisonChart(data, metric) {
-  const chartEl = document.getElementById('dash-ad-comparison-chart');
-  if (!chartEl || !data?.length) return;
+let _timeChartInstance = null;
+let _timeChartMetric   = 'spend';
+let _genderChartInst   = null;
+let _adCompareChartInst = null;
+
+function renderTimeChart(data, metric) {
+  const canvas  = document.getElementById('dash-time-chart');
+  const emptyEl = document.getElementById('time-chart-empty');
+  if (!canvas) return;
+
+  const byDate = {};
+  (data || []).forEach(row => {
+    const date = row.date_start || (row.uploaded_at ? row.uploaded_at.slice(0, 10) : null);
+    if (!date) return;
+    if (!byDate[date]) byDate[date] = { spend: 0, leads: 0, clicks: 0, impressions: 0 };
+    byDate[date].spend       += parseFloat(row.spend) || 0;
+    byDate[date].leads       += parseFloat(row.leads) || 0;
+    byDate[date].clicks      += parseFloat(row.clicks) || 0;
+    byDate[date].impressions += parseFloat(row.impressions) || 0;
+  });
+
+  const dates = Object.keys(byDate).sort();
+  if (dates.length < 2) {
+    if (emptyEl) emptyEl.style.display = 'block';
+    canvas.style.display = 'none';
+    return;
+  }
+  if (emptyEl) emptyEl.style.display = 'none';
+  canvas.style.display = 'block';
 
   const metricConfig = {
-    ctr:   { label: 'CTR (%)',         key: 'ctr',            format: v => v.toFixed(2) + '%', goodThreshold: 1.5,  color: 'var(--volt)' },
-    cpl:   { label: 'Cost/Lead (CAD)', key: 'cost_per_lead',  format: v => '$' + v.toFixed(0), goodThreshold: 50,   color: 'var(--green)', lowerIsBetter: true },
-    leads: { label: 'Total Leads',     key: 'leads',          format: v => v.toString(),        goodThreshold: 5,    color: 'var(--volt)' },
-    spend: { label: 'Spend (CAD)',     key: 'spend',          format: v => '$' + v.toFixed(0), goodThreshold: 100,  color: 'var(--t2)' }
+    spend: { label: 'Spend (CAD)',      data: dates.map(d => byDate[d].spend.toFixed(2)),    color: '#00D4A0', fill: 'rgba(0,212,160,0.1)' },
+    leads: { label: 'Leads',            data: dates.map(d => byDate[d].leads),                color: '#00C896', fill: 'rgba(0,200,150,0.1)' },
+    ctr:   { label: 'CTR (%)',          data: dates.map(d => { const i = byDate[d].impressions; return i > 0 ? ((byDate[d].clicks / i) * 100).toFixed(2) : 0; }), color: '#F5C842', fill: 'rgba(245,200,66,0.1)' },
+    cpl:   { label: 'Cost/Lead (CAD)',  data: dates.map(d => { const l = byDate[d].leads; return l > 0 ? (byDate[d].spend / l).toFixed(2) : 0; }),                color: '#7A95B8', fill: 'rgba(122,149,184,0.1)' }
   };
+  const cfg = metricConfig[metric] || metricConfig.spend;
 
+  if (_timeChartInstance) { _timeChartInstance.destroy(); _timeChartInstance = null; }
+
+  _timeChartInstance = new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels: dates.map(d => new Date(d).toLocaleDateString('en-CA', { month: 'short', day: 'numeric' })),
+      datasets: [{ label: cfg.label, data: cfg.data, borderColor: cfg.color, backgroundColor: cfg.fill, borderWidth: 2, pointBackgroundColor: cfg.color, pointRadius: 4, pointHoverRadius: 6, fill: true, tension: 0.3 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { backgroundColor: '#0D1F2D', borderColor: '#1E3A5F', borderWidth: 1, titleColor: '#E8EDF5', bodyColor: '#7A95B8',
+          callbacks: { label: ctx => { const v = ctx.parsed.y; return (metric === 'spend' || metric === 'cpl') ? ' $' + parseFloat(v).toFixed(2) + ' CAD' : metric === 'ctr' ? ' ' + v + '%' : ' ' + v; } }
+        }
+      },
+      scales: {
+        x: { grid: { color: '#1E3A5F' }, ticks: { color: '#4A6080', font: { size: 10 } } },
+        y: { grid: { color: '#1E3A5F' }, ticks: { color: '#4A6080', font: { size: 10 }, callback: v => (metric === 'spend' || metric === 'cpl') ? '$' + v : metric === 'ctr' ? v + '%' : v }, beginAtZero: true }
+      }
+    }
+  });
+  _timeChartMetric = metric;
+}
+
+function switchTimeChart(metric) {
+  ['spend','leads','ctr','cpl'].forEach(m => {
+    const btn = document.getElementById('time-btn-' + m);
+    if (btn) { btn.style.background = m === metric ? 'rgba(0,212,160,0.15)' : 'var(--bg-elevated)'; btn.style.border = m === metric ? '1px solid var(--volt)' : '1px solid var(--border)'; btn.style.color = m === metric ? 'var(--volt)' : 'var(--t3)'; }
+  });
+  renderTimeChart(S.performanceData || [], metric);
+}
+
+function renderGenderDonut(femalePct, malePct) {
+  const canvas = document.getElementById('dash-gender-chart');
+  if (!canvas) return;
+  if (_genderChartInst) { _genderChartInst.destroy(); _genderChartInst = null; }
+  _genderChartInst = new Chart(canvas, {
+    type: 'doughnut',
+    data: {
+      labels: ['Female', 'Male'],
+      datasets: [{ data: [femalePct, malePct], backgroundColor: ['#00D4A0', '#1E3A5F'], borderColor: ['#00D4A0', '#1E3A5F'], borderWidth: 1 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, cutout: '65%',
+      plugins: { legend: { display: false }, tooltip: { backgroundColor: '#0D1F2D', borderColor: '#1E3A5F', borderWidth: 1, titleColor: '#E8EDF5', bodyColor: '#7A95B8' } }
+    }
+  });
+  const fEl = document.getElementById('gender-female-pct-label');
+  const mEl = document.getElementById('gender-male-pct-label');
+  if (fEl) fEl.textContent = femalePct + '%';
+  if (mEl) mEl.textContent = malePct + '%';
+}
+
+function renderAdComparisonChart(data, metric) {
+  const canvas  = document.getElementById('dash-ad-compare-chart');
+  const emptyEl = document.getElementById('ad-compare-empty');
+  if (!canvas) return;
+
+  if (!data?.length) {
+    if (emptyEl) emptyEl.style.display = 'block';
+    canvas.style.display = 'none';
+    return;
+  }
+  if (emptyEl) emptyEl.style.display = 'none';
+  canvas.style.display = 'block';
+
+  const metricConfig = {
+    ctr:   { key: 'ctr',           label: 'CTR (%)',         suffix: '%',  goodThreshold: 1.5,  lowerIsBetter: false },
+    cpl:   { key: 'cost_per_lead', label: 'Cost/Lead (CAD)', suffix: '',   goodThreshold: 50,   lowerIsBetter: true  },
+    leads: { key: 'leads',         label: 'Total Leads',     suffix: '',   goodThreshold: 5,    lowerIsBetter: false },
+    spend: { key: 'spend',         label: 'Spend (CAD)',     suffix: '',   goodThreshold: 100,  lowerIsBetter: false }
+  };
   const cfg    = metricConfig[metric] || metricConfig.ctr;
-  const maxVal = Math.max(...data.map(r => parseFloat(r[cfg.key]) || 0), 0.1);
+  const topAds = data.slice(0, 6);
 
-  chartEl.innerHTML = data.slice(0, 8).map(row => {
-    const val = parseFloat(row[cfg.key]) || 0;
-    const pct = (val / maxVal) * 100;
-
-    const matchedAd = (S.adLibrary || []).find(ad => {
-      const adHook   = (ad.hook || '').toLowerCase();
-      const campName = (row.campaign_name || '').toLowerCase();
-      return campName.includes(adHook.slice(0,12)) || adHook.includes(campName.slice(0,12));
+  const labels = topAds.map(row => {
+    const matched = (S.adLibrary || []).find(ad => {
+      const h = (ad.hook || '').toLowerCase();
+      const c = (row.campaign_name || '').toLowerCase();
+      return c.includes(h.slice(0, 10)) || h.includes(c.slice(0, 10));
     });
+    return matched ? (matched.hook || '').replace(/[*_#>]/g, '').slice(0, 22) : (row.campaign_name || 'Ad').slice(0, 22);
+  });
 
-    const displayName = matchedAd
-      ? (matchedAd.hook || '').replace(/[*_#>]/g,'').trim().slice(0,30)
-      : (row.campaign_name || 'Ad').slice(0,30);
+  const values = topAds.map(row => parseFloat(row[cfg.key]) || 0);
+  const colors = values.map(val => {
+    const isGood = cfg.lowerIsBetter ? val > 0 && val < cfg.goodThreshold : val >= cfg.goodThreshold;
+    const isBad  = cfg.lowerIsBetter ? val > cfg.goodThreshold * 1.5 : val > 0 && val < cfg.goodThreshold * 0.5;
+    return isGood ? '#00C896' : isBad ? '#FF5050' : '#00D4A0';
+  });
 
-    const isGood  = cfg.lowerIsBetter ? val > 0 && val < cfg.goodThreshold : val >= cfg.goodThreshold;
-    const barColor = isGood ? 'var(--green)' : val > 0 ? cfg.color : 'var(--bg-elevated)';
+  if (_adCompareChartInst) { _adCompareChartInst.destroy(); _adCompareChartInst = null; }
 
-    return `
-      <div style="margin-bottom:10px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-          <div style="font-size:11px;color:var(--t2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:65%;">${displayName}</div>
-          <div style="font-size:11px;font-weight:700;color:${barColor};">${val > 0 ? cfg.format(val) : '—'}</div>
-        </div>
-        <div style="background:var(--bg-elevated);border-radius:4px;height:8px;">
-          <div style="background:${barColor};border-radius:4px;height:8px;width:${pct}%;transition:width 0.5s ease;"></div>
-        </div>
-      </div>`;
-  }).join('');
+  _adCompareChartInst = new Chart(canvas, {
+    type: 'bar',
+    data: { labels, datasets: [{ label: cfg.label, data: values, backgroundColor: colors, borderColor: colors, borderWidth: 0, borderRadius: 4 }] },
+    options: {
+      responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+      plugins: {
+        legend: { display: false },
+        tooltip: { backgroundColor: '#0D1F2D', borderColor: '#1E3A5F', borderWidth: 1, titleColor: '#E8EDF5', bodyColor: '#7A95B8',
+          callbacks: { label: ctx => { const v = ctx.parsed.x; return (metric === 'cpl' || metric === 'spend') ? ' $' + v.toFixed(0) + ' CAD' : metric === 'ctr' ? ' ' + v.toFixed(2) + '%' : ' ' + v; } }
+        }
+      },
+      scales: {
+        x: { grid: { color: '#1E3A5F' }, ticks: { color: '#4A6080', font: { size: 10 }, callback: v => (metric === 'cpl' || metric === 'spend') ? '$' + v : metric === 'ctr' ? v + '%' : v }, beginAtZero: true },
+        y: { grid: { display: false }, ticks: { color: '#7A95B8', font: { size: 10 } } }
+      }
+    }
+  });
 
   window._dashChartMetric = metric;
 
   ['ctr','cpl','leads','spend'].forEach(m => {
     const btn = document.getElementById('chart-btn-' + m);
-    if (btn) {
-      btn.style.background = m === metric ? 'rgba(0,212,160,0.15)' : 'var(--bg-elevated)';
-      btn.style.border     = m === metric ? '1px solid var(--volt)' : '1px solid var(--border)';
-      btn.style.color      = m === metric ? 'var(--volt)' : 'var(--t3)';
-    }
+    if (btn) { btn.style.background = m === metric ? 'rgba(0,212,160,0.15)' : 'var(--bg-elevated)'; btn.style.border = m === metric ? '1px solid var(--volt)' : '1px solid var(--border)'; btn.style.color = m === metric ? 'var(--volt)' : 'var(--t3)'; }
   });
 }
 
@@ -9222,17 +9349,10 @@ function renderDemographicsCharts(ageBreakdown, genderBreakdown, deviceBreakdown
     }
   });
 
-  const genderTotal  = (genderBreakdown.female || 0) + (genderBreakdown.male || 0) || 1;
-  const femalePct    = Math.round((genderBreakdown.female / genderTotal) * 100);
-  const malePct      = 100 - femalePct;
-
-  const femaleBar    = document.getElementById('gender-female-bar');
-  const femalePctEl  = document.getElementById('gender-female-pct');
-  const malePctEl    = document.getElementById('gender-male-pct');
-
-  if (femaleBar)   femaleBar.style.width = femalePct + '%';
-  if (femalePctEl) { femalePctEl.textContent = femalePct + '%'; femalePctEl.style.display = femalePct > 15 ? 'block' : 'none'; }
-  if (malePctEl)   malePctEl.textContent = malePct + '% Male';
+  const genderTotal = (genderBreakdown.female || 0) + (genderBreakdown.male || 0) || 1;
+  const femalePct   = Math.round((genderBreakdown.female / genderTotal) * 100);
+  const malePct     = 100 - femalePct;
+  renderGenderDonut(femalePct, malePct);
 
   if (deviceBreakdown) {
     const deviceTotal = Object.values(deviceBreakdown).reduce((a, b) => a + b, 0) || 1;
@@ -9340,6 +9460,7 @@ async function loadDashboardData() {
     S.performanceData = perfData;
     renderAdPerformanceTable(perfData);
     renderAdComparisonChart(perfData, 'ctr');
+    renderTimeChart(perfData, 'spend');
 
     const totals = perfData.reduce((acc, row) => ({
       spend:       acc.spend + (row.spend || 0),
