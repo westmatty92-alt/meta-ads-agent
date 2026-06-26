@@ -1223,6 +1223,11 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
           <div id="adv-meta" style="font-size:11px;color:var(--t3);margin-top:1px;"></div>
         </div>
         <div style="display:flex;align-items:center;gap:8px;">
+          <div style="display:flex;align-items:center;gap:6px;background:var(--bg-elevated);border-radius:6px;padding:4px 8px;">
+            <span style="font-size:10px;color:var(--t3);">Objective:</span>
+            <span id="adv-objective-badge" style="font-size:11px;font-weight:700;color:var(--volt);">Leads</span>
+            <button onclick="changeAdObjective()" style="background:transparent;border:none;color:var(--t3);font-size:10px;cursor:pointer;padding:0 2px;">✎</button>
+          </div>
           <button onclick="markAdAsUsed(currentAdViewId)" style="background:transparent;border:1px solid var(--green);color:var(--green);border-radius:6px;padding:5px 12px;font-size:11px;cursor:pointer;white-space:nowrap;">✓ Mark Used</button>
           <div id="adv-score-badge"></div>
         </div>
@@ -6101,6 +6106,204 @@ async function downloadAdPackage() {
   }
 }
 
+function changeAdObjective() {
+  const ad = currentAdViewData;
+  if (!ad) return;
+  const current = ad.campaign_objective || S.campaignObjective || 'leads';
+  const picker = document.createElement('div');
+  picker.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--bg-surface);border:1px solid var(--border);border-radius:12px;padding:20px;z-index:9999;width:340px;box-shadow:0 20px 60px rgba(0,0,0,0.5);';
+  picker.classList.add('obj-picker');
+  picker.innerHTML = `
+    <div style="font-size:14px;font-weight:700;color:var(--t1);margin-bottom:4px;">Change Campaign Objective</div>
+    <div style="font-size:11px;color:var(--t3);margin-bottom:16px;">This will regenerate the campaign brief, targeting, form, budget, and checklist for the new objective.</div>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;">
+      ${[
+        { value: 'leads',       label: '📋 Leads (Instant Form)',    desc: 'Collect leads inside Meta — no pixel needed' },
+        { value: 'conversions', label: '💰 Conversions (Purchase)',   desc: 'Drive purchases/bookings — requires pixel + booking page' },
+        { value: 'traffic',     label: '🌐 Traffic (Website)',        desc: 'Send people to your website — build retargeting audience' },
+        { value: 'awareness',   label: '📣 Awareness (Reach)',        desc: 'Maximize brand exposure — new to market' }
+      ].map(obj => `
+        <div onclick="selectNewObjective('${obj.value}', this)"
+          data-objective="${obj.value}"
+          style="background:${obj.value === current ? 'rgba(0,212,160,0.1)' : 'var(--bg-elevated)'};border:${obj.value === current ? '2px solid var(--volt)' : '1px solid var(--border)'};border-radius:8px;padding:10px 12px;cursor:pointer;">
+          <div style="font-size:12px;font-weight:600;color:var(--t1);">${obj.label}</div>
+          <div style="font-size:11px;color:var(--t3);margin-top:2px;">${obj.desc}</div>
+        </div>`).join('')}
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button onclick="document.querySelector('.obj-picker')?.remove()"
+        style="flex:1;background:transparent;border:1px solid var(--border);border-radius:6px;padding:8px;font-size:12px;color:var(--t2);cursor:pointer;">
+        Cancel
+      </button>
+      <button onclick="applyNewObjective()"
+        style="flex:1;background:var(--volt);color:#000;border:none;border-radius:6px;padding:8px;font-size:12px;font-weight:700;cursor:pointer;">
+        Regenerate Campaign →
+      </button>
+    </div>`;
+  document.body.appendChild(picker);
+  window._newObjective = current;
+}
+
+function selectNewObjective(value, el) {
+  window._newObjective = value;
+  const parent = el.parentElement;
+  parent.querySelectorAll('[data-objective]').forEach(item => {
+    item.style.background = 'var(--bg-elevated)';
+    item.style.border = '1px solid var(--border)';
+  });
+  el.style.background = 'rgba(0,212,160,0.1)';
+  el.style.border = '2px solid var(--volt)';
+}
+
+async function applyNewObjective() {
+  const newObj = window._newObjective;
+  if (!newObj) return;
+  document.querySelector('.obj-picker')?.remove();
+
+  const ad = currentAdViewData;
+  if (!ad) return;
+  if (!KEYS.claude) { alert('Claude API key required. Add it in Settings.'); return; }
+
+  const objConfig = {
+    leads:       { label: 'Leads',       form: true,  pixel: false, cta: 'Book Now'   },
+    conversions: { label: 'Conversions', form: false, pixel: true,  cta: 'Book Now'   },
+    traffic:     { label: 'Traffic',     form: false, pixel: true,  cta: 'Learn More' },
+    awareness:   { label: 'Awareness',   form: false, pixel: false, cta: 'Learn More' }
+  }[newObj] || { label: newObj, form: false, pixel: false, cta: 'Learn More' };
+
+  const badge = document.getElementById('adv-objective-badge');
+  if (badge) badge.textContent = objConfig.label;
+
+  ['adv-campaign-setup-content','adv-form-content','adv-budget-content','adv-checklist-content'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = `<div style="color:var(--t3);font-size:12px;padding:8px;">♻️ Regenerating for ${objConfig.label} objective...</div>`;
+  });
+  ['adv-campaign-setup','adv-instant-form','adv-budget','adv-checklist'].forEach(id => {
+    const el = document.getElementById(id);
+    const arrow = document.getElementById(id + '-arrow');
+    if (el) el.style.display = 'block';
+    if (arrow) arrow.textContent = '▲';
+  });
+
+  const city = S.serpIntelligence?.city || S.brandSnapshot?.location?.split(',')[0]?.trim() || 'Ontario';
+  const bizName = S.brandSnapshot?.business_name || '';
+  const industry = S.brandSnapshot?.industry || 'beauty/wellness';
+  const budget = S.clientDiscovery?.monthly_budget || S.budget || '$450-900/mo';
+
+  try {
+    const userPrompt = `Regenerate the campaign brief for this ad with a new objective.
+
+AD COPY: ${(ad.primary_text || ad.content || '').slice(0, 500)}
+HOOK: ${ad.hook || ''}
+SEGMENT: ${ad.segment_name || ''}
+BUSINESS: ${bizName}
+LOCATION: ${city}
+NEW OBJECTIVE: ${newObj.toUpperCase()}
+BUDGET: ${budget}
+${objConfig.pixel ? 'PIXEL REQUIRED: Yes — include pixel verification steps.' : ''}
+${objConfig.form ? 'INSTANT FORM REQUIRED: Yes — Higher Intent form.' : ''}
+
+Generate these sections for the ${newObj} objective:
+
+## CAMPAIGN SETUP
+Explain why ${newObj} is the right objective for this business.
+Include: campaign structure, ad set setup, placement recommendation.
+${objConfig.pixel ? 'Include pixel requirements and how to verify it is working.' : ''}
+
+## INSTANT FORM
+${objConfig.form
+  ? `Form Type: Higher Intent
+Context Card: [write specific intro matching the ad hook]
+Questions (max 3):
+1. [question with multiple choice answers]
+2. [question with multiple choice answers]
+3. [optional open text]
+Thank You Screen: [specific next steps]
+CASL Consent: "By submitting you agree to receive follow-up from ${bizName || 'us'}"`
+  : `NOT APPLICABLE — ${newObj} objective sends traffic to website/purchase page instead of Instant Form.`}
+
+## BUDGET ALLOCATION
+${budget}/month — use Canadian Meta benchmarks for ${industry}.
+Phase 1 Testing, Phase 2 Scaling, Phase 3 Retargeting.
+Include kill rules (CTR, frequency, CPL thresholds) and scale triggers.
+
+## LAUNCH CHECKLIST
+10 specific items for ${newObj} objective.
+${objConfig.pixel ? 'Include: pixel verification, conversion event setup, CAPI setup.' : ''}
+${objConfig.form ? 'Include: Instant Form creation, CASL consent, form preview test.' : ''}
+Include: creative upload sizes (1080×1350, 1080×1920), UTM parameters, ad preview check.`;
+
+    const newBrief = await ai(
+      `You are a Meta Ads expert. Generate a complete campaign brief for the specified objective. Use Canadian market context. Be specific and actionable. Format with ## section headers exactly as specified.`,
+      [{ role: 'user', content: userPrompt }]
+    );
+
+    if (newBrief && !newBrief.startsWith('⚠️')) {
+      const setupEl = document.getElementById('adv-campaign-setup-content');
+      if (setupEl) {
+        const s = newBrief.match(/##\s*CAMPAIGN SETUP\n([\s\S]*?)(?=\n##|$)/i)?.[1]?.trim();
+        setupEl.innerHTML = renderMarkdown(s || newBrief.slice(0, 500));
+      }
+
+      const formEl = document.getElementById('adv-form-content');
+      if (formEl) {
+        const s = newBrief.match(/##\s*INSTANT FORM\n([\s\S]*?)(?=\n##|$)/i)?.[1]?.trim();
+        if (s) {
+          const formData = extractInstantForm(s, ad, S.brandSnapshot);
+          formEl.innerHTML = renderInstantForm(formData);
+        }
+      }
+
+      const budgetEl = document.getElementById('adv-budget-content');
+      if (budgetEl) {
+        const s = newBrief.match(/##\s*BUDGET[^\n]*\n([\s\S]*?)(?=\n##|$)/i)?.[1]?.trim();
+        budgetEl.innerHTML = renderMarkdown(s || buildSmartBudgetRecommendation(ad));
+      }
+
+      const checklistEl = document.getElementById('adv-checklist-content');
+      if (checklistEl) {
+        const s = newBrief.match(/##\s*LAUNCH CHECKLIST\n([\s\S]*?)(?=\n##|$)/i)?.[1]?.trim();
+        if (s) {
+          const items = s.split('\n').map(l => l.replace(/^[-*\d.]\s*/,'').trim()).filter(l => l.length > 3);
+          checklistEl.innerHTML = items.map(item =>
+            `<label style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px;cursor:pointer;">
+              <input type="checkbox" style="margin-top:2px;accent-color:var(--volt);">
+              <span style="font-size:12px;color:var(--t2);">${item}</span>
+            </label>`
+          ).join('');
+        }
+      }
+
+      const ctaEl = document.getElementById('adv-meta-cta');
+      if (ctaEl) ctaEl.textContent = objConfig.cta;
+
+      if (currentAdViewId) {
+        await sb.from('generated_ads').update({
+          campaign_objective: newObj,
+          campaign_brief: newBrief
+        }).eq('id', currentAdViewId);
+        if (currentAdViewData) currentAdViewData.campaign_objective = newObj;
+        const adInLib = adLibrary.find(a => a.id === currentAdViewId);
+        if (adInLib) { adInLib.campaign_objective = newObj; adInLib.campaign_brief = newBrief; }
+      }
+
+      appendAdViewChatMessage('assistant',
+        `✅ Campaign brief regenerated for **${objConfig.label}** objective.\n\nCampaign Setup, ${objConfig.form ? 'Instant Form, ' : ''}Budget, and Launch Checklist have all been updated.${objConfig.pixel ? ' **Important:** Make sure your Meta Pixel is verified and firing before launching.' : ''} Review the updated sections above and let me know if you need any adjustments.`
+      );
+    } else {
+      throw new Error(newBrief || 'Empty response from AI');
+    }
+  } catch(e) {
+    console.error('[applyNewObjective]', e.message);
+    ['adv-campaign-setup-content','adv-form-content','adv-budget-content','adv-checklist-content'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.innerHTML = `<div style="color:var(--red);font-size:12px;">❌ Regeneration failed — ${e.message}</div>`;
+    });
+  }
+}
+
+// SQL: ALTER TABLE generated_ads ADD COLUMN IF NOT EXISTS campaign_objective text;
+
 function getBudgetRecommendation(ad) {
   if (ad.budget_recommendation && ad.budget_recommendation.length > 100) {
     return ad.budget_recommendation;
@@ -6208,6 +6411,13 @@ async function openAdView(adId) {
     } else {
       scoreEl.innerHTML = `<button onclick="rescoreAd('${adId}',([currentAdViewData?.hook,currentAdViewData?.primary_text,currentAdViewData?.headlines,currentAdViewData?.cta].filter(Boolean).join(' ')))" style="background:transparent;border:1px solid var(--border);border-radius:4px;padding:3px 8px;color:var(--t3);font-size:11px;cursor:pointer;">Score this ad</button>`;
     }
+  }
+
+  // ── OBJECTIVE BADGE ──────────────────────────────────────────
+  const objBadge = document.getElementById('adv-objective-badge');
+  if (objBadge) {
+    const obj = ad.campaign_objective || S.campaignObjective || 'leads';
+    objBadge.textContent = obj.charAt(0).toUpperCase() + obj.slice(1);
   }
 
   // ── IMAGE ZONE (carousel) ─────────────────────────────────────
