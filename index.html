@@ -6375,7 +6375,18 @@ function changeAdObjective() {
   console.log('[changeAdObjective] opening picker for:', ad.id);
   const current = ad.campaign_objective || S.campaignObjective || 'leads';
   const picker = document.createElement('div');
-  picker.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--bg-surface);border:1px solid var(--border);border-radius:12px;padding:20px;z-index:9999;width:340px;box-shadow:0 20px 60px rgba(0,0,0,0.5);';
+  picker.style.cssText = `
+    position:fixed;
+    top:50%;
+    left:50%;
+    transform:translate(-50%,-50%);
+    background:#0D1F2D;
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:24px;
+    z-index:10000;
+    width:360px;
+    box-shadow:0 24px 80px rgba(0,0,0,0.8);`;
   picker.classList.add('obj-picker');
   picker.innerHTML = `
     <div style="font-size:14px;font-weight:700;color:var(--t1);margin-bottom:4px;">Change Campaign Objective</div>
@@ -6395,16 +6406,26 @@ function changeAdObjective() {
         </div>`).join('')}
     </div>
     <div style="display:flex;gap:8px;">
-      <button onclick="document.querySelector('.obj-picker')?.remove()"
-        style="flex:1;background:transparent;border:1px solid var(--border);border-radius:6px;padding:8px;font-size:12px;color:var(--t2);cursor:pointer;">
+      <button onclick="document.getElementById('obj-backdrop')?.remove();this.closest('.obj-picker').remove()"
+        style="flex:1;background:transparent;border:1px solid var(--border);border-radius:6px;padding:10px;font-size:13px;color:var(--t2);cursor:pointer;">
         Cancel
       </button>
       <button onclick="applyNewObjective()"
-        style="flex:1;background:var(--volt);color:#000;border:none;border-radius:6px;padding:8px;font-size:12px;font-weight:700;cursor:pointer;">
+        style="flex:1;background:transparent;border:2px solid var(--volt);color:var(--volt);border-radius:6px;padding:10px;font-size:13px;font-weight:700;cursor:pointer;">
         Regenerate Campaign →
       </button>
     </div>`;
   window._newObjective = current;
+  const backdrop = document.createElement('div');
+  backdrop.id = 'obj-backdrop';
+  backdrop.style.cssText = `
+    position:fixed;
+    top:0;left:0;right:0;bottom:0;
+    background:rgba(0,0,0,0.7);
+    z-index:9999;
+    backdrop-filter:blur(2px);`;
+  backdrop.onclick = () => { backdrop.remove(); document.querySelector('.obj-picker')?.remove(); };
+  document.body.appendChild(backdrop);
   document.body.appendChild(picker);
 }
 
@@ -6424,6 +6445,7 @@ async function applyNewObjective() {
   console.log('[applyNewObjective] objective:', window._newObjective);
   const newObj = window._newObjective;
   if (!newObj) { console.warn('[applyNewObjective] no objective selected'); return; }
+  document.getElementById('obj-backdrop')?.remove();
   document.querySelector('.obj-picker')?.remove();
 
   const ad = currentAdViewData;
