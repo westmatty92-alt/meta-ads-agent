@@ -4420,16 +4420,9 @@ async function runVisualSilent() {
 }
 
 async function generateDiscoverySuggestions() {
-  const claudeKey = document.getElementById('key-claude')?.value?.trim() || S.keys?.claude;
-  if (!claudeKey) return null;
+  if (!KEYS.claude) return null;
   try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': claudeKey, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 600,
-        messages: [{ role: 'user', content: `Based on these business discovery answers, recommend the best Meta ad setup.
+    const text = await ai('', [{ role: 'user', content: `Based on these business discovery answers, recommend the best Meta ad setup.
 
 Business: ${S.brandSnapshot?.business_name || 'local service business'}
 Industry: ${S.brandSnapshot?.industry || 'service'}
@@ -4462,12 +4455,8 @@ Return ONLY this JSON, no other text:
     {"format": "carousel", "reason": "one sentence why not"}
   ],
   "summary": "2 sentence overall recommendation"
-}` }]
-      })
-    });
-    const data = await response.json();
-    const text = data.content?.find(b => b.type === 'text')?.text || '';
-    const result = JSON.parse(text.match(/\{[\s\S]*\}/)[0]);
+}` }]);
+    const result = JSON.parse((text || '').match(/\{[\s\S]*\}/)?.[0] || '{}');
     S.discoverySuggestions = result;
     return result;
   } catch(e) {
@@ -6061,21 +6050,14 @@ async function generateMoreSizes() {
   if (!prompt) {
     const ad = currentAdViewData;
     if (!ad) { alert('No ad data found.'); return; }
-    const claudeKey = document.getElementById('key-claude')?.value?.trim() || S.keys?.claude || KEYS.claude;
-    if (!claudeKey) { alert('Claude API key required.'); return; }
+    if (!KEYS.claude) { alert('Claude API key required.'); return; }
     if (statusEl) { statusEl.style.display = 'block'; statusEl.innerHTML = '⏳ Generating visual prompt...'; }
     try {
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-api-key': claudeKey, 'anthropic-version': '2023-06-01' },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-6', max_tokens: 300,
-          messages: [{ role: 'user', content: `Write a GPT Image 2 prompt for this ad.\nBusiness: ${S.brandSnapshot?.business_name || 'local service'}\nLocation: ${S.brandSnapshot?.location?.split(',')[0] || 'Ontario'}\nHook: ${ad.hook || extractHookFromContent(ad.primary_text || '')}\nBrand colors: ${getBrandColors() || 'warm neutrals'}\nStyle: ${getBrandStyle() || 'premium minimal clean'}\nWrite ONLY the image prompt. Under 200 words.` }]
-        })
-      });
-      const data = await response.json();
-      const newPrompt = data.content?.find(b => b.type === 'text')?.text?.trim();
-      if (!newPrompt) { if (statusEl) statusEl.innerHTML = '❌ Could not generate prompt'; return; }
+      const newPrompt = await ai('', [{
+        role: 'user',
+        content: `Write a GPT Image 2 prompt for this ad.\nBusiness: ${S.brandSnapshot?.business_name || 'local service'}\nLocation: ${S.brandSnapshot?.location?.split(',')[0] || 'Ontario'}\nHook: ${ad.hook || extractHookFromContent(ad.primary_text || '')}\nBrand colors: ${getBrandColors() || 'warm neutrals'}\nStyle: ${getBrandStyle() || 'premium minimal clean'}\nWrite ONLY the image prompt. Under 200 words.`
+      }]);
+      if (!newPrompt || newPrompt.startsWith('⚠️')) { if (statusEl) statusEl.innerHTML = '❌ Could not generate prompt'; return; }
       S.lastGeneratedPrompt = newPrompt;
       prompt = newPrompt;
     } catch(e) {
