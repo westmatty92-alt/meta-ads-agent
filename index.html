@@ -1551,7 +1551,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
       <!-- Header -->
       <div style="padding:20px 24px;border-bottom:1px solid var(--border);flex-shrink:0;">
         <div style="font-size:20px;font-weight:800;color:var(--t1);font-family:var(--display);margin-bottom:4px;">🧭 Ad Discovery</div>
-        <div style="font-size:13px;color:var(--t2);">Answer 12 questions. AI builds your complete campaign strategy.</div>
+        <div style="font-size:13px;color:var(--t2);">Answer 17 questions. AI builds your complete campaign strategy.</div>
       </div>
 
       <!-- Mode selector (shown by default) -->
@@ -1562,7 +1562,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
             style="background:var(--bg-surface);border:2px solid var(--volt);border-radius:12px;padding:20px;cursor:pointer;transition:all 0.2s;">
             <div style="font-size:24px;margin-bottom:8px;">🧭</div>
             <div style="font-size:14px;font-weight:700;color:var(--t1);margin-bottom:6px;">Guided Mode</div>
-            <div style="font-size:12px;color:var(--t2);line-height:1.5;">Answer 12 questions. AI builds the full strategy and runs the pipeline automatically.</div>
+            <div style="font-size:12px;color:var(--t2);line-height:1.5;">Answer 17 questions. AI builds the full strategy and runs the pipeline automatically.</div>
             <div style="margin-top:10px;font-size:11px;color:var(--t3);">Best for: Business owners new to ads</div>
           </div>
           <div onclick="go('data')"
@@ -4034,6 +4034,36 @@ const DISCOVERY_QUESTIONS = [
     {value:'5_7',label:'5 – 7 out of 10',hint:'Strong — ready to scale'},
     {value:'8_plus',label:'8+ out of 10',hint:'Excellent — maximize volume'}
   ]},
+  { id:'has_pixel', section:'Campaign Infrastructure', question:'Do you have the Meta Pixel installed on your website?', type:'single_choice', options:[
+    {value:'yes_verified',label:'Yes — installed and verified',hint:'Full tracking available'},
+    {value:'yes_unsure',label:'Yes but not sure if working',hint:"We'll flag this for setup"},
+    {value:'no',label:'No — not installed',hint:"We'll use Instant Form leads instead"},
+    {value:'no_help',label:'No and I need help setting it up',hint:"We'll include setup in checklist"}
+  ]},
+  { id:'has_booking_page', section:'Campaign Infrastructure', question:'Do you have a live booking page?', type:'single_choice', options:[
+    {value:'yes_dedicated',label:'Yes — dedicated booking page',hint:'Can drive traffic directly'},
+    {value:'yes_homepage',label:'My homepage has booking',hint:'Works but not optimized'},
+    {value:'third_party',label:'Third party (Calendly, Jane, etc.)',hint:'Works, pixel may not fire'},
+    {value:'no',label:'No booking page yet',hint:'Instant Form only — no website traffic'}
+  ]},
+  { id:'has_crm', section:'Campaign Infrastructure', question:'What do you use when a lead comes in?', type:'single_choice', options:[
+    {value:'ghl',label:'GoHighLevel — automated follow-up',hint:'Ideal — leads handled automatically'},
+    {value:'other_crm',label:'Other CRM with automation',hint:'Good — confirm Meta integration'},
+    {value:'manual',label:'I follow up manually',hint:'Workable — respond within 2 hours'},
+    {value:'nothing',label:'No system yet',hint:'Fix this before launching'}
+  ]},
+  { id:'has_assets', section:'Campaign Infrastructure', question:'Do you have before/after photos or professional creative assets?', type:'single_choice', options:[
+    {value:'professional',label:'Yes — professional photos and/or video',hint:'Use real photos in ads'},
+    {value:'phone_photos',label:'Phone photos only',hint:'AI generates hero, phone photos for proof'},
+    {value:'testimonials',label:'Client testimonials but no visuals',hint:'Use quotes as copy, AI generates image'},
+    {value:'none',label:'No assets yet',hint:'AI generates all imagery from brand kit'}
+  ]},
+  { id:'payment_timing', section:'Campaign Infrastructure', question:'When do customers pay?', type:'single_choice', options:[
+    {value:'at_booking',label:'Full payment at time of booking online',hint:'Purchase pixel event available'},
+    {value:'deposit',label:'Deposit at booking, rest at appointment',hint:'Partial purchase tracking possible'},
+    {value:'at_appointment',label:'Full payment at appointment in person',hint:'Lead tracking only'},
+    {value:'no_system',label:'No payment system yet',hint:'Set up before launching ads'}
+  ]},
   { id:'monthly_capacity', section:'Sales Intelligence', question:'How many new clients can you realistically handle this month?', type:'single_choice', options:[
     {value:'1_5',label:'1 – 5',hint:'Small capacity — targeted ads'},
     {value:'5_15',label:'5 – 15',hint:'Moderate capacity'},
@@ -4197,6 +4227,11 @@ async function saveDiscoveryAndBuild() {
       ads_run_before: discoveryAnswers.ads_run_before !== 'never',
       ads_result: discoveryAnswers.ads_run_before,
       campaign_goal: discoveryAnswers.campaign_goal,
+      has_pixel: discoveryAnswers.has_pixel,
+      has_booking_page: discoveryAnswers.has_booking_page,
+      has_crm: discoveryAnswers.has_crm,
+      has_assets: discoveryAnswers.has_assets,
+      payment_timing: discoveryAnswers.payment_timing,
       updated_at: new Date().toISOString()
     };
     const { error } = await sb.from('client_discovery').upsert(payload, { onConflict: 'business_id' });
@@ -4245,6 +4280,11 @@ Ads run before: ${discoveryAnswers.ads_run_before || 'not provided'}
 Campaign goal: ${discoveryAnswers.campaign_goal || 'not provided'}
 Budget: ${discoveryAnswers.monthly_budget || 'not provided'}
 Promotion: ${discoveryAnswers.promotion_details || 'none'}
+Pixel status: ${discoveryAnswers.has_pixel || 'not provided'}
+Booking page: ${discoveryAnswers.has_booking_page || 'not provided'}
+CRM / follow-up: ${discoveryAnswers.has_crm || 'not provided'}
+Creative assets: ${discoveryAnswers.has_assets || 'not provided'}
+Payment timing: ${discoveryAnswers.payment_timing || 'not provided'}
 
 STRATEGY IMPLICATIONS (apply from ad-strategy skill):
 - Use close rate to determine targeting tightness and form type
@@ -4252,6 +4292,49 @@ STRATEGY IMPLICATIONS (apply from ad-strategy skill):
 - Use referral language as primary hook direction
 - Use client fear as primary objection to address in copy
 - Apply Canadian market tone — warm, local, specific`;
+
+  // Override campaign objective based on pixel + payment timing
+  if (discoveryAnswers.has_pixel === 'yes_verified' &&
+      discoveryAnswers.payment_timing === 'at_booking') {
+    S.campaignObjective = 'conversions';
+    S.conversionEvent = 'Purchase';
+    S.discoveryContext += '\nOBJECTIVE OVERRIDE: Pixel verified + payment at booking = use Conversions objective with Purchase event.';
+  } else {
+    S.campaignObjective = 'leads';
+    S.useInstantForm = true;
+  }
+
+  // Override form type based on pixel / booking page status
+  if (discoveryAnswers.has_pixel === 'no' || discoveryAnswers.has_pixel === 'no_help' ||
+      discoveryAnswers.has_booking_page === 'no') {
+    S.useInstantForm = true;
+    S.formType = 'intent';
+    S.discoveryContext += '\nFORM NOTE: No pixel or no booking page — Instant Form required. Higher Intent form recommended.';
+  }
+
+  // Creative strategy note based on asset availability
+  if (discoveryAnswers.has_assets === 'professional') {
+    S.discoveryContext += '\nCREATIVE NOTE: Professional assets available. Prioritize real photos. Request upload from client before launch.';
+  } else if (discoveryAnswers.has_assets === 'none') {
+    S.discoveryContext += '\nCREATIVE NOTE: No assets. Use AI-generated lifestyle imagery. Founder story hook angle.';
+  } else if (discoveryAnswers.has_assets) {
+    S.discoveryContext += '\nCREATIVE NOTE: Phone photos available for social proof. AI generates primary hero image.';
+  }
+
+  // Build pre-launch warnings
+  S.discoveryWarnings = [];
+  if (discoveryAnswers.has_crm === 'nothing') {
+    S.discoveryWarnings.push("⚠️ No follow-up system detected. Leads will go cold within 2 hours without contact. Set up GHL or a manual follow-up process before launching.");
+  }
+  if (discoveryAnswers.has_pixel === 'no' || discoveryAnswers.has_pixel === 'no_help') {
+    S.discoveryWarnings.push("⚠️ Meta Pixel not installed. You cannot run Conversions campaigns or build retargeting audiences without it. We'll use Instant Form leads for now.");
+  }
+  if (discoveryAnswers.payment_timing === 'no_system') {
+    S.discoveryWarnings.push("⚠️ No payment system set up. Clients won't be able to pay online. Set up Stripe or Square before launching.");
+  }
+  if (discoveryAnswers.has_booking_page === 'no') {
+    S.discoveryWarnings.push("⚠️ No booking page. All leads must go through Instant Form — you cannot send ad traffic to a website.");
+  }
 
   try {
     // Stage 1 — Auto-Research if not already done
@@ -4475,7 +4558,14 @@ function showDiscoveryResults() {
       </div>`;
   }
 
-  previewEl.innerHTML = suggestionsHTML + adCardHTML;
+  let warningsHTML = '';
+  if (S.discoveryWarnings?.length) {
+    warningsHTML = `<div style="background:rgba(255,80,80,0.08);border:1px solid rgba(255,80,80,0.2);border-radius:10px;padding:14px 16px;margin-bottom:16px;">
+      <div style="font-size:12px;font-weight:700;color:var(--red);margin-bottom:10px;">⚠️ Fix These Before Launching</div>
+      ${S.discoveryWarnings.map(w => `<div style="font-size:12px;color:var(--t2);line-height:1.5;margin-bottom:8px;">${w}</div>`).join('')}
+    </div>`;
+  }
+  previewEl.innerHTML = warningsHTML + suggestionsHTML + adCardHTML;
 }
 
 function openDiscoveryAdView() {
