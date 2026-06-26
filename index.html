@@ -3829,20 +3829,24 @@ async function generateAdImage(provider) {
   btns.forEach(b => { b.disabled = false; b.style.opacity = '1'; });
 
   if (imageUrl) {
+    if (statusEl) statusEl.innerHTML = `⏳ Applying brand kit...`;
+    const brandedUrl = await applyBrandOverlay(imageUrl);
+    const finalUrl = brandedUrl || imageUrl;
+
     setSt('Image ready ✓', 'done');
     if (statusEl) statusEl.innerHTML = `✅ Image generated with ${provider === 'dalle' ? 'GPT Image 2' : 'Flux'} (${size})`;
 
-    S.lastImageUrl = imageUrl;
+    S.lastImageUrl = finalUrl;
     if (!S.generatedImages) S.generatedImages = [];
     const _imgTs = Date.now();
-    S.generatedImages.push({ url: imageUrl, size, provider, prompt, timestamp: _imgTs });
+    S.generatedImages.push({ url: finalUrl, size, provider, prompt, timestamp: _imgTs });
 
     const sizeFormatMap = { '4:5': 'feed', '9:16': 'stories', '1:1': 'square', 'landscape': 'landscape' };
     const sizePixelMap  = { '4:5': '1080×1350', '9:16': '1080×1920', '1:1': '1080×1080', 'landscape': '1200×628' };
     const sizeLabelMap  = { '4:5': 'Feed (1080×1350)', '9:16': 'Stories/Reels (1080×1920)', '1:1': 'Square (1080×1080)', 'landscape': 'Landscape (1200×628)' };
 
     if (!window._carouselImages) window._carouselImages = [];
-    const _newEntry = { url: imageUrl, size: sizePixelMap[size] || size, label: sizeLabelMap[size] || size, format: sizeFormatMap[size] || 'feed' };
+    const _newEntry = { url: finalUrl, size: sizePixelMap[size] || size, label: sizeLabelMap[size] || size, format: sizeFormatMap[size] || 'feed' };
     const _existIdx = window._carouselImages.findIndex(img => img.format === _newEntry.format);
     if (_existIdx >= 0) { window._carouselImages[_existIdx] = _newEntry; } else { window._carouselImages.push(_newEntry); }
 
@@ -3852,16 +3856,16 @@ async function generateAdImage(provider) {
     imgCard.style.cssText = 'background:var(--bg-surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;display:flex;flex-direction:column;';
     imgCard.innerHTML = `
       <div style="position:relative;background:#000;">
-        <img src="${imageUrl}" style="width:100%;display:block;aspect-ratio:4/5;object-fit:cover;">
+        <img src="${finalUrl}" style="width:100%;display:block;aspect-ratio:4/5;object-fit:cover;">
         <div style="position:absolute;top:6px;left:6px;background:rgba(0,0,0,0.6);border-radius:4px;padding:2px 6px;font-size:10px;color:#fff;">${sizeLabelMap[size] || size}</div>
         <div style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,0.6);border-radius:4px;padding:2px 6px;font-size:10px;color:#fff;">${provider === 'dalle' ? 'GPT Image 2' : 'Flux'}</div>
       </div>
       <div style="padding:8px;display:flex;flex-direction:column;gap:6px;flex:1;justify-content:flex-end;">
-        <button onclick="addImageToAdLibrary('${imageUrl}', '${size}', '${imgId}')" id="add-btn-${imgId}"
+        <button onclick="addImageToAdLibrary('${finalUrl}', '${size}', '${imgId}')" id="add-btn-${imgId}"
           style="width:100%;background:var(--volt);color:#000;border:none;border-radius:6px;padding:7px;font-size:11px;font-weight:700;cursor:pointer;">
           + Add to Ad Library
         </button>
-        <a href="${imageUrl}" download="baseleap-ad-${(sizeFormatMap[size]||'feed')}-${sizePixelMap[size]?.replace('×','x')||size}-${_imgTs}.png" target="_blank"
+        <a href="${finalUrl}" download="baseleap-ad-${(sizeFormatMap[size]||'feed')}-${sizePixelMap[size]?.replace('×','x')||size}-${_imgTs}.png" target="_blank"
           style="width:100%;background:transparent;border:1px solid var(--border);border-radius:6px;padding:7px;font-size:11px;color:var(--t2);text-decoration:none;text-align:center;display:block;">
           ⬇ Download
         </a>
@@ -6213,6 +6217,81 @@ async function downloadAdPackage() {
   }
 }
 
+function getBudgetRecommendation(ad) {
+  if (ad.budget_recommendation && ad.budget_recommendation.length > 100) {
+    return ad.budget_recommendation;
+  }
+  const briefBudget = ad.campaign_brief?.match(/##\s*BUDGET[^\n]*\n([\s\S]*?)(?=\n##|$)/i)?.[1]?.trim();
+  if (briefBudget && briefBudget.length > 100) return briefBudget;
+  return buildSmartBudgetRecommendation(ad);
+}
+
+function buildSmartBudgetRecommendation(ad) {
+  const industry = S.brandSnapshot?.industry || '';
+  const isBeauty = /beauty|whiten|salon|spa|skin|lash/i.test(industry);
+  const isReno = /reno|construct|build|paint|roof/i.test(industry);
+  const serpCity = S.serpIntelligence?.city ||
+    S.brandSnapshot?.location?.split(',')[0]?.trim() || 'Ontario';
+  const isFirstMover = !S.competitorAds?.length;
+  const competitorCount = S.competitorAds?.length || 0;
+  const serpCompetitors = S.serpIntelligence?.organicResults?.length || 0;
+
+  const budgetKey = S.clientDiscovery?.monthly_budget || S.budget || '450_900';
+  const budgetMap = {
+    '300_450':   { monthly: '$300-450',     daily: '$10-15',   p1: '$10', p2: '$15',  p3: '$5'  },
+    '450_900':   { monthly: '$450-900',     daily: '$15-30',   p1: '$15', p2: '$25',  p3: '$8'  },
+    '900_2100':  { monthly: '$900-2,100',   daily: '$30-70',   p1: '$30', p2: '$50',  p3: '$15' },
+    '2100_plus': { monthly: '$2,100+',      daily: '$70-150',  p1: '$70', p2: '$100', p3: '$25' }
+  };
+  const b = budgetMap[budgetKey] || budgetMap['450_900'];
+
+  const cplLow  = isBeauty ? '$20' : isReno ? '$40' : '$30';
+  const cplHigh = isBeauty ? '$60' : isReno ? '$120' : '$80';
+  const cpbLow  = isBeauty ? '$60' : isReno ? '$120' : '$80';
+  const cpbHigh = isBeauty ? '$150' : isReno ? '$300' : '$200';
+
+  const competitorSignal = competitorCount > 3
+    ? `⚠️ ${competitorCount} competitors running Meta ads — consider increasing budget to compete`
+    : isFirstMover
+    ? `✅ FIRST-MOVER: No competitors on Meta in ${serpCity} — lower CPMs expected ($8-12 CAD)`
+    : `${serpCompetitors} local businesses found — Meta ad competition appears low`;
+
+  return `RECOMMENDED BUDGET: ${b.monthly} CAD/month (${b.daily}/day)
+
+PHASE 1 — TESTING (Week 1-2): ${b.p1} CAD/day
+- Run Feed (1080×1350) — primary placement only
+- Test 2 hook variations simultaneously
+- Target: ${serpCity} + 25km radius
+- Kill rule: Pause if CTR below 0.8% after 500 impressions
+- Goal: Find winning hook and audience
+
+PHASE 2 — SCALING (Week 3-4): ${b.p2} CAD/day
+- Double budget on winning hook/audience
+- Introduce Stories placement if Feed CTR strong
+- Kill anything below 1% CTR
+- Goal: Drive bookings at target cost
+
+PHASE 3 — RETARGETING (Ongoing): ${b.p3} CAD/day
+- Target: Website visitors + form openers (last 30 days)
+- Use winning creative only
+- Expected CPL: 40-60% lower than cold traffic
+
+EXPECTED RESULTS AT ${b.monthly}/month:
+- Estimated reach: ${isBeauty ? '8,000-15,000' : '5,000-10,000'} people/month
+- Estimated leads: ${isBeauty ? '15-40' : '8-20'} per month
+- Target cost per lead: ${cplLow}-${cplHigh} CAD
+- Target cost per booking: ${cpbLow}-${cpbHigh} CAD
+
+SCALE TRIGGER: When CPL stays below ${isBeauty ? '$45' : '$75'} CAD
+for 3 consecutive days → increase daily budget by 20%
+
+COMPETITOR ACTIVITY:
+${competitorSignal}
+${competitorCount > 0 ? '\nActive Meta ads found:\n' +
+  (S.competitorAds?.slice(0,3)?.map(a => `• ${a.page_name || a.title || 'Competitor'} — ${a.ad_count || 1} ad(s) running`).join('\n') || '') : ''}
+${budgetKey === '300_450' ? '\n⚠️ MINIMUM BUDGET WARNING: $15 CAD/day is the absolute minimum to enter Meta\'s learning phase. Below this the algorithm cannot optimise.' : ''}`;
+}
+
 async function openAdView(adId) {
   const ad = adLibrary.find(a => a.id === adId);
   if (!ad) { console.warn('[openAdView] ad not found:', adId); return; }
@@ -6430,7 +6509,13 @@ async function openAdView(adId) {
 
   // ── BUDGET ───────────────────────────────────────────────────
   const budgetEl = document.getElementById('adv-budget-content');
-  if (budgetEl) budgetEl.innerHTML = renderMarkdown(ad.budget_recommendation ?? extractSection(brief, 'BUDGET') ?? 'No budget recommendation yet — run the pipeline with a budget set.');
+  if (budgetEl) {
+    budgetEl.innerHTML = renderMarkdown(getBudgetRecommendation(ad));
+  }
+  const budgetAccordion = document.getElementById('adv-budget');
+  if (budgetAccordion) budgetAccordion.style.display = 'block';
+  const budgetArrow = document.getElementById('adv-budget-arrow');
+  if (budgetArrow) budgetArrow.textContent = '▲';
 
   // ── LAUNCH CHECKLIST ─────────────────────────────────────────
   const checklistEl = document.getElementById('adv-checklist-content');
@@ -6583,8 +6668,12 @@ function appendAdViewChatMessage(role, content, id) {
   if (id) el.id = id;
   el.style.cssText = role === 'user'
     ? 'background:rgba(0,212,160,0.1);border:1px solid rgba(0,212,160,0.2);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--t1);align-self:flex-end;max-width:80%;margin-left:auto;word-break:break-word;'
-    : 'background:var(--bg-surface);border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--t2);max-width:85%;line-height:1.7;white-space:pre-wrap;word-break:break-word;';
-  el.textContent = content;
+    : 'background:var(--bg-surface);border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--t2);max-width:85%;line-height:1.7;word-break:break-word;';
+  if (role === 'assistant') {
+    el.innerHTML = renderMarkdown(content);
+  } else {
+    el.textContent = content;
+  }
   chatEl.appendChild(el);
   chatEl.scrollTo(0, chatEl.scrollHeight);
 }
