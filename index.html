@@ -6359,9 +6359,9 @@ function renderAdImageCarousel(ad) {
       style="display:block;width:100%;background:var(--volt);color:#000;border:none;border-radius:6px;padding:8px;font-size:12px;font-weight:700;cursor:pointer;text-align:center;margin-bottom:6px;">
       ⬇ Download ${images[0].label}
     </button>
-    <button onclick="generateMoreSizes()"
-      style="width:100%;background:transparent;border:1px solid var(--border);border-radius:6px;padding:7px;font-size:11px;color:var(--t2);cursor:pointer;margin-bottom:6px;">
-      🎨 Generate / Replace Sizes
+    <button onclick="regenerateAllSizes()"
+      style="display:block;width:100%;background:transparent;border:1px solid var(--border);border-radius:8px;padding:8px;font-size:11px;color:var(--t2);cursor:pointer;text-align:center;margin-bottom:6px;">
+      🎨 Generate / Replace All Sizes
     </button>
     <button onclick="downloadAdPackage()"
       style="width:100%;background:var(--bg-elevated);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:12px;color:var(--t1);cursor:pointer;font-weight:600;">
@@ -6397,6 +6397,26 @@ function carouselPrev() {
   carouselGo((window._carouselIndex - 1 + images.length) % images.length);
 }
 
+async function regenerateAllSizes() {
+  window._carouselImages = [];
+  window._carouselIndex = 0;
+
+  if (currentAdViewId) {
+    await sb.from('generated_ads').update({
+      image_url: null,
+      image_urls: {}
+    }).eq('id', currentAdViewId);
+  }
+
+  if (currentAdViewData) {
+    currentAdViewData.image_url = null;
+    currentAdViewData.image_urls = {};
+  }
+
+  updateAdImageStatus('Starting fresh generation...');
+  await generateMoreSizes();
+}
+
 async function generateMoreSizes() {
   const existingImages = window._carouselImages || [];
   const existingSizes = existingImages.map(i => i.format);
@@ -6406,7 +6426,14 @@ async function generateMoreSizes() {
     { ratio: '1:1', format: 'square', label: 'Square' }
   ];
   const missing = allSizes.filter(s => !existingSizes.includes(s.format));
-  if (missing.length === 0) { alert('All 3 sizes already generated.'); return; }
+  if (missing.length === 0) {
+    if (confirm('All 3 sizes already exist. Regenerate all from scratch?')) {
+      window._carouselImages = [];
+      // fall through to generate
+    } else {
+      return;
+    }
+  }
 
   let prompt = S.lastVisualPrompts?.dalle || S.lastVisualPrompts?.flux ||
                currentAdViewData?.visual_prompt || S.lastGeneratedPrompt || null;
