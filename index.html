@@ -3981,11 +3981,16 @@ async function generateAdImage(provider = 'dalle', injectedPrompt = null) {
         const _sizeKey = img.format === 'feed' ? '4:5' : img.format === 'stories' ? '9:16' : img.format === 'square' ? '1:1' : img.format === 'landscape' ? 'landscape' : img.format;
         _imageUrlsMap[_sizeKey] = img.url;
       });
-      await sb.from('generated_ads').update({
+      const { error: saveError } = await sb.from('generated_ads').update({
         image_url: window._carouselImages?.[0]?.url || finalUrl,
         image_urls: _imageUrlsMap,
         visual_prompt: prompt || null
       }).eq('id', _saveAdId);
+      if (saveError) {
+        console.error('[generateAdImage] Supabase save error:', saveError);
+      } else {
+        console.log('[generateAdImage] saved successfully, image size:', Math.round(finalUrl.length / 1024) + 'KB');
+      }
       if (currentAdViewData) {
         currentAdViewData.image_url = window._carouselImages?.[0]?.url || finalUrl;
         currentAdViewData.image_urls = _imageUrlsMap;
@@ -6354,11 +6359,10 @@ function renderAdImageCarousel(ad) {
       style="display:block;width:100%;background:var(--volt);color:#000;border:none;border-radius:6px;padding:8px;font-size:12px;font-weight:700;cursor:pointer;text-align:center;margin-bottom:6px;">
       ⬇ Download ${images[0].label}
     </button>
-    ${images.length < 3 ? `
     <button onclick="generateMoreSizes()"
       style="width:100%;background:transparent;border:1px solid var(--border);border-radius:6px;padding:7px;font-size:11px;color:var(--t2);cursor:pointer;margin-bottom:6px;">
-      🎨 Generate Missing Sizes
-    </button>` : ''}
+      🎨 Generate / Replace Sizes
+    </button>
     <button onclick="downloadAdPackage()"
       style="width:100%;background:var(--bg-elevated);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:12px;color:var(--t1);cursor:pointer;font-weight:600;">
       📦 Download Ad Package (all sizes)
