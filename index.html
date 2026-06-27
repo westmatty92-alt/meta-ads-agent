@@ -1247,7 +1247,51 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
             <!-- Left: Generated image carousel -->
             <div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:10px;padding:12px;">
               <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">🖼️ Ad Creative</div>
-              <div id="adv-image-zone"></div>
+              <div style="display:flex;gap:6px;margin-bottom:10px;" id="adv-mode-tabs">
+                <button id="adv-mode-ai" onclick="switchAdCreativeMode('ai')"
+                  style="flex:1;background:rgba(0,212,160,0.15);border:1px solid var(--volt);border-radius:6px;padding:7px;font-size:11px;font-weight:600;color:var(--volt);cursor:pointer;">
+                  🤖 AI Generate
+                </button>
+                <button id="adv-mode-upload" onclick="switchAdCreativeMode('upload')"
+                  style="flex:1;background:var(--bg-elevated);border:1px solid var(--border);border-radius:6px;padding:7px;font-size:11px;font-weight:600;color:var(--t2);cursor:pointer;">
+                  📷 Upload Photo
+                </button>
+              </div>
+              <div id="adv-ai-zone">
+                <div id="adv-image-zone"></div>
+              </div>
+              <div id="adv-upload-zone" style="display:none;flex-direction:column;gap:8px;">
+                <div id="adv-photo-dropzone"
+                  onclick="document.getElementById('adv-photo-input').click()"
+                  ondragover="event.preventDefault();this.style.borderColor='var(--volt)';this.style.background='rgba(0,212,160,0.05)'"
+                  ondragleave="this.style.borderColor='var(--border)';this.style.background='transparent'"
+                  ondrop="handlePhotoDropzone(event)"
+                  style="border:2px dashed var(--border);border-radius:10px;padding:32px 16px;text-align:center;cursor:pointer;transition:border-color 0.2s,background 0.2s;">
+                  <div style="font-size:28px;margin-bottom:8px;">📷</div>
+                  <div style="font-size:13px;font-weight:600;color:var(--t1);margin-bottom:4px;">Drop your photo here or click to browse</div>
+                  <div style="font-size:11px;color:var(--t3);">JPG or PNG · Max 10MB</div>
+                  <input type="file" id="adv-photo-input" accept="image/jpeg,image/png,image/webp" style="display:none;"
+                    onchange="handlePhotoUpload(this.files[0])">
+                </div>
+                <div id="adv-upload-preview" style="display:none;flex-direction:column;gap:8px;">
+                  <div style="position:relative;">
+                    <img id="adv-upload-img" style="width:100%;border-radius:8px;border:1px solid var(--border);display:block;">
+                    <div style="position:absolute;top:8px;right:8px;background:rgba(13,31,45,0.8);border-radius:4px;padding:3px 8px;font-size:10px;color:var(--volt);">✅ Photo ready</div>
+                  </div>
+                  <button onclick="applyOverlayToUpload()"
+                    style="display:block;width:100%;background:var(--volt);color:#000;border:none;border-radius:8px;padding:9px;font-size:12px;font-weight:700;cursor:pointer;text-align:center;">
+                    🎨 Use This Photo + Apply Brand Overlay
+                  </button>
+                  <button onclick="generateSizesFromUpload()"
+                    style="display:block;width:100%;background:transparent;border:1px solid var(--border);border-radius:8px;padding:8px;font-size:11px;color:var(--t2);cursor:pointer;text-align:center;">
+                    📐 Generate Stories + Square from This Photo
+                  </button>
+                  <button onclick="document.getElementById('adv-upload-preview').style.display='none';document.getElementById('adv-photo-dropzone').style.display='block';document.getElementById('adv-photo-input').value='';"
+                    style="display:block;width:100%;background:transparent;border:1px solid var(--border);border-radius:8px;padding:7px;font-size:10px;color:var(--t3);cursor:pointer;text-align:center;">
+                    🔄 Choose Different Photo
+                  </button>
+                </div>
+              </div>
             </div>
 
             <!-- Right: Meta Ad Fields -->
@@ -6395,6 +6439,129 @@ function carouselNext() {
 function carouselPrev() {
   const images = window._carouselImages || [];
   carouselGo((window._carouselIndex - 1 + images.length) % images.length);
+}
+
+function switchAdCreativeMode(mode) {
+  const aiBtn     = document.getElementById('adv-mode-ai');
+  const uploadBtn = document.getElementById('adv-mode-upload');
+  const aiZone    = document.getElementById('adv-ai-zone');
+  const uploadZone = document.getElementById('adv-upload-zone');
+
+  if (mode === 'ai') {
+    if (aiBtn)     { aiBtn.style.background = 'rgba(0,212,160,0.15)'; aiBtn.style.border = '1px solid var(--volt)'; aiBtn.style.color = 'var(--volt)'; }
+    if (uploadBtn) { uploadBtn.style.background = 'var(--bg-elevated)'; uploadBtn.style.border = '1px solid var(--border)'; uploadBtn.style.color = 'var(--t2)'; }
+    if (aiZone)    aiZone.style.display = 'block';
+    if (uploadZone) uploadZone.style.display = 'none';
+  } else {
+    if (uploadBtn) { uploadBtn.style.background = 'rgba(0,212,160,0.15)'; uploadBtn.style.border = '1px solid var(--volt)'; uploadBtn.style.color = 'var(--volt)'; }
+    if (aiBtn)     { aiBtn.style.background = 'var(--bg-elevated)'; aiBtn.style.border = '1px solid var(--border)'; aiBtn.style.color = 'var(--t2)'; }
+    if (aiZone)    aiZone.style.display = 'none';
+    if (uploadZone) uploadZone.style.display = 'flex';
+  }
+}
+
+async function handlePhotoUpload(file) {
+  if (!file) return;
+  if (file.size > 10 * 1024 * 1024) { alert('Photo must be under 10MB'); return; }
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const dataUrl = e.target.result;
+    window._uploadedPhotoDataUrl = dataUrl;
+
+    const img      = document.getElementById('adv-upload-img');
+    const preview  = document.getElementById('adv-upload-preview');
+    const dropzone = document.getElementById('adv-photo-dropzone');
+
+    if (img)      img.src = dataUrl;
+    if (preview)  preview.style.display = 'flex';
+    if (dropzone) dropzone.style.display = 'none';
+
+    console.log('[handlePhotoUpload] loaded:', Math.round(file.size / 1024) + 'KB', file.type);
+  };
+  reader.readAsDataURL(file);
+}
+
+function handlePhotoDropzone(event) {
+  event.preventDefault();
+  const dropzone = document.getElementById('adv-photo-dropzone');
+  if (dropzone) { dropzone.style.borderColor = 'var(--border)'; dropzone.style.background = 'transparent'; }
+  const file = event.dataTransfer.files[0];
+  if (file && file.type.startsWith('image/')) handlePhotoUpload(file);
+}
+
+async function applyOverlayToUpload() {
+  const dataUrl = window._uploadedPhotoDataUrl;
+  if (!dataUrl) { alert('No photo uploaded yet'); return; }
+
+  const btn = event?.target?.closest('button') || event?.target;
+  if (btn) { btn.textContent = '⏳ Applying brand overlay...'; btn.disabled = true; }
+
+  try {
+    const brandedUrl = await applyBrandOverlay(dataUrl) || dataUrl;
+
+    if (!window._carouselImages) window._carouselImages = [];
+    const entry = { url: brandedUrl, size: '1080×1350', label: 'Feed (1080×1350)', format: 'feed' };
+    const existIdx = window._carouselImages.findIndex(i => i.format === 'feed');
+    if (existIdx >= 0) { window._carouselImages[existIdx] = entry; } else { window._carouselImages.unshift(entry); }
+
+    if (currentAdViewId) {
+      const map = {};
+      window._carouselImages.forEach(img => {
+        const k = img.format === 'feed' ? '4:5' : img.format === 'stories' ? '9:16' : img.format === 'square' ? '1:1' : img.format;
+        map[k] = img.url;
+      });
+      const { error: saveErr } = await sb.from('generated_ads').update({ image_url: brandedUrl, image_urls: map }).eq('id', currentAdViewId);
+      if (saveErr) console.error('[applyOverlayToUpload] save error:', saveErr);
+      if (currentAdViewData) { currentAdViewData.image_url = brandedUrl; currentAdViewData.image_urls = map; }
+    }
+
+    switchAdCreativeMode('ai');
+    const imageZone = document.getElementById('adv-image-zone');
+    if (imageZone && currentAdViewData) imageZone.innerHTML = renderAdImageCarousel(currentAdViewData);
+
+    if (btn) { btn.textContent = '✅ Saved — switching to carousel'; btn.disabled = false; }
+  } catch(e) {
+    console.error('[applyOverlayToUpload]', e);
+    if (btn) { btn.textContent = '🎨 Use This Photo + Apply Brand Overlay'; btn.disabled = false; }
+  }
+}
+
+async function generateSizesFromUpload() {
+  const dataUrl = window._uploadedPhotoDataUrl;
+  if (!dataUrl) { alert('No photo uploaded yet'); return; }
+
+  const btn = event?.target?.closest('button') || event?.target;
+  if (btn) { btn.textContent = '⏳ Generating Stories + Square...'; btn.disabled = true; }
+
+  if (!window._carouselImages) window._carouselImages = [];
+  const brandedFeed = await applyBrandOverlay(dataUrl) || dataUrl;
+  const feedEntry = { url: brandedFeed, size: '1080×1350', label: 'Feed (1080×1350)', format: 'feed' };
+  const feedIdx = window._carouselImages.findIndex(i => i.format === 'feed');
+  if (feedIdx >= 0) { window._carouselImages[feedIdx] = feedEntry; } else { window._carouselImages.unshift(feedEntry); }
+
+  const prompt = currentAdViewData?.visual_prompt
+    || S.lastGeneratedPrompt
+    || `Professional Meta ad creative for ${S.brandSnapshot?.business_name || 'local business'} in ${S.brandSnapshot?.location || 'Ontario, Canada'}. Hook: "${(currentAdViewData?.hook || '').replace(/[*_#>]/g, '').slice(0, 60)}". Same model, same lighting, same warm lifestyle aesthetic.`;
+
+  const missingSizes = [
+    { ratio: '9:16', format: 'stories', label: 'Stories' },
+    { ratio: '1:1',  format: 'square',  label: 'Square'  }
+  ].filter(s => !window._carouselImages.find(i => i.format === s.format));
+
+  switchAdCreativeMode('ai');
+
+  for (const sizeInfo of missingSizes) {
+    updateAdImageStatus(`⏳ Generating ${sizeInfo.label} (${sizeInfo.ratio})...`);
+    selectImageSize(sizeInfo.ratio);
+    await generateAdImage('dalle', prompt);
+    await new Promise(r => setTimeout(r, 2500));
+  }
+
+  const imageZone = document.getElementById('adv-image-zone');
+  if (imageZone && currentAdViewData) imageZone.innerHTML = renderAdImageCarousel(currentAdViewData);
+
+  if (btn) { btn.textContent = '📐 Generate Stories + Square from This Photo'; btn.disabled = false; }
 }
 
 async function regenerateAllSizes() {
