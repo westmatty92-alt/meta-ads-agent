@@ -3874,17 +3874,20 @@ async function generateImageFlux(prompt, aspectRatio) {
   return null;
 }
 
-async function generateAdImage(provider) {
+async function generateAdImage(provider = 'dalle', injectedPrompt = null) {
   const prompts = S.lastVisualPrompts || {};
   const size = S.selectedImageSize || '4:5';
 
-  // Build enriched prompt: extracted prompt + brand context
-  let basePrompt = provider === 'flux'
-    ? (prompts.flux || prompts.dalle || '')
-    : (prompts.dalle || prompts.flux || '');
+  // injectedPrompt takes priority, then session prompts, then saved visual_prompt from Supabase
+  let basePrompt = injectedPrompt
+    || (provider === 'flux' ? (prompts.flux || prompts.dalle) : (prompts.dalle || prompts.flux))
+    || currentAdViewData?.visual_prompt
+    || S.lastGeneratedPrompt
+    || S.dallePrompt
+    || '';
 
   if (!basePrompt) {
-    basePrompt = S.dallePrompt || `Professional Meta ad creative for ${S.product}, ${S.audience}, clean composition, high quality`;
+    basePrompt = `Professional Meta ad creative for ${S.brandSnapshot?.business_name || S.product || 'local business'}, ${S.brandSnapshot?.location || 'Ontario, Canada'}. Clean composition, high quality photography.`;
   }
 
   // Build size-specific composition, then enrich with brand context
@@ -6428,7 +6431,7 @@ async function generateMoreSizes() {
   for (const sizeInfo of missing) {
     updateAdImageStatus(`⏳ Generating ${sizeInfo.label} (${sizeInfo.ratio})...`);
     selectImageSize(sizeInfo.ratio);
-    await generateAdImage('dalle');
+    await generateAdImage('dalle', prompt);
     await new Promise(r => setTimeout(r, 2500));
   }
   const _imageZone = document.getElementById('adv-image-zone');
