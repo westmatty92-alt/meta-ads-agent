@@ -1257,6 +1257,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
                   📷 Upload Photo
                 </button>
               </div>
+              <div id="adv-brand-kit-status" style="margin-bottom:8px;"></div>
               <div id="adv-ai-zone">
                 <div id="adv-image-zone"></div>
               </div>
@@ -6220,6 +6221,23 @@ function renderInstantForm(formData) {
     </div>`;
 }
 
+function getBrandKitStatus() {
+  const hasLogo = !!(S.brandSnapshot?.logo_url ||
+                     S.brandSnapshot?.logo);
+  const hasColors = !!(S.brandSnapshot?.colors?.length ||
+                       S.brandSnapshot?.brand_colors?.length);
+  if (hasLogo && hasColors)
+    return '<span style="font-size:10px;color:var(--green);">' +
+           '✅ Brand kit active</span>';
+  if (!hasLogo && !hasColors)
+    return '<span style="font-size:10px;color:var(--red);">' +
+           '❌ No brand kit — add logo + colors in Base Profile</span>';
+  return '<span style="font-size:10px;color:var(--yellow);">⚠️ Partial — ' +
+    (!hasLogo ? 'add logo ' : '') +
+    (!hasColors ? 'add colors' : '') +
+    ' in Base Profile</span>';
+}
+
 function getBrandColors() {
   const colors = S.brandSnapshot?.colors || S.brandSnapshot?.brand_colors || S.brandSnapshot?.colour_palette || null;
   if (colors) {
@@ -6253,9 +6271,29 @@ function getBrandStyle() {
 }
 
 async function applyBrandOverlay(imageUrl) {
-  const logoUrl = getBrandLogo();
-  const brandColors = getBrandColors();
-  if (!logoUrl && !brandColors) return imageUrl;
+  const logoUrl = S.brandSnapshot?.logo_url ||
+                  S.brandSnapshot?.logo || null;
+  const brandColors = S.brandSnapshot?.colors ||
+                      S.brandSnapshot?.brand_colors || [];
+  const primaryColor = Array.isArray(brandColors) && brandColors.length > 0
+    ? (typeof brandColors[0] === 'string'
+       ? brandColors[0]
+       : brandColors[0]?.hex || brandColors[0]?.color || null)
+    : null;
+
+  console.log('[applyBrandOverlay] brand kit:', {
+    business: S.brandSnapshot?.business_name,
+    logoUrl: logoUrl ? 'found (' + logoUrl.slice(0,40) + ')' : 'MISSING',
+    primaryColor: primaryColor || 'MISSING',
+    colorsArray: brandColors
+  });
+
+  // If no brand kit at all — return null (skip overlay)
+  if (!logoUrl && !primaryColor) {
+    console.warn('[applyBrandOverlay] No brand kit — ' +
+      'returning original image unchanged.');
+    return null;
+  }
 
   return new Promise((resolve) => {
     const canvas = document.createElement('canvas');
@@ -6263,13 +6301,16 @@ async function applyBrandOverlay(imageUrl) {
     const bgImg = new Image();
     bgImg.crossOrigin = 'anonymous';
 
-    bgImg.onload = async () => {
+    bgImg.onload = () => {
       canvas.width = bgImg.width;
       canvas.height = bgImg.height;
       ctx.drawImage(bgImg, 0, 0);
 
-      if (brandColors) {
-        const hexMatch = brandColors.match(/#[0-9A-Fa-f]{6}/);
+      if (!primaryColor) {
+        // Skip gradient entirely — no brand color set
+      } else {
+        // Draw gradient with primaryColor
+        const hexMatch = primaryColor.match(/#[0-9A-Fa-f]{6}/);
         if (hexMatch) {
           const gradient = ctx.createLinearGradient(0, canvas.height * 0.75, 0, canvas.height);
           gradient.addColorStop(0, hexMatch[0] + '00');
@@ -6279,26 +6320,30 @@ async function applyBrandOverlay(imageUrl) {
         }
       }
 
-      const exportCanvas = () => canvas.toBlob(blob => resolve(blob ? URL.createObjectURL(blob) : imageUrl), 'image/png', 0.95);
-
       if (logoUrl) {
         const logoImg = new Image();
         logoImg.crossOrigin = 'anonymous';
         logoImg.onload = () => {
-          const logoWidth = canvas.width * 0.22;
-          const logoHeight = logoWidth * (logoImg.height / logoImg.width);
-          const padding = canvas.width * 0.04;
-          ctx.drawImage(logoImg, padding, canvas.height - logoHeight - padding, logoWidth, logoHeight);
-          exportCanvas();
+          // draw logo at bottom-left, 20% of image width
+          const lw = Math.round(canvas.width * 0.20);
+          const lh = Math.round(lw * (logoImg.height / logoImg.width));
+          const lx = Math.round(canvas.width * 0.03);
+          const ly = canvas.height - lh - Math.round(canvas.height * 0.03);
+          ctx.drawImage(logoImg, lx, ly, lw, lh);
+          resolve(canvas.toDataURL('image/png', 0.92));
         };
-        logoImg.onerror = exportCanvas;
+        logoImg.onerror = () => {
+          console.warn('[applyBrandOverlay] Logo failed to load:', logoUrl);
+          resolve(canvas.toDataURL('image/png', 0.92));
+        };
         logoImg.src = logoUrl;
       } else {
-        exportCanvas();
+        // No logo — resolve with color overlay only (or original)
+        resolve(canvas.toDataURL('image/png', 0.92));
       }
     };
 
-    bgImg.onerror = () => resolve(imageUrl);
+    bgImg.onerror = () => resolve(null);
     bgImg.src = imageUrl;
   });
 }
@@ -6532,36 +6577,114 @@ async function generateSizesFromUpload() {
   if (!dataUrl) { alert('No photo uploaded yet'); return; }
 
   const btn = event?.target?.closest('button') || event?.target;
-  if (btn) { btn.textContent = '⏳ Generating Stories + Square...'; btn.disabled = true; }
+  if (btn) { btn.textContent = '⏳ Creating sizes...'; btn.disabled = true; }
 
-  if (!window._carouselImages) window._carouselImages = [];
-  const brandedFeed = await applyBrandOverlay(dataUrl) || dataUrl;
-  const feedEntry = { url: brandedFeed, size: '1080×1350', label: 'Feed (1080×1350)', format: 'feed' };
-  const feedIdx = window._carouselImages.findIndex(i => i.format === 'feed');
-  if (feedIdx >= 0) { window._carouselImages[feedIdx] = feedEntry; } else { window._carouselImages.unshift(feedEntry); }
+  try {
+    const sourceImg = await loadImageFromDataUrl(dataUrl);
 
-  const prompt = currentAdViewData?.visual_prompt
-    || S.lastGeneratedPrompt
-    || `Professional Meta ad creative for ${S.brandSnapshot?.business_name || 'local business'} in ${S.brandSnapshot?.location || 'Ontario, Canada'}. Hook: "${(currentAdViewData?.hook || '').replace(/[*_#>]/g, '').slice(0, 60)}". Same model, same lighting, same warm lifestyle aesthetic.`;
+    // Stories (9:16) — top-biased crop
+    const storiesCanvas = cropImageToRatio(sourceImg, 9/16, 'top');
+    const storiesDataUrl = await applyBrandOverlay(
+      storiesCanvas.toDataURL('image/png', 0.92)
+    ) || storiesCanvas.toDataURL('image/png', 0.92);
 
-  const missingSizes = [
-    { ratio: '9:16', format: 'stories', label: 'Stories' },
-    { ratio: '1:1',  format: 'square',  label: 'Square'  }
-  ].filter(s => !window._carouselImages.find(i => i.format === s.format));
+    // Square (1:1) — center crop
+    const squareCanvas = cropImageToRatio(sourceImg, 1/1, 'center');
+    const squareDataUrl = await applyBrandOverlay(
+      squareCanvas.toDataURL('image/png', 0.92)
+    ) || squareCanvas.toDataURL('image/png', 0.92);
 
-  switchAdCreativeMode('ai');
+    if (!window._carouselImages) window._carouselImages = [];
 
-  for (const sizeInfo of missingSizes) {
-    updateAdImageStatus(`⏳ Generating ${sizeInfo.label} (${sizeInfo.ratio})...`);
-    selectImageSize(sizeInfo.ratio);
-    await generateAdImage('dalle', prompt);
-    await new Promise(r => setTimeout(r, 2500));
+    const hasFeed = window._carouselImages.find(i => i.format === 'feed');
+    if (!hasFeed) {
+      const feedDataUrl = await applyBrandOverlay(dataUrl) || dataUrl;
+      window._carouselImages.unshift({
+        url: feedDataUrl, size: '1080×1350',
+        label: 'Feed (1080×1350)', format: 'feed'
+      });
+    }
+
+    const storiesIdx = window._carouselImages
+      .findIndex(i => i.format === 'stories');
+    const storiesEntry = { url: storiesDataUrl, size: '1080×1920',
+      label: 'Stories/Reels (1080×1920)', format: 'stories' };
+    if (storiesIdx >= 0) window._carouselImages[storiesIdx] = storiesEntry;
+    else window._carouselImages.push(storiesEntry);
+
+    const squareIdx = window._carouselImages
+      .findIndex(i => i.format === 'square');
+    const squareEntry = { url: squareDataUrl, size: '1080×1080',
+      label: 'Square (1080×1080)', format: 'square' };
+    if (squareIdx >= 0) window._carouselImages[squareIdx] = squareEntry;
+    else window._carouselImages.push(squareEntry);
+
+    if (currentAdViewId) {
+      const map = {};
+      window._carouselImages.forEach(img => {
+        const k = img.format === 'feed' ? '4:5' :
+          img.format === 'stories' ? '9:16' :
+          img.format === 'square' ? '1:1' : img.format;
+        map[k] = img.url;
+      });
+      await sb.from('generated_ads').update({
+        image_url: window._carouselImages[0]?.url,
+        image_urls: map
+      }).eq('id', currentAdViewId);
+      if (currentAdViewData) {
+        currentAdViewData.image_url = window._carouselImages[0]?.url;
+        currentAdViewData.image_urls = map;
+      }
+    }
+
+    switchAdCreativeMode('ai');
+    const imageZone = document.getElementById('adv-image-zone');
+    if (imageZone && currentAdViewData)
+      imageZone.innerHTML = renderAdImageCarousel(currentAdViewData);
+
+    if (btn) { btn.textContent = '✅ All 3 sizes created'; btn.disabled = false; }
+
+  } catch(e) {
+    console.error('[generateSizesFromUpload]', e);
+    if (btn) { btn.textContent = '📐 Generate Stories + Square from This Photo';
+      btn.disabled = false; }
+  }
+}
+
+function loadImageFromDataUrl(dataUrl) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = dataUrl;
+  });
+}
+
+function cropImageToRatio(img, targetRatio, bias = 'center') {
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  const srcW = img.naturalWidth;
+  const srcH = img.naturalHeight;
+  const srcRatio = srcW / srcH;
+  let cropW, cropH, cropX, cropY;
+
+  if (srcRatio > targetRatio) {
+    cropH = srcH; cropW = Math.round(srcH * targetRatio);
+    cropY = 0; cropX = Math.round((srcW - cropW) / 2);
+  } else {
+    cropW = srcW; cropH = Math.round(srcW / targetRatio);
+    cropX = 0;
+    if (bias === 'top') cropY = 0;
+    else if (bias === 'bottom') cropY = srcH - cropH;
+    else cropY = Math.round((srcH - cropH) / 2);
   }
 
-  const imageZone = document.getElementById('adv-image-zone');
-  if (imageZone && currentAdViewData) imageZone.innerHTML = renderAdImageCarousel(currentAdViewData);
-
-  if (btn) { btn.textContent = '📐 Generate Stories + Square from This Photo'; btn.disabled = false; }
+  const outW = 1080;
+  const outH = Math.round(outW / targetRatio);
+  canvas.width = outW;
+  canvas.height = outH;
+  ctx.drawImage(img, cropX, cropY, cropW, cropH, 0, 0, outW, outH);
+  return canvas;
 }
 
 async function regenerateAllSizes() {
@@ -7268,6 +7391,9 @@ async function openAdView(adId) {
   }
   const imageZone = document.getElementById('adv-image-zone');
   if (imageZone) imageZone.innerHTML = renderAdImageCarousel(ad);
+
+  const bks = document.getElementById('adv-brand-kit-status');
+  if (bks) bks.innerHTML = getBrandKitStatus();
 
   // ── META AD FIELDS ────────────────────────────────────────────
   // SQL: ALTER TABLE generated_ads ADD COLUMN IF NOT EXISTS meta_primary_text text;
