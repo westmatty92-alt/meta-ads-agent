@@ -6427,6 +6427,10 @@ function renderAdImageCarousel(ad) {
         style="position:absolute;top:8px;left:8px;background:rgba(0,0,0,0.6);border-radius:4px;padding:3px 8px;font-size:10px;color:#fff;">
         ${images[0].label}
       </div>
+      <button id="adv-carousel-delete-btn" onclick="deleteCarouselImage(window._carouselIndex)"
+        style="position:absolute;top:8px;right:8px;background:rgba(13,31,45,0.85);border:1px solid rgba(255,80,80,0.4);border-radius:6px;padding:4px 8px;font-size:10px;color:#FF5050;cursor:pointer;backdrop-filter:blur(4px);">
+        🗑 Remove
+      </button>
       ${images.length > 1 ? `
       <button onclick="carouselPrev()"
         style="position:absolute;left:8px;top:50%;transform:translateY(-50%);background:rgba(0,0,0,0.5);border:none;border-radius:50%;width:32px;height:32px;color:#fff;font-size:18px;cursor:pointer;line-height:1;">‹</button>
@@ -6484,6 +6488,56 @@ function carouselNext() {
 function carouselPrev() {
   const images = window._carouselImages || [];
   carouselGo((window._carouselIndex - 1 + images.length) % images.length);
+}
+
+async function deleteCarouselImage(index) {
+  if (!confirm('Remove this image from the carousel?')) return;
+
+  const images = window._carouselImages || [];
+  if (index < 0 || index >= images.length) return;
+
+  const removed = images[index];
+
+  // Remove from carousel array
+  window._carouselImages.splice(index, 1);
+
+  // Reset index if needed
+  if (window._carouselIndex >= window._carouselImages.length) {
+    window._carouselIndex = Math.max(0, window._carouselImages.length - 1);
+  }
+
+  // Update Supabase — remove from image_urls
+  if (currentAdViewId) {
+    const map = {};
+    window._carouselImages.forEach(img => {
+      const k = img.format === 'feed' ? '4:5' :
+        img.format === 'stories' ? '9:16' :
+        img.format === 'square' ? '1:1' : img.format;
+      map[k] = img.url;
+    });
+
+    const newPrimary = window._carouselImages[0]?.url || null;
+
+    await sb.from('generated_ads').update({
+      image_url: newPrimary,
+      image_urls: map
+    }).eq('id', currentAdViewId);
+
+    if (currentAdViewData) {
+      currentAdViewData.image_url = newPrimary;
+      currentAdViewData.image_urls = map;
+    }
+  }
+
+  // Re-render carousel
+  const imageZone = document.getElementById('adv-image-zone');
+  if (imageZone && currentAdViewData) {
+    imageZone.innerHTML = renderAdImageCarousel(currentAdViewData);
+  }
+
+  console.log('[deleteCarouselImage] removed:',
+    removed.format, '— remaining:',
+    window._carouselImages.map(i => i.format).join(', '));
 }
 
 function switchAdCreativeMode(mode) {
