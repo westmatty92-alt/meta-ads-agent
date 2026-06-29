@@ -7516,8 +7516,8 @@ async function openAdView(adId) {
   if (bks) bks.innerHTML = getBrandKitStatus();
   buildOverlayColorPicker();
 
-  const budgetEl = document.getElementById('adv-budget');
-  if (budgetEl) budgetEl.classList.add('open');
+  const budgetAccordion = document.getElementById('adv-budget');
+  if (budgetAccordion) budgetAccordion.classList.add('open');
   const budgetArrow = document.getElementById('adv-budget-arrow');
   if (budgetArrow) budgetArrow.textContent = '▲';
 
