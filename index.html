@@ -118,7 +118,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
 .auth-ok{background:var(--gglow);border:1px solid rgba(0,212,160,.3);color:var(--green);border-radius:7px;padding:9px 12px;font-size:12px;margin-top:10px;display:none;}
 
 /* ── Header ── */
-.hdr{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:0 18px;height:50px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;position:relative;z-index:200;}
+.hdr{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:0 18px;height:50px;border-bottom:1px solid var(--border);background:rgba(13,31,45,0.94);backdrop-filter:blur(12px);flex-shrink:0;position:relative;z-index:200;}
 .hdr-logo{background:linear-gradient(135deg,#00D4A0,#00A878);width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;color:#0D1F2D;flex-shrink:0;}
 .hdr-title{font-family:var(--display);font-size:14px;font-weight:700;letter-spacing:-.3px;}
 .hdr-status{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--t2);margin-left:10px;}
@@ -134,6 +134,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
 /* ── Biz switcher ── */
 .biz-switcher{display:flex;align-items:center;gap:6px;margin-left:12px;}
 .biz-select{background:var(--s2);border:1px solid var(--border2);border-radius:6px;color:var(--text);font-family:var(--sans);font-size:12px;padding:4px 10px;outline:none;cursor:pointer;max-width:160px;}
+.biz-select:focus{border-color:rgba(0,212,160,0.45);box-shadow:0 0 0 2px rgba(0,212,160,0.1);}
+.biz-dot{width:7px;height:7px;border-radius:50%;background:var(--volt);flex-shrink:0;box-shadow:0 0 7px rgba(0,212,160,0.55);}
 .btn-new-biz{background:var(--accent);color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:700;padding:5px 10px;cursor:pointer;font-family:var(--sans);white-space:nowrap;}
 .btn-new-biz:hover{opacity:.85;}
 
@@ -155,8 +157,11 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
 .bd{background:var(--gglow);color:var(--green);}
 .br{background:var(--aglow);color:var(--accent);}
 .bl{background:var(--s3);color:var(--t2);}
-.conn{width:2px;height:10px;background:var(--border);margin:0 0 0 20px;}
+.conn{width:2px;height:16px;background:var(--border);margin:0 0 0 20px;transition:background 0.2s;}
 .conn.done{background:var(--green);}
+.conn.active{background:var(--volt);}
+.stage.done .si{background:rgba(0,212,160,0.12);}
+.stage.active .si{background:rgba(0,212,160,0.2);box-shadow:0 0 0 2px rgba(0,212,160,0.22);}
 .run-all{background:linear-gradient(135deg,#00D4A0,#00A878);color:#000;font-weight:800;border:none;border-radius:8px;width:calc(100% - 24px);margin:0 12px 16px;padding:11px;font-size:12px;box-shadow:0 4px 20px rgba(0,212,160,0.2);cursor:pointer;transition:box-shadow 0.2s,transform 0.1s;font-family:var(--sans);}
 .run-all:hover{box-shadow:0 6px 28px rgba(0,212,160,0.35);transform:translateY(-1px);}
 .run-all:disabled{opacity:.4;cursor:not-allowed;transform:none;}
@@ -170,6 +175,17 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
 .copy-field-btn:hover{color:var(--volt);background:rgba(0,212,160,0.08);}
 /* Chat input focus ring */
 #adv-chat-input:focus{border-color:var(--volt);box-shadow:0 0 0 3px rgba(0,212,160,0.08);outline:none;}
+/* ── Stat cards ── */
+.stat-card{background:var(--bg-surface);border:1px solid var(--border);border-radius:10px;padding:14px;position:relative;overflow:hidden;transition:border-color 0.2s,transform 0.15s;}
+.stat-card:hover{border-color:rgba(0,212,160,0.3);transform:translateY(-1px);}
+.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--volt),transparent);opacity:0;transition:opacity 0.2s;}
+.stat-card:hover::before{opacity:1;}
+.stat-label{font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;}
+.stat-value{font-size:26px;font-weight:800;color:var(--t1);}
+.stat-sub{font-size:10px;color:var(--t3);margin-top:2px;}
+/* ── Accordion animation ── */
+.acc-body{max-height:0;overflow:hidden;transition:max-height 0.28s ease;}
+.acc-body.open{max-height:800px;}
 .ctx-box h4{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--t2);margin-bottom:5px;}
 .ctx-row{display:flex;justify-content:space-between;font-size:10px;padding:2px 0;border-bottom:1px solid var(--border);color:var(--t2);}
 .ctx-row:last-child{border:none;}
@@ -597,6 +613,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
     <span id="stxt">Ready</span>
   </div>
   <div class="biz-switcher">
+    <span class="biz-dot"></span>
     <select class="biz-select" id="biz-select" onchange="switchBusiness(this.value)"></select>
     <button class="btn-new-biz" onclick="openNewBizModal()">+ New Client</button>
   </div>
@@ -1370,7 +1387,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
                 <div style="font-size:12px;font-weight:600;color:var(--t1);">🎯 Targeting & Audience</div>
                 <span id="adv-targeting-arrow" style="color:var(--t3);font-size:12px;">▼</span>
               </div>
-              <div id="adv-targeting" style="display:none;padding:0 14px 12px;">
+              <div id="adv-targeting" class="acc-body" style="padding:0 14px 12px;">
                 <div style="margin-bottom:10px;">
                   <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Demographics</div>
                   <div id="adv-demographics" style="font-size:12px;color:var(--t2);line-height:1.8;"></div>
@@ -1398,7 +1415,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
                 <div style="font-size:12px;font-weight:600;color:var(--t1);">⚙️ Campaign Setup</div>
                 <span id="adv-campaign-setup-arrow" style="color:var(--t3);font-size:12px;">▼</span>
               </div>
-              <div id="adv-campaign-setup" style="display:none;padding:0 14px 12px;">
+              <div id="adv-campaign-setup" class="acc-body" style="padding:0 14px 12px;">
                 <div id="adv-campaign-setup-content" style="font-size:12px;color:var(--t2);line-height:1.8;max-height:400px;overflow-y:auto;padding-right:4px;"></div>
               </div>
             </div>
@@ -1411,7 +1428,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
                 <div id="adv-form-title" style="font-size:12px;font-weight:600;color:var(--t1);">📋 Instant Form</div>
                 <span id="adv-instant-form-arrow" style="color:var(--t3);font-size:12px;">▼</span>
               </div>
-              <div id="adv-instant-form" style="display:none;padding:0 14px 12px;max-height:300px;overflow-y:auto;">
+              <div id="adv-instant-form" class="acc-body" style="padding:0 14px 12px;">
                 <div id="adv-form-content" style="font-size:12px;color:var(--t2);line-height:1.8;max-height:350px;overflow-y:auto;"></div>
               </div>
             </div>
@@ -1420,8 +1437,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
                 <div style="font-size:12px;font-weight:600;color:var(--t1);">💰 Budget & Results</div>
                 <span id="adv-budget-arrow" style="color:var(--t3);font-size:12px;">▼</span>
               </div>
-              <div id="adv-budget" style="display:none;padding:0 14px 12px;max-height:300px;overflow-y:auto;">
-                <div id="adv-budget-content" style="font-size:12px;color:var(--t2);line-height:1.8;"></div>
+              <div id="adv-budget" class="acc-body" style="padding:0 14px 12px;">
+                <div id="adv-budget-content" style="font-size:12px;color:var(--t2);line-height:1.8;max-height:280px;overflow-y:auto;"></div>
               </div>
             </div>
             <div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;">
@@ -1429,8 +1446,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
                 <div style="font-size:12px;font-weight:600;color:var(--t1);">✅ Launch Checklist</div>
                 <span id="adv-checklist-arrow" style="color:var(--t3);font-size:12px;">▼</span>
               </div>
-              <div id="adv-checklist" style="display:none;padding:0 14px 12px;max-height:300px;overflow-y:auto;">
-                <div id="adv-checklist-content" style="font-size:12px;color:var(--t2);line-height:1.8;"></div>
+              <div id="adv-checklist" class="acc-body" style="padding:0 14px 12px;">
+                <div id="adv-checklist-content" style="font-size:12px;color:var(--t2);line-height:1.8;max-height:280px;overflow-y:auto;"></div>
               </div>
             </div>
           </div>
@@ -1441,8 +1458,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
               <div style="font-size:12px;font-weight:600;color:var(--t1);">💡 Strategy Note</div>
               <span id="adv-strategy-arrow" style="color:var(--t3);font-size:12px;">▼</span>
             </div>
-            <div id="adv-strategy" style="display:none;padding:0 14px 12px;max-height:300px;overflow-y:auto;">
-              <div id="adv-strategy-content" style="font-size:12px;color:var(--t2);line-height:1.8;"></div>
+            <div id="adv-strategy" class="acc-body" style="padding:0 14px 12px;">
+              <div id="adv-strategy-content" style="font-size:12px;color:var(--t2);line-height:1.8;max-height:280px;overflow-y:auto;"></div>
             </div>
           </div>
 
@@ -1452,8 +1469,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
               <div style="font-size:12px;font-weight:600;color:var(--t1);">🎨 Visual Concept + Prompts</div>
               <span id="adv-visual-arrow" style="color:var(--t3);font-size:12px;">▼</span>
             </div>
-            <div id="adv-visual" style="display:none;padding:0 14px 12px;max-height:300px;overflow-y:auto;">
-              <div id="adv-visual-content" style="font-size:12px;color:var(--t2);line-height:1.8;"></div>
+            <div id="adv-visual" class="acc-body" style="padding:0 14px 12px;">
+              <div id="adv-visual-content" style="font-size:12px;color:var(--t2);line-height:1.8;max-height:280px;overflow-y:auto;"></div>
             </div>
           </div>
 
@@ -1463,7 +1480,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
               <div style="font-size:12px;font-weight:700;color:var(--t1);">🚀 Launch Plan</div>
               <span id="adv-launch-plan-arrow" style="color:var(--t3);font-size:12px;">▼</span>
             </div>
-            <div id="adv-launch-plan" style="display:none;padding:0 14px 16px;">
+            <div id="adv-launch-plan" class="acc-body" style="padding:0 14px 16px;">
               <div id="adv-launch-plan-content">
                 <div style="text-align:center;padding:16px;">
                   <button onclick="generateLaunchPlan()" style="background:var(--volt);color:#000;border:none;border-radius:8px;padding:10px 20px;font-size:12px;font-weight:700;cursor:pointer;">🚀 Generate My Launch Plan</button>
@@ -1533,30 +1550,30 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
 
         <!-- ROW 1: Account Overview Stats -->
         <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;">
-          <div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:10px;padding:14px;">
-            <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Total Spend</div>
-            <div id="dash-spend" style="font-size:26px;font-weight:800;color:var(--t1);">—</div>
-            <div style="font-size:10px;color:var(--t3);margin-top:2px;">CAD (30 days)</div>
+          <div class="stat-card">
+            <div class="stat-label">Total Spend</div>
+            <div id="dash-spend" class="stat-value">—</div>
+            <div class="stat-sub">CAD (30 days)</div>
           </div>
-          <div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:10px;padding:14px;">
-            <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Total Leads</div>
-            <div id="dash-leads" style="font-size:26px;font-weight:800;color:var(--t1);">—</div>
-            <div style="font-size:10px;color:var(--t3);margin-top:2px;">form submissions</div>
+          <div class="stat-card">
+            <div class="stat-label">Total Leads</div>
+            <div id="dash-leads" class="stat-value">—</div>
+            <div class="stat-sub">form submissions</div>
           </div>
-          <div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:10px;padding:14px;">
-            <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Avg Cost/Lead</div>
-            <div id="dash-cpl" style="font-size:26px;font-weight:800;color:var(--t1);">—</div>
-            <div style="font-size:10px;color:var(--t3);margin-top:2px;">CAD target: $20-60</div>
+          <div class="stat-card">
+            <div class="stat-label">Avg Cost/Lead</div>
+            <div id="dash-cpl" class="stat-value">—</div>
+            <div class="stat-sub">CAD target: $20-60</div>
           </div>
-          <div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:10px;padding:14px;">
-            <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Avg CTR</div>
-            <div id="dash-ctr" style="font-size:26px;font-weight:800;color:var(--t1);">—</div>
-            <div style="font-size:10px;color:var(--t3);margin-top:2px;">target: above 1.5%</div>
+          <div class="stat-card">
+            <div class="stat-label">Avg CTR</div>
+            <div id="dash-ctr" class="stat-value">—</div>
+            <div class="stat-sub">target: above 1.5%</div>
           </div>
-          <div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:10px;padding:14px;">
-            <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Best Ad CTR</div>
-            <div id="dash-best-ctr" style="font-size:26px;font-weight:800;color:var(--green);">—</div>
-            <div id="dash-best-ad-name" style="font-size:10px;color:var(--t3);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">—</div>
+          <div class="stat-card">
+            <div class="stat-label">Best Ad CTR</div>
+            <div id="dash-best-ctr" class="stat-value" style="color:var(--green);">—</div>
+            <div id="dash-best-ad-name" class="stat-sub" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">—</div>
           </div>
         </div>
 
@@ -7294,7 +7311,7 @@ Keep each section under 8 bullets. Be direct. Write as a trusted advisor sitting
     if (currentAdViewId) await sb.from('generated_ads').update({ launch_plan: plan }).eq('id', currentAdViewId);
     const accordion = document.getElementById('adv-launch-plan');
     const arrow = document.getElementById('adv-launch-plan-arrow');
-    if (accordion) accordion.style.display = 'block';
+    if (accordion) accordion.classList.add('open');
     if (arrow) arrow.textContent = '▲';
   } else if (btn) {
     btn.textContent = '❌ Failed — Try Again';
@@ -7725,8 +7742,8 @@ function toggleAccordion(id) {
   const content = document.getElementById(id);
   const arrow = document.getElementById(id + '-arrow');
   if (!content) return;
-  const isOpen = content.style.display !== 'none';
-  content.style.display = isOpen ? 'none' : 'block';
+  const isOpen = content.classList.contains('open');
+  content.classList.toggle('open');
   if (arrow) arrow.textContent = isOpen ? '▼' : '▲';
 }
 
