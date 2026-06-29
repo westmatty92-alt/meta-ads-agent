@@ -7516,11 +7516,6 @@ async function openAdView(adId) {
   if (bks) bks.innerHTML = getBrandKitStatus();
   buildOverlayColorPicker();
 
-  const budgetAccordion = document.getElementById('adv-budget');
-  if (budgetAccordion) budgetAccordion.classList.add('open');
-  const budgetArrow = document.getElementById('adv-budget-arrow');
-  if (budgetArrow) budgetArrow.textContent = '▲';
-
   // ── META AD FIELDS ────────────────────────────────────────────
   // SQL: ALTER TABLE generated_ads ADD COLUMN IF NOT EXISTS meta_primary_text text;
   // SQL: ALTER TABLE generated_ads ADD COLUMN IF NOT EXISTS meta_headline_1 text;
@@ -7704,7 +7699,7 @@ async function openAdView(adId) {
     budgetEl.innerHTML = renderMarkdown(getBudgetRecommendation(ad));
   }
   const budgetAccordion = document.getElementById('adv-budget');
-  if (budgetAccordion) budgetAccordion.style.display = 'block';
+  if (budgetAccordion) { budgetAccordion.classList.add('open'); budgetAccordion.style.display = 'block'; }
   const budgetArrow = document.getElementById('adv-budget-arrow');
   if (budgetArrow) budgetArrow.textContent = '▲';
 
