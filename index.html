@@ -6222,17 +6222,20 @@ function renderInstantForm(formData) {
 }
 
 function getBrandKitStatus() {
-  const hasLogo = !!(S.brandSnapshot?.logo_url ||
-                     S.brandSnapshot?.logo);
-  const hasColors = !!(S.brandSnapshot?.colors?.length ||
-                       S.brandSnapshot?.brand_colors?.length);
+  const hasLogo = !!(S.brandLogos?.primary ||
+                     S.brandLogos?.transparent);
+  const hasColors = Array.isArray(S.brandColors) &&
+                    S.brandColors.length > 0;
+
   if (hasLogo && hasColors)
     return '<span style="font-size:10px;color:var(--green);">' +
            '✅ Brand kit active</span>';
   if (!hasLogo && !hasColors)
     return '<span style="font-size:10px;color:var(--red);">' +
-           '❌ No brand kit — add logo + colors in Base Profile</span>';
-  return '<span style="font-size:10px;color:var(--yellow);">⚠️ Partial — ' +
+           '❌ No brand kit — add logo + colors in Base Profile' +
+           '</span>';
+  return '<span style="font-size:10px;color:var(--yellow);">' +
+    '⚠️ Partial — ' +
     (!hasLogo ? 'add logo ' : '') +
     (!hasColors ? 'add colors' : '') +
     ' in Base Profile</span>';
@@ -6271,11 +6274,10 @@ function getBrandStyle() {
 }
 
 async function applyBrandOverlay(imageUrl) {
-  const logoUrl = S.brandSnapshot?.logo_url ||
-                  S.brandSnapshot?.logo || null;
-  const brandColors = S.brandSnapshot?.colors ||
-                      S.brandSnapshot?.brand_colors || [];
-  const primaryColor = Array.isArray(brandColors) && brandColors.length > 0
+  const logoUrl = S.brandLogos?.primary ||
+                  S.brandLogos?.transparent || null;
+  const brandColors = S.brandColors || [];
+  const primaryColor = brandColors.length > 0
     ? (typeof brandColors[0] === 'string'
        ? brandColors[0]
        : brandColors[0]?.hex || brandColors[0]?.color || null)
@@ -6283,15 +6285,13 @@ async function applyBrandOverlay(imageUrl) {
 
   console.log('[applyBrandOverlay] brand kit:', {
     business: S.brandSnapshot?.business_name,
-    logoUrl: logoUrl ? 'found (' + logoUrl.slice(0,40) + ')' : 'MISSING',
+    logoUrl: logoUrl ? 'found' : 'MISSING',
     primaryColor: primaryColor || 'MISSING',
-    colorsArray: brandColors
+    colorsCount: brandColors.length
   });
 
-  // If no brand kit at all — return null (skip overlay)
   if (!logoUrl && !primaryColor) {
-    console.warn('[applyBrandOverlay] No brand kit — ' +
-      'returning original image unchanged.');
+    console.warn('[applyBrandOverlay] No brand kit found.');
     return null;
   }
 
