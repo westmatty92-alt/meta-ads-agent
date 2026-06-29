@@ -184,8 +184,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
 .stat-value{font-size:26px;font-weight:800;color:var(--t1);}
 .stat-sub{font-size:10px;color:var(--t3);margin-top:2px;}
 /* ── Accordion animation ── */
-.acc-body{max-height:0;overflow:hidden;transition:max-height 0.28s ease;}
-.acc-body.open{max-height:800px;}
+.acc-body{max-height:0;overflow:hidden;transition:max-height 0.28s ease;padding-top:0;padding-bottom:0;}
+.acc-body.open{max-height:3000px;overflow:visible;}
 .ctx-box h4{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--t2);margin-bottom:5px;}
 .ctx-row{display:flex;justify-content:space-between;font-size:10px;padding:2px 0;border-bottom:1px solid var(--border);color:var(--t2);}
 .ctx-row:last-child{border:none;}
@@ -1259,6 +1259,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
           <div onclick="changeAdObjective()" style="display:flex;align-items:center;gap:6px;background:rgba(0,212,160,0.08);border:1px solid rgba(0,212,160,0.2);border-radius:20px;padding:3px 10px;cursor:pointer;">
             <span style="font-size:10px;color:var(--t3);">Objective:</span>
             <span id="adv-objective-badge" style="font-size:11px;font-weight:600;color:var(--volt);">Leads</span>
+            <span style="font-size:11px;color:rgba(0,212,160,0.6);margin-left:2px;">✎</span>
           </div>
           <button onclick="markAdAsUsed(currentAdViewId)" id="adv-mark-used-btn" style="background:transparent;border:1px solid var(--border);color:var(--t2);border-radius:6px;padding:5px 12px;font-size:11px;cursor:pointer;white-space:nowrap;">✓ Mark Used</button>
           <div id="adv-score-badge"></div>
@@ -1288,6 +1289,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
                 </button>
               </div>
               <div id="adv-brand-kit-status" style="margin-bottom:8px;"></div>
+              <div id="adv-overlay-color-picker" style="display:none;margin-bottom:8px;align-items:center;gap:6px;flex-wrap:wrap;"></div>
               <div id="adv-ai-zone">
                 <div id="adv-image-zone"></div>
               </div>
@@ -6271,6 +6273,42 @@ function getBrandKitStatus() {
     ' in Base Profile</span>';
 }
 
+function buildOverlayColorPicker() {
+  const picker = document.getElementById('adv-overlay-color-picker');
+  if (!picker) return;
+  const colors = S.brandColors || [];
+  if (!colors.length) {
+    picker.style.display = 'none';
+    return;
+  }
+  picker.style.display = 'flex';
+  if (!window._overlayColor) {
+    window._overlayColor = colors[0]?.hex || colors[0] || null;
+  }
+  picker.innerHTML = '<span style="font-size:10px;color:var(--t3);flex-shrink:0;">Overlay:</span>' +
+    colors.slice(0, 8).map(c => {
+      const hex = typeof c === 'string' ? c : (c?.hex || '#000');
+      const isSel = window._overlayColor === hex;
+      return `<div onclick="selectOverlayColor('${hex}',this)" title="${hex}" style="width:20px;height:20px;border-radius:50%;background:${hex};cursor:pointer;flex-shrink:0;border:${isSel ? '2px solid var(--t1)' : '2px solid transparent'};box-shadow:${isSel ? '0 0 0 1px rgba(255,255,255,0.4)' : 'none'};transition:box-shadow 0.15s,border 0.15s;"></div>`;
+    }).join('') +
+    '<div onclick="selectOverlayColor(null,this)" title="No overlay" style="width:20px;height:20px;border-radius:50%;background:transparent;border:1px dashed var(--border);cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--t3);">✕</div>';
+}
+
+function selectOverlayColor(hex, el) {
+  window._overlayColor = hex;
+  const picker = document.getElementById('adv-overlay-color-picker');
+  if (picker) {
+    picker.querySelectorAll('[onclick*="selectOverlayColor"]').forEach(dot => {
+      dot.style.border = '2px solid transparent';
+      dot.style.boxShadow = 'none';
+    });
+    if (el && hex) {
+      el.style.border = '2px solid var(--t1)';
+      el.style.boxShadow = '0 0 0 1px rgba(255,255,255,0.4)';
+    }
+  }
+}
+
 function getBrandColors() {
   const colors = S.brandSnapshot?.colors || S.brandSnapshot?.brand_colors || S.brandSnapshot?.colour_palette || null;
   if (colors) {
@@ -6304,14 +6342,12 @@ function getBrandStyle() {
 }
 
 async function applyBrandOverlay(imageUrl) {
-  const logoUrl = S.brandLogos?.primary ||
-                  S.brandLogos?.transparent || null;
+  const logoUrl = S.brandLogos?.transparent || null;
   const brandColors = S.brandColors || [];
-  const primaryColor = brandColors.length > 0
-    ? (typeof brandColors[0] === 'string'
-       ? brandColors[0]
-       : brandColors[0]?.hex || brandColors[0]?.color || null)
-    : null;
+  const primaryColor = window._overlayColor ||
+    (brandColors.length > 0
+      ? (brandColors[0]?.hex || brandColors[0] || null)
+      : null);
 
   console.log('[applyBrandOverlay] brand kit:', {
     business: S.brandSnapshot?.business_name,
@@ -7478,6 +7514,12 @@ async function openAdView(adId) {
 
   const bks = document.getElementById('adv-brand-kit-status');
   if (bks) bks.innerHTML = getBrandKitStatus();
+  buildOverlayColorPicker();
+
+  const budgetEl = document.getElementById('adv-budget');
+  if (budgetEl) budgetEl.classList.add('open');
+  const budgetArrow = document.getElementById('adv-budget-arrow');
+  if (budgetArrow) budgetArrow.textContent = '▲';
 
   // ── META AD FIELDS ────────────────────────────────────────────
   // SQL: ALTER TABLE generated_ads ADD COLUMN IF NOT EXISTS meta_primary_text text;
