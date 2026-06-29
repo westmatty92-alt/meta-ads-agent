@@ -88,6 +88,10 @@ WITH CHECK (auth.uid() = user_id);
   --sans:'Inter',system-ui,sans-serif;
   --display:'Barlow',system-ui,sans-serif;--r:10px;
   --fw-h1:800;--fw-h2:700;--fw-h3:700;--fw-body:400;--fw-label:700;
+  /* Linear design system tokens */
+  --volt:#00D4A0;--run:#00A878;
+  --t1:#E8EDF5;--t3:#4A6080;
+  --bg-primary:#0D1F2D;--bg-surface:#1A1A2E;--bg-elevated:#16253A;
 }
 *{box-sizing:border-box;margin:0;padding:0;}
 body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13px;font-weight:400;line-height:1.65;height:100vh;display:flex;flex-direction:column;overflow:hidden;}
@@ -136,15 +140,16 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
 /* ── Layout ── */
 .app{display:flex;flex:1;overflow:hidden;}
 .pipe{width:210px;flex-shrink:0;border-right:1px solid var(--border);background:var(--surface);display:flex;flex-direction:column;overflow-y:auto;}
-.pipe-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--t2);padding:14px 14px 5px;}
-.stage{display:flex;align-items:center;gap:9px;padding:9px 12px;cursor:pointer;border-left:2px solid transparent;transition:all .15s;}
-.stage:hover{background:var(--s2);}
-.stage.active{background:var(--s2);border-left-color:var(--accent);}
+.pipe-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--t3);padding:16px 16px 6px;}
+.stage{display:flex;align-items:center;gap:9px;padding:9px 12px;cursor:pointer;border-left:3px solid transparent;transition:background 0.15s;}
+.stage:hover{background:rgba(255,255,255,0.03);}
+.stage.active{background:rgba(0,212,160,0.08);border-left-color:var(--volt);padding-left:13px;}
 .stage.done{border-left-color:var(--green);}
 .stage.locked{opacity:.4;cursor:not-allowed;}
-.si{font-size:15px;width:18px;text-align:center;flex-shrink:0;}
+.si{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;background:var(--bg-elevated);border-radius:6px;flex-shrink:0;font-size:14px;}
 .sinfo{flex:1;min-width:0;}
-.sname{font-family:var(--sans);font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.sname{font-family:var(--sans);font-size:12px;font-weight:500;color:var(--t3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.stage.active .sname{font-weight:600;color:var(--t1);}
 .sdesc{font-family:var(--sans);font-size:11px;font-weight:400;color:var(--t2);margin-top:1px;}
 .sbadge{font-size:9px;padding:2px 6px;border-radius:10px;font-weight:700;flex-shrink:0;white-space:nowrap;}
 .bd{background:var(--gglow);color:var(--green);}
@@ -152,10 +157,19 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
 .bl{background:var(--s3);color:var(--t2);}
 .conn{width:2px;height:10px;background:var(--border);margin:0 0 0 20px;}
 .conn.done{background:var(--green);}
-.run-all{margin:10px 12px 6px;padding:9px;background:linear-gradient(135deg,var(--accent),var(--purple));color:#fff;border:none;border-radius:var(--r);font-size:12px;font-weight:700;cursor:pointer;font-family:var(--sans);transition:opacity .15s;}
-.run-all:hover{opacity:.88;}
-.run-all:disabled{opacity:.4;cursor:not-allowed;}
+.run-all{background:linear-gradient(135deg,#00D4A0,#00A878);color:#000;font-weight:800;border:none;border-radius:8px;width:calc(100% - 24px);margin:0 12px 16px;padding:11px;font-size:12px;box-shadow:0 4px 20px rgba(0,212,160,0.2);cursor:pointer;transition:box-shadow 0.2s,transform 0.1s;font-family:var(--sans);}
+.run-all:hover{box-shadow:0 6px 28px rgba(0,212,160,0.35);transform:translateY(-1px);}
+.run-all:disabled{opacity:.4;cursor:not-allowed;transform:none;}
 .ctx-box{margin:0 12px 12px;background:var(--s2);border:1px solid var(--border);border-radius:var(--r);padding:9px 11px;}
+/* Ad View header components */
+#adv-score-badge{background:var(--bg-elevated);border:1px solid var(--border);border-radius:8px;padding:4px 10px;display:flex;align-items:center;}
+/* Meta Ad Fields */
+.meta-field-section{border-left:2px solid transparent;padding-left:8px;transition:border-left-color 0.15s;}
+.meta-field-section:hover{border-left-color:var(--volt);}
+.copy-field-btn{background:transparent;border:none;color:var(--t3);font-size:10px;cursor:pointer;border-radius:4px;padding:3px 6px;transition:color 0.15s,background 0.15s;}
+.copy-field-btn:hover{color:var(--volt);background:rgba(0,212,160,0.08);}
+/* Chat input focus ring */
+#adv-chat-input:focus{border-color:var(--volt);box-shadow:0 0 0 3px rgba(0,212,160,0.08);outline:none;}
 .ctx-box h4{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--t2);margin-bottom:5px;}
 .ctx-row{display:flex;justify-content:space-between;font-size:10px;padding:2px 0;border-bottom:1px solid var(--border);color:var(--t2);}
 .ctx-row:last-child{border:none;}
@@ -1219,18 +1233,17 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
 
       <!-- TOP BAR -->
       <div style="display:grid;grid-template-columns:auto 1fr auto;align-items:center;padding:12px 20px;border-bottom:1px solid var(--border);flex-shrink:0;gap:12px;">
-        <button onclick="closeAdView()" style="background:transparent;border:1px solid var(--border);border-radius:6px;padding:5px 10px;color:var(--t2);font-size:12px;cursor:pointer;white-space:nowrap;">← Back</button>
+        <button onclick="closeAdView()" style="background:none;border:none;color:var(--t3);font-size:20px;padding:0 8px 0 0;cursor:pointer;transition:color 0.15s;" onmouseover="this.style.color='var(--t1)'" onmouseout="this.style.color='var(--t3)'">←</button>
         <div style="text-align:center;min-width:0;">
-          <div id="adv-title" style="font-size:14px;font-weight:700;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Ad Package</div>
+          <div id="adv-title" style="font-size:14px;font-weight:700;color:var(--t1);max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin:0 auto;">Ad Package</div>
           <div id="adv-meta" style="font-size:11px;color:var(--t3);margin-top:1px;"></div>
         </div>
         <div style="display:flex;align-items:center;gap:8px;">
-          <div style="display:flex;align-items:center;gap:6px;background:var(--bg-elevated);border-radius:6px;padding:4px 8px;">
+          <div onclick="changeAdObjective()" style="display:flex;align-items:center;gap:6px;background:rgba(0,212,160,0.08);border:1px solid rgba(0,212,160,0.2);border-radius:20px;padding:3px 10px;cursor:pointer;">
             <span style="font-size:10px;color:var(--t3);">Objective:</span>
-            <span id="adv-objective-badge" style="font-size:11px;font-weight:700;color:var(--volt);">Leads</span>
-            <button onclick="changeAdObjective()" style="background:transparent;border:none;color:var(--t3);font-size:10px;cursor:pointer;padding:0 2px;">✎</button>
+            <span id="adv-objective-badge" style="font-size:11px;font-weight:600;color:var(--volt);">Leads</span>
           </div>
-          <button onclick="markAdAsUsed(currentAdViewId)" style="background:transparent;border:1px solid var(--green);color:var(--green);border-radius:6px;padding:5px 12px;font-size:11px;cursor:pointer;white-space:nowrap;">✓ Mark Used</button>
+          <button onclick="markAdAsUsed(currentAdViewId)" id="adv-mark-used-btn" style="background:transparent;border:1px solid var(--border);color:var(--t2);border-radius:6px;padding:5px 12px;font-size:11px;cursor:pointer;white-space:nowrap;">✓ Mark Used</button>
           <div id="adv-score-badge"></div>
         </div>
       </div>
@@ -1297,36 +1310,36 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
 
             <!-- Right: Meta Ad Fields -->
             <div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;height:100%;">
-              <div style="padding:10px 14px;border-bottom:1px solid var(--border);background:var(--bg-elevated);display:flex;justify-content:space-between;align-items:center;">
+              <div style="padding:12px 16px;border-bottom:1px solid var(--border);background:var(--bg-elevated);display:flex;justify-content:space-between;align-items:center;">
                 <div>
-                  <div style="font-size:11px;font-weight:700;color:var(--t1);text-transform:uppercase;letter-spacing:1px;">📋 Meta Ad Fields</div>
-                  <div style="font-size:10px;color:var(--t3);margin-top:1px;">Copy these into Meta Ads Manager</div>
+                  <div style="font-size:9px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:2px;">META AD FIELDS</div>
+                  <div style="font-size:11px;color:var(--t3);margin-top:2px;">Copy these into Meta Ads Manager</div>
                 </div>
-                <button onclick="copyAllMetaFields()" style="background:var(--volt);color:#000;border:none;border-radius:6px;padding:4px 10px;font-size:10px;font-weight:600;cursor:pointer;">Copy All</button>
+                <button onclick="copyAllMetaFields()" style="background:var(--volt);color:#000;border:none;border-radius:6px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background='#00A878'" onmouseout="this.style.background='var(--volt)'">Copy All</button>
               </div>
               <div style="padding:14px;display:flex;flex-direction:column;gap:12px;overflow-y:auto;max-height:calc(100% - 50px);">
                 <!-- Primary Text -->
-                <div>
+                <div class="meta-field-section">
                   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-                    <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;">Primary Text (body copy)</div>
-                    <button onclick="copyMetaField('adv-meta-primary-text', this)" style="background:transparent;border:1px solid var(--border);border-radius:4px;padding:1px 7px;font-size:10px;color:var(--t3);cursor:pointer;">Copy</button>
+                    <div style="font-size:9px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:1.5px;">Primary Text</div>
+                    <button onclick="copyMetaField('adv-meta-primary-text', this)" class="copy-field-btn">Copy</button>
                   </div>
                   <div id="adv-meta-primary-text" style="font-size:12px;color:var(--t1);line-height:1.6;background:var(--bg-elevated);border-radius:6px;padding:8px 10px;max-height:100px;overflow-y:auto;white-space:pre-wrap;"></div>
                 </div>
                 <!-- Headline -->
-                <div>
+                <div class="meta-field-section">
                   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-                    <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;">Headline <span style="font-weight:400;">(40 chars max)</span></div>
-                    <button onclick="copyMetaField('adv-meta-headline', this)" style="background:transparent;border:1px solid var(--border);border-radius:4px;padding:1px 7px;font-size:10px;color:var(--t3);cursor:pointer;">Copy</button>
+                    <div style="font-size:9px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:1.5px;">Headline <span style="font-weight:400;text-transform:none;">(40 chars max)</span></div>
+                    <button onclick="copyMetaField('adv-meta-headline', this)" class="copy-field-btn">Copy</button>
                   </div>
                   <div id="adv-meta-headline" style="font-size:13px;font-weight:700;color:var(--t1);background:var(--bg-elevated);border-radius:6px;padding:8px 10px;"></div>
                   <div id="adv-headline-charcount" style="font-size:10px;color:var(--t3);margin-top:2px;text-align:right;"></div>
                 </div>
                 <!-- Description -->
-                <div>
+                <div class="meta-field-section">
                   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-                    <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;">Description <span style="font-weight:400;">(optional)</span></div>
-                    <button onclick="copyMetaField('adv-meta-description', this)" style="background:transparent;border:1px solid var(--border);border-radius:4px;padding:1px 7px;font-size:10px;color:var(--t3);cursor:pointer;">Copy</button>
+                    <div style="font-size:9px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:1.5px;">Description <span style="font-weight:400;text-transform:none;">(optional)</span></div>
+                    <button onclick="copyMetaField('adv-meta-description', this)" class="copy-field-btn">Copy</button>
                   </div>
                   <div id="adv-meta-description" style="font-size:12px;color:var(--t2);background:var(--bg-elevated);border-radius:6px;padding:8px 10px;line-height:1.5;"></div>
                 </div>
@@ -1481,9 +1494,9 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
             <div style="padding:10px 16px;border-top:1px solid var(--border);display:flex;gap:8px;">
               <input type="text" id="adv-chat-input"
                 placeholder="Ask about this ad — variations, strategy, targeting..."
-                style="flex:1;background:var(--bg-elevated);border:1px solid var(--border);border-radius:6px;padding:8px 12px;font-size:12px;color:var(--t1);"
+                style="flex:1;background:var(--bg-elevated);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:12px;color:var(--t1);outline:none;transition:border-color 0.15s,box-shadow 0.15s;"
                 onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendAdViewChat();}">
-              <button onclick="sendAdViewChat()" style="background:var(--volt);color:#000;border:none;border-radius:6px;padding:8px 16px;font-size:12px;font-weight:700;cursor:pointer;">Send →</button>
+              <button onclick="sendAdViewChat()" style="background:var(--volt);color:#000;border:none;border-radius:6px;padding:8px 16px;font-size:12px;font-weight:700;cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background='#00A878'" onmouseout="this.style.background='var(--volt)'">Send →</button>
             </div>
           </div>
         </div>
@@ -7802,8 +7815,8 @@ function appendAdViewChatMessage(role, content, id) {
   const el = document.createElement('div');
   if (id) el.id = id;
   el.style.cssText = role === 'user'
-    ? 'background:rgba(0,212,160,0.1);border:1px solid rgba(0,212,160,0.2);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--t1);align-self:flex-end;max-width:80%;margin-left:auto;word-break:break-word;'
-    : 'background:var(--bg-surface);border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--t2);max-width:85%;line-height:1.7;word-break:break-word;';
+    ? 'background:rgba(0,212,160,0.08);border:1px solid rgba(0,212,160,0.15);border-radius:12px 12px 3px 12px;align-self:flex-end;max-width:85%;padding:8px 12px;font-size:12px;color:var(--t1);margin-bottom:6px;word-break:break-word;'
+    : 'background:var(--bg-elevated);border:1px solid var(--border);border-radius:12px 12px 12px 3px;align-self:flex-start;max-width:92%;padding:10px 14px;font-size:12px;color:var(--t2);margin-bottom:8px;line-height:1.7;word-break:break-word;';
   if (role === 'assistant') {
     el.innerHTML = renderMarkdown(content);
   } else {
