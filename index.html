@@ -185,7 +185,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
 .stat-sub{font-size:10px;color:var(--t3);margin-top:2px;}
 /* ── Accordion animation ── */
 .acc-body{max-height:0;overflow:hidden;transition:max-height 0.28s ease;padding-top:0;padding-bottom:0;}
-.acc-body.open{max-height:3000px;overflow:visible;}
+.acc-body.open{max-height:3000px;}
 .ctx-box h4{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--t2);margin-bottom:5px;}
 .ctx-row{display:flex;justify-content:space-between;font-size:10px;padding:2px 0;border-bottom:1px solid var(--border);color:var(--t2);}
 .ctx-row:last-child{border:none;}
@@ -1812,11 +1812,11 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
         <!-- Navigation -->
         <div style="display:flex;gap:10px;margin-top:20px;">
           <button id="discovery-back-btn" onclick="discoveryBack()"
-            style="display:none;background:transparent;border:1px solid var(--border);border-radius:8px;padding:10px 20px;color:var(--t2);font-size:13px;cursor:pointer;">
+            style="display:none;background:transparent;border:1px solid var(--border);border-radius:8px;padding:10px 20px;color:var(--t2);font-size:13px;font-weight:600;cursor:pointer;transition:border-color 0.15s,color 0.15s;" onmouseover="this.style.borderColor='var(--volt)';this.style.color='var(--volt)';" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--t2)';">
             ← Back
           </button>
           <button id="discovery-next-btn" onclick="discoveryNext()"
-            style="flex:1;background:var(--volt);color:#000;border:none;border-radius:8px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;">
+            style="flex:1;background:var(--volt);color:#000;border:none;border-radius:8px;padding:10px 20px;font-size:13px;font-weight:600;cursor:pointer;">
             Next →
           </button>
         </div>
@@ -2747,6 +2747,10 @@ function renderBizSelector() {
 
 async function switchBusiness(id) {
   if (!id) return;
+  S.brandColors = [];
+  S.brandLogos = {};
+  S.brandSnapshot = null;
+  window._overlayColor = undefined;
   await savePipelineRun();
   currentBizId = id;
   resetPipelineUI();
@@ -5658,6 +5662,7 @@ function renderAdLibrary() {
   grid.innerHTML = adLibrary.map(ad => {
     const date  = ad.created_at ? new Date(ad.created_at).toLocaleDateString() : '';
     const hook  = escHtml((ad.headline || ad.hook || '').substring(0,120));
+    const cardTitle = escHtml((ad.hook || ad.headline || 'Untitled Ad').replace(/[*_#>]/g,'').trim().slice(0,45));
     const thumb = ad.image_url
       ? `<img class="adlib-thumb" src="${escHtml(ad.image_url)}" onerror="this.style.display='none'" alt="Ad image">`
       : '';
@@ -5665,7 +5670,7 @@ function renderAdLibrary() {
     return `<div class="adlib-card" data-product-id="${ad.product_id||''}">
       <div class="adlib-card-top">
         <span class="adlib-score" style="color:${scoreColor(sc)};">${sc!=null?sc+'/100':'—'}</span>
-        <span class="adlib-niche">${escHtml(ad.segment_name || S.brandSnapshot?.industry || S.selectedProduct?.name || 'Beauty & Wellness')}</span>
+        <span class="adlib-niche" title="${escHtml(ad.segment_name || '')}">${cardTitle}${(ad.hook||ad.headline||'').length>45?'…':''}</span>
         <span class="adlib-date">${date}</span>
       </div>
       ${thumb}
@@ -6165,17 +6170,12 @@ function extractDemographicsFromBrief(brief) {
   };
 }
 
-function extractInstantForm(campaignBrief, ad, brandSnapshot) {
+async function extractInstantForm(campaignBrief, ad, brandSnapshot) {
   const businessName = brandSnapshot?.business_name || 'us';
   const city = brandSnapshot?.location?.split(',')[0]?.trim() || 'your area';
   const industry = brandSnapshot?.industry || ad?.industry || 'service';
   const isBeauty = /beauty|whiten|salon|spa|skin|lash/i.test(industry);
   const isReno   = /reno|construct|build|paint|roof/i.test(industry);
-
-  const formSection = campaignBrief?.match(/##\s*INSTANT FORM[\s\S]*?(?=\n##|$)/i)?.[0] || '';
-  const formType    = formSection.match(/(?:form type|type)[:\s]+(higher intent|more volume)/i)?.[1] || 'Higher Intent';
-  const introMatch  = formSection.match(/(?:intro|context card|headline)[:\s]*([^\n]+)/i);
-  const thankYouMatch = formSection.match(/(?:thank you|closing|confirmation)[:\s]*([^\n]+(?:\n[^\n#]+)*)/i);
 
   const beautyQs = [
     { q: 'Which service are you most interested in?', type: 'Multiple Choice', answers: ['Teeth Whitening', 'Touch-up Session', 'Package Deal', 'Gift for Someone'] },
@@ -6200,16 +6200,58 @@ function extractInstantForm(campaignBrief, ad, brandSnapshot) {
     { q: 'Phone Number', type: 'Auto-fill', answers: ['Pre-filled from Facebook profile'] },
     { q: 'Email Address', type: 'Auto-fill', answers: ['Pre-filled from Facebook profile'] }
   ];
-
-  return {
-    formType,
-    introHeadline: introMatch?.[1]?.trim() || `Book Your ${isBeauty ? 'Whitening Session' : 'Consultation'} in ${city}`,
-    introBody: `We come to you. Professional service delivered to your door.\nTakes 30 seconds to claim your spot.`,
+  const fallback = {
+    formType: 'Higher Intent',
+    introHeadline: `Book Your ${isBeauty ? 'Whitening Session' : 'Consultation'} in ${city}`,
+    introBody: `Professional service. Takes 30 seconds to claim your spot.`,
     questions: isBeauty ? beautyQs : isReno ? renoQs : genericQs,
-    thankYou: thankYouMatch?.[1]?.trim() || `Thanks! We'll reach out within 24 hours to confirm your booking.`,
+    thankYou: `Thanks! We'll reach out within 24 hours to confirm your booking.`,
     thankYouCTA: 'Visit Our Page',
     caslConsent: `By submitting, you agree to receive follow-up communications from ${businessName}.`
   };
+
+  if (!campaignBrief || !KEYS.claude) return fallback;
+
+  try {
+    const raw = await ai(
+      'Return only valid JSON. No markdown, no code fences, no explanation.',
+      [{ role: 'user', content: `You are building a Meta Ads Instant Form for a ${industry} business called "${businessName}" in ${city}.
+
+Extract or generate the Instant Form structure from this campaign brief. Return ONLY valid JSON:
+{
+  "formType": "Higher Intent",
+  "introHeadline": "string — compelling booking headline (max 10 words)",
+  "introBody": "string — 1-2 sentence context (why they should fill this out)",
+  "questions": [
+    {
+      "q": "string — full question text",
+      "type": "Multiple Choice" | "Short Answer" | "Auto-fill",
+      "answers": ["string", "string", "string"]
+    }
+  ],
+  "thankYou": "string — confirmation message",
+  "thankYouCTA": "Visit Our Page",
+  "caslConsent": "By submitting, you agree to receive follow-up communications from ${businessName}."
+}
+
+Rules:
+- Include 3-5 qualifying questions relevant to THIS specific campaign
+- Always end with Full Name, Phone Number, Email Address as Auto-fill questions
+- For Multiple Choice questions include 3-4 realistic answer options
+- Questions must qualify the lead for ${industry} specifically
+- Use the campaign brief context below to write campaign-specific questions
+
+CAMPAIGN BRIEF (excerpt):
+${(campaignBrief || '').slice(0, 2500)}` }]
+    );
+    const json = raw.replace(/```json|```/g, '').trim();
+    const parsed = JSON.parse(json);
+    if (!parsed.questions?.length) return fallback;
+    return parsed;
+  } catch(e) {
+    console.error('[extractInstantForm] AI extraction failed, using fallback:', e);
+    return fallback;
+  }
 }
 
 function renderInstantForm(formData) {
@@ -7077,7 +7119,7 @@ Include: creative upload sizes (1080×1350, 1080×1920), UTM parameters, ad prev
         if (newObj === 'leads') {
           const s = newBrief.match(/##\s*INSTANT FORM\n([\s\S]*?)(?=\n##|$)/i)?.[1]?.trim();
           if (s) {
-            const formData = extractInstantForm(s, ad, S.brandSnapshot);
+            const formData = await extractInstantForm(s, ad, S.brandSnapshot);
             formEl.innerHTML = renderInstantForm(formData);
           }
 
@@ -7685,11 +7727,11 @@ async function openAdView(adId) {
   // ── INSTANT FORM ─────────────────────────────────────────────
   const formEl = document.getElementById('adv-form-content');
   if (formEl) {
-    const formData = extractInstantForm(ad.campaign_brief, ad, S.brandSnapshot);
+    const formData = await extractInstantForm(ad.campaign_brief, ad, S.brandSnapshot);
     formEl.innerHTML = renderInstantForm(formData);
   }
   const formAccordion = document.getElementById('adv-instant-form');
-  if (formAccordion) formAccordion.style.display = 'block';
+  if (formAccordion) formAccordion.classList.add('open');
   const formArrow = document.getElementById('adv-instant-form-arrow');
   if (formArrow) formArrow.textContent = '▲';
 
@@ -7699,7 +7741,7 @@ async function openAdView(adId) {
     budgetEl.innerHTML = renderMarkdown(getBudgetRecommendation(ad));
   }
   const budgetAccordion = document.getElementById('adv-budget');
-  if (budgetAccordion) { budgetAccordion.classList.add('open'); budgetAccordion.style.display = 'block'; }
+  if (budgetAccordion) budgetAccordion.classList.add('open');
   const budgetArrow = document.getElementById('adv-budget-arrow');
   if (budgetArrow) budgetArrow.textContent = '▲';
 
@@ -7765,7 +7807,7 @@ async function openAdView(adId) {
 
   // ── OPEN ACCORDIONS BY DEFAULT ───────────────────────────────
   const targetingAccordion = document.getElementById('adv-targeting');
-  if (targetingAccordion) targetingAccordion.style.display = 'block';
+  if (targetingAccordion) targetingAccordion.classList.add('open');
   const targetingArrow = document.getElementById('adv-targeting-arrow');
   if (targetingArrow) targetingArrow.textContent = '▲';
 
@@ -9394,72 +9436,94 @@ async function handlePerformanceCSV(input) {
   if (!file) return;
   const statusEl = document.getElementById('perf-csv-status');
   if (statusEl) statusEl.textContent = '⏳ Parsing...';
-  const text = await file.text();
-  const rows = text.split('\n').map(r => r.split(','));
-  const headers = rows[0].map(h => h.trim().toLowerCase().replace(/['"]/g,'').replace(/\s+/g,'_'));
-  const data = rows.slice(1).filter(r => r.length > 3).map(r => {
-    const obj = {};
-    headers.forEach((h, i) => { obj[h] = r[i]?.trim().replace(/['"]/g,'') || ''; });
-    return obj;
-  });
-  if (!data.length) {
-    if (statusEl) statusEl.textContent = '❌ No data found in CSV';
-    return;
-  }
-  const mapped = data.map(row => ({
-    campaign_name: row.campaign_name || row['campaign_name'] || row.name || '',
-    ad_name: row.ad_name || '',
-    impressions: parseFloat(row.impressions || row.reach || 0),
-    reach: parseFloat(row.reach || 0),
-    clicks: parseFloat(row.clicks || row.link_clicks || 0),
-    ctr: parseFloat(row.ctr || 0),
-    spend: parseFloat(row.amount_spent || row.amount_spent_(cad) || 0),
-    cpm: parseFloat(row.cpm || 0),
-    cpc: parseFloat(row.cpc || 0),
-    leads: parseFloat(row.leads || row.results || 0),
-    cost_per_lead: parseFloat(row.cost_per_lead || row.cost_per_result || 0),
-    frequency: parseFloat(row.frequency || 0)
-  }));
-  const totals = mapped.reduce((acc, row) => ({
-    spend: acc.spend + row.spend,
-    leads: acc.leads + row.leads,
-    clicks: acc.clicks + row.clicks,
-    impressions: acc.impressions + row.impressions
-  }), { spend: 0, leads: 0, clicks: 0, impressions: 0 });
-  const avgCTR = totals.impressions > 0 ? ((totals.clicks / totals.impressions) * 100).toFixed(2) : 0;
-  const avgCPL = totals.leads > 0 ? (totals.spend / totals.leads).toFixed(2) : 0;
-  const el = (id, val) => { const e = document.getElementById(id); if (e) e.textContent = val; };
-  el('dash-spend', '$' + totals.spend.toFixed(0));
-  el('dash-ctr', avgCTR + '%');
-  el('dash-cpl', '$' + avgCPL);
-  el('dash-leads', totals.leads);
-  el('dash-last-updated', 'Last updated: ' + new Date().toLocaleString('en-CA'));
-  renderAdPerformanceTable(mapped);
-  renderAdComparisonChart(mapped, 'ctr');
-  renderTimeChart(mapped, _timeChartMetric || 'spend');
-  await matchPerformanceToAds(mapped);
-  generatePerformanceAlerts(mapped);
-  if (currentBizId && currentUser?.id) {
-    for (const row of mapped) {
-      await sb.from('ad_performance').upsert({
-        business_id: currentBizId,
-        user_id: currentUser.id,
-        campaign_name: row.campaign_name,
-        impressions: row.impressions,
-        reach: row.reach,
-        clicks: row.clicks,
-        ctr: row.ctr,
-        spend: row.spend,
-        cpm: row.cpm,
-        cpc: row.cpc,
-        leads: row.leads,
-        cost_per_lead: row.cost_per_lead,
-        frequency: row.frequency
-      }, { onConflict: 'business_id,campaign_name' });
+  try {
+    const text = await file.text();
+    // Parse CSV respecting quoted fields (handles commas inside campaign names)
+    const parseCSVRow = line => {
+      const result = []; let cur = ''; let inQ = false;
+      for (let i = 0; i < line.length; i++) {
+        const ch = line[i];
+        if (ch === '"') { inQ = !inQ; }
+        else if (ch === ',' && !inQ) { result.push(cur.trim()); cur = ''; }
+        else { cur += ch; }
+      }
+      result.push(cur.trim());
+      return result;
+    };
+    const rawLines = text.split('\n').filter(l => l.trim());
+    const headers = parseCSVRow(rawLines[0]).map(h => h.replace(/['"]/g,'').trim().toLowerCase().replace(/\s+/g,'_').replace(/[()]/g,''));
+    console.log('[handlePerformanceCSV] headers detected:', headers);
+    const data = rawLines.slice(1).map(l => {
+      const vals = parseCSVRow(l);
+      const obj = {};
+      headers.forEach((h, i) => { obj[h] = vals[i]?.replace(/['"]/g,'').trim() || ''; });
+      return obj;
+    }).filter(r => Object.values(r).some(v => v));
+    console.log('[handlePerformanceCSV] parsed rows:', data.length);
+    if (!data.length) {
+      if (statusEl) statusEl.textContent = '❌ No data found in CSV';
+      return;
     }
+    // Map headers — Meta exports "Amount Spent (CAD)" → normalised key is "amount_spent_cad"
+    const mapped = data.map(row => ({
+      campaign_name: row.campaign_name || row.name || '',
+      ad_name: row.ad_name || '',
+      impressions: parseFloat(row.impressions || row.reach || 0),
+      reach: parseFloat(row.reach || 0),
+      clicks: parseFloat(row.clicks || row.link_clicks || 0),
+      ctr: parseFloat(row.ctr || 0),
+      spend: parseFloat(row.amount_spent || row.amount_spent_cad || row.spend || 0),
+      cpm: parseFloat(row.cpm || 0),
+      cpc: parseFloat(row.cpc || 0),
+      leads: parseFloat(row.leads || row.results || 0),
+      cost_per_lead: parseFloat(row.cost_per_lead || row.cost_per_result || 0),
+      frequency: parseFloat(row.frequency || 0)
+    }));
+    const totals = mapped.reduce((acc, row) => ({
+      spend: acc.spend + row.spend,
+      leads: acc.leads + row.leads,
+      clicks: acc.clicks + row.clicks,
+      impressions: acc.impressions + row.impressions
+    }), { spend: 0, leads: 0, clicks: 0, impressions: 0 });
+    const avgCTR = totals.impressions > 0 ? ((totals.clicks / totals.impressions) * 100).toFixed(2) : 0;
+    const avgCPL = totals.leads > 0 ? (totals.spend / totals.leads).toFixed(2) : 0;
+    const el = (id, val) => { const e = document.getElementById(id); if (e) e.textContent = val; };
+    el('dash-spend', '$' + totals.spend.toFixed(0));
+    el('dash-ctr', avgCTR + '%');
+    el('dash-cpl', '$' + avgCPL);
+    el('dash-leads', totals.leads);
+    el('dash-last-updated', 'Last updated: ' + new Date().toLocaleString('en-CA'));
+    renderAdPerformanceTable(mapped);
+    renderAdComparisonChart(mapped, 'ctr');
+    renderTimeChart(mapped, _timeChartMetric || 'spend');
+    await matchPerformanceToAds(mapped);
+    generatePerformanceAlerts(mapped);
+    if (currentBizId && currentUser?.id) {
+      for (const row of mapped) {
+        const { error } = await sb.from('ad_performance').upsert({
+          business_id: currentBizId,
+          user_id: currentUser.id,
+          campaign_name: row.campaign_name,
+          impressions: row.impressions,
+          reach: row.reach,
+          clicks: row.clicks,
+          ctr: row.ctr,
+          spend: row.spend,
+          cpm: row.cpm,
+          cpc: row.cpc,
+          leads: row.leads,
+          cost_per_lead: row.cost_per_lead,
+          frequency: row.frequency
+        }, { onConflict: 'business_id,campaign_name' });
+        console.log('[handlePerformanceCSV] Supabase insert result:', error || 'success');
+      }
+    }
+    if (statusEl) statusEl.textContent = '✅ ' + mapped.length + ' rows imported · ' + new Date().toLocaleDateString('en-CA');
+    S.performanceData = mapped;
+  } catch(e) {
+    console.error('[handlePerformanceCSV] error:', e);
+    if (statusEl) statusEl.textContent = '❌ Parse error: ' + e.message;
   }
-  if (statusEl) statusEl.textContent = '✅ ' + mapped.length + ' rows imported · ' + new Date().toLocaleDateString('en-CA');
-  S.performanceData = mapped;
 }
 
 function renderAdPerformanceTable(data) {
