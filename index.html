@@ -2755,15 +2755,42 @@ async function switchBusiness(id) {
   S.brandLogos = {};
   S.brandSnapshot = null;
   window._overlayColor = undefined;
+  // Business data isolation — clear all per-business state that
+  // loadPipelineRun() does not overwrite when a pipeline row exists
+  S.clientDiscovery = null;
+  S.serpIntelligence = null;
+  S.competitorAds = [];
+  S.competitorIntelligence = null;
+  S.performanceData = [];
+  S.lastVisualPrompts = {};
+  S.lastGeneratedPrompt = null;
+  S.dallePrompt = '';
+  S.lastImageUrl = '';
+  S.lastAdId = null;
+  S.lastBuiltAd = null;
+  S.audienceIntelligence = null;
+  S.segmentVisuals = [];
+  S.campaignType = null;
+  S.promotionContext = '';
+  S.discoveryContext = null;
+  S.pipelineMode = null;
+  S.currentProductId = null;
+  window._carouselImages = null;
+  currentAdViewData = null;
+  currentAdViewId = null;
   await savePipelineRun();
   currentBizId = id;
   resetPipelineUI();
   await loadPipelineRun();
   await loadBaseProfile();
+  // Reload per-business intelligence (otherwise only loaded in initApp)
+  loadClientDiscovery().catch(() => {});
+  loadSERPIntelligence().catch(() => {});
+  loadCompetitorIntelligence().catch(() => {});
   populateProductSelect();
-  adLibrary = []; renderAdLibrary();
+  adLibrary = []; S.adLibrary = adLibrary; renderAdLibrary();
   perfData = []; renderPerfTable(); renderDashboard();
-  loadAdLibrary().then(renderAdLibrary);
+  loadAdLibrary().then(() => { S.adLibrary = adLibrary; renderAdLibrary(); });
   loadPerfData().then(() => { renderStage1Overview(); checkAutoHealthCheck(); });
   const biz = businesses.find(b=>b.id===id);
   document.getElementById('ctx-biz').textContent = biz?.name || '—';
@@ -9558,7 +9585,7 @@ function renderAdPerformanceTable(data) {
             const leads  = parseInt(row.leads) || 0;
             const reach  = parseInt(row.reach) || 0;
 
-            const matchedAd = (S.adLibrary || []).find(ad => {
+            const matchedAd = (adLibrary || []).find(ad => {
               const adHook   = (ad.hook || ad.headline || '').toLowerCase();
               const campName = (row.campaign_name || '').toLowerCase();
               return campName.includes(adHook.slice(0,15)) || adHook.includes(campName.slice(0,15));
@@ -9625,7 +9652,7 @@ function generatePerformanceAlerts(data) {
   const alerts = [];
 
   data.forEach(row => {
-    const matchedAd = (S.adLibrary || []).find(ad => {
+    const matchedAd = (adLibrary || []).find(ad => {
       const adName   = (ad.hook || ad.headline || ad.segment_name || '').toLowerCase();
       const campName = (row.campaign_name || '').toLowerCase();
       return campName.includes(adName.slice(0,15)) || adName.includes(campName.slice(0,15));
@@ -9822,7 +9849,7 @@ function renderAdComparisonChart(data, metric) {
   const topAds = data.slice(0, 6);
 
   const labels = topAds.map(row => {
-    const matched = (S.adLibrary || []).find(ad => {
+    const matched = (adLibrary || []).find(ad => {
       const h = (ad.hook || '').toLowerCase();
       const c = (row.campaign_name || '').toLowerCase();
       return c.includes(h.slice(0, 10)) || h.includes(c.slice(0, 10));
@@ -9932,7 +9959,7 @@ function filterDashboardByProduct(value) {
     return;
   }
 
-  const matchingAdIds = (S.adLibrary || [])
+  const matchingAdIds = (adLibrary || [])
     .filter(ad => {
       const adProduct = ad.product_name || ad.campaign_type || ad.segment_name || '';
       return adProduct.toLowerCase().includes(value.toLowerCase());
@@ -9940,7 +9967,7 @@ function filterDashboardByProduct(value) {
     .map(ad => ad.id);
 
   const filtered = (S.performanceData || []).filter(row => {
-    const matchedAd = (S.adLibrary || []).find(ad => {
+    const matchedAd = (adLibrary || []).find(ad => {
       const adHook   = (ad.hook || ad.headline || '').toLowerCase();
       const campName = (row.campaign_name || '').toLowerCase();
       return campName.includes(adHook.slice(0,12)) || adHook.includes(campName.slice(0,12));
@@ -10026,7 +10053,7 @@ async function loadDashboardData() {
       const bestNameEl = document.getElementById('dash-best-ad-name');
       if (bestAdEl) bestAdEl.textContent = parseFloat(bestAd.ctr).toFixed(2) + '%';
       if (bestNameEl) {
-        const matched = (S.adLibrary || []).find(ad =>
+        const matched = (adLibrary || []).find(ad =>
           (bestAd.campaign_name || '').toLowerCase().includes((ad.hook || '').toLowerCase().slice(0,10))
         );
         bestNameEl.textContent = matched
@@ -10859,6 +10886,29 @@ async function saveBaseProfile() {
 async function loadBaseProfile() {
   if (!currentBizId || !currentUser) return;
   setSt('Loading profile…', 'run');
+  // Clear previous business's profile from UI and state before loading —
+  // without this, a business with no base_profiles row shows stale data
+  ['bp-business-name','bp-industry','bp-location','bp-website','bp-tagline','bp-mission',
+   'bp-instagram','bp-facebook','bp-tiktok','bp-linkedin','bp-youtube',
+   'bp-brand-name','bp-brand-vibe','bp-logo-url'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  ['bp-logo-preview','bp-logo-transparent-preview','bp-favicon-preview'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.src = ''; el.style.display = 'none'; }
+  });
+  const bpColorsClear = document.getElementById('bp-colors-list');
+  if (bpColorsClear) bpColorsClear.innerHTML = '';
+  S.brandLogos = {};
+  S.locationLat = null;
+  S.locationLon = null;
+  S.brandFonts = { headline: 'Barlow', subheadline: 'Inter', body: 'Inter' };
+  ['headline','subheadline','body'].forEach(t => {
+    const sel = document.getElementById('bp-font-' + t);
+    if (sel) sel.value = S.brandFonts[t];
+    updateFontPreview(t, S.brandFonts[t]);
+  });
   try {
     const [profileRes, productsRes] = await Promise.all([
       sb.from('base_profiles').select('*').eq('business_id', currentBizId).maybeSingle(),
