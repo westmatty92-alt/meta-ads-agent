@@ -6969,6 +6969,8 @@ function getFormAccordionLabel(objective) {
   const labels = {
     leads:       '📋 Instant Form',
     conversions: '🔄 Conversion Setup',
+    sales:       '🛒 Purchase Setup',
+    app:         '📱 App Setup',
     traffic:     '🌐 Landing Page Setup',
     awareness:   '📣 Reach Setup'
   };
@@ -7001,6 +7003,8 @@ function changeAdObjective() {
       ${[
         { value: 'leads',       label: '📋 Leads (Instant Form)',    desc: 'Collect leads inside Meta — no pixel needed' },
         { value: 'conversions', label: '💰 Conversions (Purchase)',   desc: 'Drive purchases/bookings — requires pixel + booking page' },
+        { value: 'sales',       label: '🛒 Sales (Purchase)',         desc: 'Find people likely to purchase — requires pixel + booking/purchase page' },
+        { value: 'app',         label: '📱 App Promotion',            desc: 'Drive app installs and in-app events — requires mobile app' },
         { value: 'traffic',     label: '🌐 Traffic (Website)',        desc: 'Send people to your website — build retargeting audience' },
         { value: 'awareness',   label: '📣 Awareness (Reach)',        desc: 'Maximize brand exposure — new to market' }
       ].map(obj => `
@@ -7059,10 +7063,12 @@ async function applyNewObjective() {
   if (!KEYS.claude) { alert('Claude API key required. Add it in Settings.'); return; }
 
   const objConfig = {
-    leads:       { label: 'Leads',       form: true,  pixel: false, cta: 'Book Now'   },
-    conversions: { label: 'Conversions', form: false, pixel: true,  cta: 'Book Now'   },
-    traffic:     { label: 'Traffic',     form: false, pixel: true,  cta: 'Learn More' },
-    awareness:   { label: 'Awareness',   form: false, pixel: false, cta: 'Learn More' }
+    leads:       { label: 'Leads',         form: true,  pixel: false, cta: 'Book Now'    },
+    conversions: { label: 'Conversions',   form: false, pixel: true,  cta: 'Book Now'    },
+    sales:       { label: 'Sales',         form: false, pixel: true,  cta: 'Book Now'    },
+    app:         { label: 'App Promotion', form: false, pixel: false, cta: 'Install Now' },
+    traffic:     { label: 'Traffic',       form: false, pixel: true,  cta: 'Learn More'  },
+    awareness:   { label: 'Awareness',     form: false, pixel: false, cta: 'Learn More'  }
   }[newObj] || { label: newObj, form: false, pixel: false, cta: 'Learn More' };
 
   const badge = document.getElementById('adv-objective-badge');
@@ -7238,6 +7244,69 @@ Include: creative upload sizes (1080×1350, 1080×1920), UTM parameters, ad prev
               <div style="background:rgba(245,200,66,0.08);border:1px solid rgba(245,200,66,0.2);border-radius:8px;padding:10px 12px;">
                 <div style="font-size:11px;font-weight:600;color:var(--yellow);margin-bottom:4px;">⚠️ No Instant Form or conversion tracking</div>
                 <div style="font-size:12px;color:var(--t2);line-height:1.5;">Awareness campaigns measure Reach and Impressions only. Switch to Leads or Conversions once your audience knows your brand.</div>
+              </div>
+            </div>`;
+
+        } else if (newObj === 'sales') {
+          const salesUrl = S.brandSnapshot?.website_url || S.brandSnapshot?.website || '';
+          formEl.innerHTML = `
+            <div style="display:flex;flex-direction:column;gap:12px;">
+              <div style="background:rgba(0,212,160,0.08);border:1px solid rgba(0,212,160,0.2);border-radius:8px;padding:12px;">
+                <div style="font-size:11px;font-weight:700;color:var(--volt);margin-bottom:4px;">Objective: Sales</div>
+                <div style="font-size:12px;color:var(--t2);line-height:1.6;">Meta finds people most likely to purchase and optimizes delivery for the Purchase event. Requires Meta Pixel installed and firing on your booking/purchase confirmation page.</div>
+              </div>
+              <div style="background:var(--bg-elevated);border-radius:8px;padding:12px;">
+                <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Purchase Event</div>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                  ${['Purchase','Initiate Checkout','Add to Cart','Schedule'].map((event, i) => `
+                  <div style="background:${i===0?'rgba(0,212,160,0.15)':'var(--bg-primary)'};border:${i===0?'1px solid var(--volt)':'1px solid var(--border)'};border-radius:6px;padding:5px 10px;font-size:11px;color:${i===0?'var(--volt)':'var(--t3)'};">${event}</div>`).join('')}
+                </div>
+                <div style="font-size:10px;color:var(--t3);margin-top:6px;">Optimize for <strong style="color:var(--t1);">Purchase</strong> — the deepest event in the funnel with pixel data</div>
+              </div>
+              <div style="background:var(--bg-elevated);border-radius:8px;padding:12px;">
+                <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Pixel Setup Checklist</div>
+                ${[
+                  { label: 'Meta Pixel installed on website', status: S.clientDiscovery?.has_pixel === 'yes_verified' ? '✅' : '⚠️' },
+                  { label: 'Purchase event firing on confirmation page', status: '⬜' },
+                  { label: 'Test Events tool confirms pixel data', status: '⬜' },
+                  { label: 'Booking page URL: ' + (salesUrl || 'Add in Base Profile'), status: salesUrl ? '✅' : '⚠️' },
+                  { label: 'Conversions API (CAPI) connected', status: '⬜' }
+                ].map(item => `
+                <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);">
+                  <span style="font-size:14px;">${item.status}</span>
+                  <span style="font-size:12px;color:var(--t2);">${item.label}</span>
+                </div>`).join('')}
+              </div>
+              <div style="background:rgba(245,200,66,0.08);border:1px solid rgba(245,200,66,0.2);border-radius:8px;padding:10px 12px;">
+                <div style="font-size:11px;font-weight:600;color:var(--yellow);margin-bottom:4px;">⚠️ No Instant Form needed</div>
+                <div style="font-size:12px;color:var(--t2);line-height:1.5;">Sales objective sends people directly to your booking/purchase page. The pixel tracks the purchase — no Meta form is used.</div>
+              </div>
+            </div>`;
+
+        } else if (newObj === 'app') {
+          formEl.innerHTML = `
+            <div style="display:flex;flex-direction:column;gap:12px;">
+              <div style="background:rgba(0,212,160,0.08);border:1px solid rgba(0,212,160,0.2);border-radius:8px;padding:12px;">
+                <div style="font-size:11px;font-weight:700;color:var(--volt);margin-bottom:4px;">Objective: App Promotion</div>
+                <div style="font-size:12px;color:var(--t2);line-height:1.6;">Drive app installs and in-app events (purchases, registrations) on iOS and Android. Meta optimizes delivery toward people likely to install and use your app.</div>
+              </div>
+              <div style="background:var(--bg-elevated);border-radius:8px;padding:12px;">
+                <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Requirements Checklist</div>
+                ${[
+                  'Live mobile app in the App Store / Google Play',
+                  'Meta SDK integrated in the app',
+                  'App registered in Meta App Dashboard',
+                  'In-app events configured (install, purchase, registration)',
+                  'SKAdNetwork set up for iOS 14+ attribution'
+                ].map(item => `
+                <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);">
+                  <span style="font-size:14px;">⬜</span>
+                  <span style="font-size:12px;color:var(--t2);">${item}</span>
+                </div>`).join('')}
+              </div>
+              <div style="background:rgba(245,200,66,0.08);border:1px solid rgba(245,200,66,0.2);border-radius:8px;padding:10px 12px;">
+                <div style="font-size:11px;font-weight:600;color:var(--yellow);margin-bottom:4px;">⚠️ Not typical for service businesses</div>
+                <div style="font-size:12px;color:var(--t2);line-height:1.5;">App Promotion only applies if the client has a mobile app. For local service businesses, Leads or Sales almost always performs better.</div>
               </div>
             </div>`;
         }
@@ -7481,6 +7550,37 @@ function buildSmartBudgetRecommendation(ad) {
   const cpbLow  = isBeauty ? '$60' : isReno ? '$120' : '$80';
   const cpbHigh = isBeauty ? '$150' : isReno ? '$300' : '$200';
 
+  // Objective-specific benchmarks — objectives not listed here use the
+  // default leads-style output below
+  const objective = ad?.campaign_objective || S.campaignObjective || 'leads';
+  const benchmarks = {
+    sales: {
+      resultLabel: 'purchases/bookings',
+      resultCount: isBeauty ? '4-12' : '2-8',
+      costLabel: 'cost per purchase',
+      costLow: isBeauty ? '$80' : '$120',
+      costHigh: isBeauty ? '$200' : '$350',
+      costBookLabel: 'Target ROAS',
+      costBookLow: '3x',
+      costBookHigh: '6x',
+      scaleThreshold: isBeauty ? '$150' : '$250',
+      phase3Target: 'website visitors who did not complete purchase'
+    },
+    app: {
+      resultLabel: 'app installs',
+      resultCount: '50-200',
+      costLabel: 'cost per install',
+      costLow: '$2',
+      costHigh: '$8',
+      costBookLabel: 'Target cost per in-app event',
+      costBookLow: '$5',
+      costBookHigh: '$20',
+      scaleThreshold: '$6 CPI',
+      phase3Target: 'lapsed app users (re-engagement)'
+    }
+  };
+  const bm = benchmarks[objective];
+
   const competitorSignal = competitorCount > 3
     ? `⚠️ ${competitorCount} competitors running Meta ads — consider increasing budget to compete`
     : isFirstMover
@@ -7503,17 +7603,17 @@ PHASE 2 — SCALING (Week 3-4): ${b.p2} CAD/day
 - Goal: Drive bookings at target cost
 
 PHASE 3 — RETARGETING (Ongoing): ${b.p3} CAD/day
-- Target: Website visitors + form openers (last 30 days)
+- Target: ${bm ? bm.phase3Target : 'Website visitors + form openers (last 30 days)'}
 - Use winning creative only
-- Expected CPL: 40-60% lower than cold traffic
+- Expected ${bm ? bm.costLabel : 'CPL'}: 40-60% lower than cold traffic
 
 EXPECTED RESULTS AT ${b.monthly}/month:
 - Estimated reach: ${isBeauty ? '8,000-15,000' : '5,000-10,000'} people/month
-- Estimated leads: ${isBeauty ? '15-40' : '8-20'} per month
-- Target cost per lead: ${cplLow}-${cplHigh} CAD
-- Target cost per booking: ${cpbLow}-${cpbHigh} CAD
+- Estimated ${bm ? bm.resultLabel : 'leads'}: ${bm ? bm.resultCount : (isBeauty ? '15-40' : '8-20')} per month
+- Target ${bm ? bm.costLabel : 'cost per lead'}: ${bm ? bm.costLow : cplLow}-${bm ? bm.costHigh : cplHigh} CAD
+- ${bm ? bm.costBookLabel : 'Target cost per booking'}: ${bm ? bm.costBookLow : cpbLow}-${bm ? bm.costBookHigh : cpbHigh}${bm ? '' : ' CAD'}
 
-SCALE TRIGGER: When CPL stays below ${isBeauty ? '$45' : '$75'} CAD
+SCALE TRIGGER: When ${bm ? bm.costLabel : 'CPL'} stays below ${bm ? bm.scaleThreshold : (isBeauty ? '$45' : '$75') + ' CAD'}
 for 3 consecutive days → increase daily budget by 20%
 
 COMPETITOR ACTIVITY:
