@@ -2137,10 +2137,6 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
           <button class="btn bg bsm" onclick="addBrandColor()">+ Add Color</button>
         </div>
         <div id="bp-colors-list" style="margin-top:8px;"></div>
-        <div style="margin-top:16px;">
-          <div class="flbl">Primary Color Preview</div>
-          <div id="bp-color-preview" style="width:100%;height:48px;border-radius:8px;background:var(--accent);border:1px solid var(--border2);margin-top:4px;"></div>
-        </div>
       </div>
     </div>
   </div>
@@ -2537,7 +2533,7 @@ function readBkColors() {
   if (!rows.length) return;
   S.brandColors = Array.from(rows).map(row => ({
     hex:   row.querySelector('input[type="color"]').value,
-    label: row.querySelectorAll('input[type="text"]')[1]?.value.trim() || 'Color'
+    label: row.querySelector('.bp-color-label')?.value || 'Other'
   }));
 }
 
@@ -10633,16 +10629,24 @@ function filterFonts(input, selectId) {
   }
 }
 
+const BP_COLOR_LABELS = ['Primary','Secondary','Accent','Background','Text','Other'];
+
 function addBrandColor(hex, label) {
   const container = document.getElementById('bp-colors-list');
   if (!container) return;
+  // Match saved free-text labels to a dropdown option; unknown labels become "Other"
+  const selected = label
+    ? (BP_COLOR_LABELS.find(l => l.toLowerCase() === String(label).trim().toLowerCase()) || 'Other')
+    : 'Primary';
   const row = document.createElement('div');
   row.className = 'color-row';
   row.style.cssText = 'display:flex;gap:8px;align-items:center;margin-bottom:8px;';
   row.innerHTML =
     '<input type="color" value="' + (hex || '#00D4A0') + '" oninput="syncColorHex(this)" style="width:36px;height:36px;border:none;border-radius:6px;cursor:pointer;padding:0;">' +
     '<input type="text" value="' + (hex || '#00D4A0') + '" placeholder="#000000" oninput="syncColorPicker(this)" style="width:90px;" class="fi">' +
-    '<input type="text" value="' + (label || '') + '" placeholder="Label (e.g. Primary)" class="fi" style="flex:1;" oninput="debouncedBPSave()">' +
+    '<select class="fsel bp-color-label" style="flex:1;" onchange="debouncedBPSave()">' +
+      BP_COLOR_LABELS.map(l => '<option value="' + l + '"' + (l === selected ? ' selected' : '') + '>' + l + '</option>').join('') +
+    '</select>' +
     '<button onclick="this.parentElement.remove();debouncedBPSave()" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:16px;padding:4px;">✕</button>';
   container.appendChild(row);
 }
@@ -10837,7 +10841,7 @@ async function saveBaseProfile() {
   try {
     const colors = [...document.querySelectorAll('#bp-colors-list .color-row')].map(row => ({
       hex:   row.querySelector('input[type="color"]').value,
-      label: row.querySelectorAll('input[type="text"]')[1].value
+      label: row.querySelector('.bp-color-label')?.value || 'Other'
     }));
     const bpPayload = {
       business_id:   currentBizId,
