@@ -1541,7 +1541,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
             style="background:var(--bg-elevated);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:12px;color:var(--t2);cursor:pointer;">
             <option value="all">All Products</option>
           </select>
-          <button onclick="document.getElementById('dash-unified-csv').click()"
+          <button onclick="document.getElementById('perf-csv-upload').click()"
             style="background:var(--volt);color:#000;border:none;border-radius:6px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;">
             📤 Upload Meta Data
           </button>
@@ -1748,18 +1748,34 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
             </select>
           </div>
 
-          <label style="display:flex;align-items:center;gap:8px;background:var(--bg-elevated);border:1px dashed var(--border);border-radius:8px;padding:12px;cursor:pointer;transition:border-color 0.15s;"
-            onmouseover="this.style.borderColor='var(--volt)'"
-            onmouseout="this.style.borderColor='var(--border)'">
-            <span style="font-size:18px;">📊</span>
-            <div>
-              <div style="font-size:12px;color:var(--t1);font-weight:600;">Choose Meta CSV export</div>
-              <div style="font-size:10px;color:var(--t3);margin-top:2px;">Summary or demographic breakdown</div>
-            </div>
-            <input type="file" accept=".csv" multiple id="dash-unified-csv" style="display:none" onchange="handleUnifiedCSV(this)">
-          </label>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
 
-          <div id="dash-upload-status" style="margin-top:8px;font-size:11px;color:var(--t3);display:none;"></div>
+            <!-- Performance Upload -->
+            <div style="background:var(--bg-elevated);border:1px solid var(--border);border-radius:8px;padding:12px;">
+              <div style="font-size:11px;font-weight:600;color:var(--t1);margin-bottom:2px;">📊 Performance Data</div>
+              <div style="font-size:10px;color:var(--t3);margin-bottom:10px;">Spend · CTR · Clicks · Results · Frequency</div>
+              <input type="file" id="perf-csv-upload" accept=".csv" style="display:none"
+                onchange="processSingleCSV(this.files[0]).then(()=>this.value='')">
+              <button onclick="document.getElementById('perf-csv-upload').click()"
+                style="width:100%;background:var(--volt);color:#000;border:none;border-radius:6px;padding:8px;font-size:11px;font-weight:700;cursor:pointer;">
+                Upload Performance CSV
+              </button>
+              <div id="perf-csv-status" style="font-size:10px;color:var(--t3);margin-top:6px;text-align:center;"></div>
+            </div>
+
+            <!-- Demographics Upload -->
+            <div style="background:var(--bg-elevated);border:1px solid var(--border);border-radius:8px;padding:12px;">
+              <div style="font-size:11px;font-weight:600;color:var(--t1);margin-bottom:2px;">👥 Demographics Data</div>
+              <div style="font-size:10px;color:var(--t3);margin-bottom:10px;">Age · Gender breakdown</div>
+              <input type="file" id="demo-csv-upload" accept=".csv" style="display:none"
+                onchange="processSingleCSV(this.files[0]).then(()=>this.value='')">
+              <button onclick="document.getElementById('demo-csv-upload').click()"
+                style="width:100%;background:transparent;border:1px solid var(--volt);color:var(--volt);border-radius:6px;padding:8px;font-size:11px;font-weight:700;cursor:pointer;">
+                Upload Demographics CSV
+              </button>
+              <div id="demo-csv-status" style="font-size:10px;color:var(--t3);margin-top:6px;text-align:center;"></div>
+            </div>
+          </div>
 
           <div id="dash-saved-data-row" style="display:none;margin-top:8px;align-items:center;justify-content:space-between;">
             <span id="dash-saved-count" style="font-size:11px;color:var(--volt);"></span>
@@ -9686,7 +9702,7 @@ function checkAuditSchedule() {
 }
 
 function uploadPerformanceCSV() {
-  document.getElementById('dash-unified-csv')?.click();
+  document.getElementById('perf-csv-upload')?.click();
 }
 
 // Unified Meta CSV upload — auto-detects performance summary vs demographic breakdown
@@ -9702,8 +9718,9 @@ async function handleUnifiedCSV(input) {
 async function processSingleCSV(file) {
   if (!file) return;
   const adId = document.getElementById('dash-upload-ad-select')?.value || null;
-  const statusEl = document.getElementById('dash-upload-status');
-  const setStatus = msg => { if (statusEl) { statusEl.style.display = 'block'; statusEl.textContent = msg; } };
+  // Status routes to the box matching the detected type; defaults to performance until we know
+  let statusId = 'perf-csv-status';
+  const setStatus = msg => { const el = document.getElementById(statusId); if (el) el.textContent = msg; };
   setStatus('⏳ Reading ' + file.name + '...');
   // Numeric sanitizers — strip $ , % and whitespace so "$1,234.56" etc. parse correctly (both branches use these)
   const toNum = v => { const f = parseFloat(String(v == null ? '' : v).replace(/[$,%\s]/g,'')); return isNaN(f) ? 0 : f; };
@@ -9737,6 +9754,7 @@ async function processSingleCSV(file) {
 
     // Detect demographic breakdown (Age / Gender columns present)
     const isDemographic = headers.some(h => h === 'age' || h === 'age_group') || headers.some(h => h === 'gender');
+    statusId = isDemographic ? 'demo-csv-status' : 'perf-csv-status'; // route status to the matching box
     setStatus('Detected: ' + (isDemographic ? 'Demographic breakdown' : 'Performance summary') + ' · parsing...');
 
     if (isDemographic) {
@@ -9873,7 +9891,7 @@ async function clearDashboardData() {
   ['dash-spend','dash-ctr','dash-cpl','dash-leads','dash-best-ctr'].forEach(id => { const e = document.getElementById(id); if (e) e.textContent = '—'; });
   const lu = document.getElementById('dash-last-updated'); if (lu) lu.textContent = 'No data uploaded yet — upload a Meta CSV to populate';
   const row = document.getElementById('dash-saved-data-row'); if (row) row.style.display = 'none';
-  const st = document.getElementById('dash-upload-status'); if (st) { st.style.display = 'block'; st.textContent = 'Data cleared'; }
+  ['perf-csv-status','demo-csv-status'].forEach(id => { const st = document.getElementById(id); if (st) st.textContent = ''; });
 }
 
 function renderAdPerformanceTable(data) {
