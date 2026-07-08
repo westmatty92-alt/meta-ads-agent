@@ -1756,7 +1756,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
               <div style="font-size:12px;color:var(--t1);font-weight:600;">Choose Meta CSV export</div>
               <div style="font-size:10px;color:var(--t3);margin-top:2px;">Summary or demographic breakdown</div>
             </div>
-            <input type="file" accept=".csv" id="dash-unified-csv" style="display:none" onchange="handleUnifiedCSV(this)">
+            <input type="file" accept=".csv" multiple id="dash-unified-csv" style="display:none" onchange="handleUnifiedCSV(this)">
           </label>
 
           <div id="dash-upload-status" style="margin-top:8px;font-size:11px;color:var(--t3);display:none;"></div>
@@ -3216,7 +3216,8 @@ End with: READY TO LAUNCH SCORE: [0-100]`;
 // Build a structured audit brief from data already in memory (perf CSV, demographics,
 // ad library, brand snapshot) — replaces the old manual-paste (S.adData) workflow.
 function buildAuditBrief() {
-  const perf = perfData || [];
+  // Prefer the freshly-uploaded rows (carry rankings/results); fall back to Supabase-backed perfData
+  const perf = (perfData && perfData.length) ? perfData : (S.performanceData || []);
   const demo = S.demographicsData || null;
   const ads  = adLibrary || [];
   const biz  = S.brandSnapshot || {};
@@ -3229,7 +3230,7 @@ function buildAuditBrief() {
   const totalReach   = perf.reduce((s,r)=>s+int(r.reach),0);
   const totalClicks  = perf.reduce((s,r)=>s+int(r.clicks),0);
   // "Results" — Meta's Results column isn't stored separately; use conversions, else leads
-  const totalResults = perf.reduce((s,r)=>s+int(r.conversions ?? r.leads),0);
+  const totalResults = perf.reduce((s,r)=>s+int(r.results ?? r.conversions ?? r.leads),0);
   const avgCTR = totalImpr>0 ? (totalClicks/totalImpr*100).toFixed(2)
     : (perf.length ? (perf.reduce((s,r)=>s+num(r.ctr),0)/perf.length).toFixed(2) : 0);
   const avgCPL = totalResults>0 ? (totalSpend/totalResults).toFixed(2) : 'N/A';
@@ -3250,8 +3251,14 @@ function buildAuditBrief() {
   const adSummary = ads.slice(0,5)
     .map(ad => '- ' + (ad.hook||ad.headline||'Untitled').replace(/[*_#>]/g,'').trim().slice(0,50)).join('\n');
   const perTable = perf.length
-    ? perf.slice(0,15).map(r=>`${(r.ad_name||r.campaign_name||'Ad')}: Spend $${num(r.spend).toFixed(0)} · CTR ${num(r.ctr).toFixed(2)}% · Clicks ${int(r.clicks)} · Results ${int(r.conversions ?? r.leads)} · CPA $${num(r.cpa).toFixed(2)} · Freq ${num(r.frequency).toFixed(1)}`).join('\n')
+    ? perf.slice(0,15).map(r=>`${(r.ad_name||r.campaign_name||'Ad')}: Spend $${num(r.spend).toFixed(0)} · CTR ${num(r.ctr).toFixed(2)}% · Clicks ${int(r.clicks)} · Results ${int(r.results ?? r.conversions ?? r.leads)} · CPA $${num(r.cpa).toFixed(2)} · Freq ${num(r.frequency).toFixed(1)}`).join('\n')
     : 'No per-campaign rows available';
+  // Rankings only exist on freshly-uploaded rows (S.performanceData); Supabase-backed perfData lacks them
+  const perfRanked = (S.performanceData && S.performanceData.length) ? S.performanceData : perf;
+  const rankings = perfRanked.map(r =>
+    (r.ad_name || r.campaign_name || 'Ad') + ': Quality=' + (r.quality_ranking || 'N/A') +
+    ', Engagement=' + (r.engagement_ranking || 'N/A') + ', Conversion=' + (r.conversion_ranking || 'N/A')
+  ).filter(r => !r.includes('N/A')).join('\n');
 
   const pixelStatus = discovery.has_pixel || biz.has_pixel || 'unknown';
   const objective = discovery.campaign_objective || S.campaignObjective || ads[0]?.objective || 'unknown';
@@ -3275,14 +3282,14 @@ Avg Frequency: ${avgFreq}x
 
 PER-CAMPAIGN / PER-AD ROWS:
 ${perTable}
-
+${rankings ? '\nMETA QUALITY RANKINGS:\n' + rankings + '\n' : ''}
 ACTIVE ADS IN LIBRARY:
 ${adSummary || 'No ads in library'}
 
 DEMOGRAPHIC BREAKDOWN:
 ${demoSummary || 'No demographic data uploaded yet'}
 
-NOTE: Meta quality/engagement/conversion rankings and a separate Purchase-event count are NOT captured in this dataset. Do not assume specific pixel-event numbers or invent a purchase/checkout figure — if pixel or conversion-tracking status matters to a finding, ask the user rather than guessing.`;
+NOTE: A separate Purchase-event count is not captured in this dataset. Do not invent a purchase/checkout figure — if pixel or conversion-tracking status matters to a finding, ask the user rather than guessing.`;
 }
 
 // Pattern-based follow-up question surfaced after the audit renders
@@ -3291,7 +3298,7 @@ function generateDiagnosticQuestion() {
   if (!perf.length) return null;
   const int = v => parseInt(v)||0, num = v => parseFloat(v)||0;
   const totalClicks  = perf.reduce((s,r)=>s+int(r.clicks),0);
-  const totalResults = perf.reduce((s,r)=>s+int(r.conversions ?? r.leads),0);
+  const totalResults = perf.reduce((s,r)=>s+int(r.results ?? r.conversions ?? r.leads),0);
   const totalImpr    = perf.reduce((s,r)=>s+int(r.impressions),0);
   const avgCTR = totalImpr>0 ? totalClicks/totalImpr*100 : (perf.reduce((s,r)=>s+num(r.ctr),0)/perf.length);
   if (avgCTR > 1 && totalResults > 0 && totalClicks/totalResults > 10)
@@ -9686,12 +9693,21 @@ function uploadPerformanceCSV() {
 // and routes to the correct renderers + storage (both live in the ad_performance table,
 // distinguished by data_type). Replaces the old handlePerformanceCSV / handleDemographicsCSV.
 async function handleUnifiedCSV(input) {
-  const file = input.files[0];
+  const files = Array.from(input.files || []);
+  if (!files.length) return;
+  for (const file of files) { await processSingleCSV(file); }
+  input.value = '';
+}
+
+async function processSingleCSV(file) {
   if (!file) return;
   const adId = document.getElementById('dash-upload-ad-select')?.value || null;
   const statusEl = document.getElementById('dash-upload-status');
   const setStatus = msg => { if (statusEl) { statusEl.style.display = 'block'; statusEl.textContent = msg; } };
-  setStatus('⏳ Reading file...');
+  setStatus('⏳ Reading ' + file.name + '...');
+  // Numeric sanitizers — strip $ , % and whitespace so "$1,234.56" etc. parse correctly (both branches use these)
+  const toNum = v => { const f = parseFloat(String(v == null ? '' : v).replace(/[$,%\s]/g,'')); return isNaN(f) ? 0 : f; };
+  const toInt = v => { const i = parseInt(String(v == null ? '' : v).replace(/[$,\s]/g,''), 10); return isNaN(i) ? 0 : i; };
   try {
     const text = await file.text();
     // Quote-aware CSV row parser (handles commas inside campaign names)
@@ -9729,7 +9745,7 @@ async function handleUnifiedCSV(input) {
         const age    = row.age || row.age_group || '';
         const gender = (row.gender || '').toLowerCase();
         const device = (row.device || row.platform || row.device_platform || '').toLowerCase();
-        const reach  = parseFloat(row.reach || row.impressions || 0) || 0;
+        const reach  = toInt(row.reach || row.impressions);
         if (age) ageBreakdown[age] = (ageBreakdown[age] || 0) + reach;
         if (gender.includes('female')) genderBreakdown.female += reach;
         else if (gender.includes('male')) genderBreakdown.male += reach;
@@ -9746,7 +9762,7 @@ async function handleUnifiedCSV(input) {
         const rows = objs.map(row => ({
           business_id: currentBizId, user_id: currentUser.id, ad_id: adId,
           data_type: 'demographic', campaign_name: null,
-          reach: parseInt(row.reach || row.impressions || 0) || null,
+          reach: toInt(row.reach || row.impressions) || null,
           row_data: row
         }));
         const { data, error } = await sb.from('ad_performance').insert(rows).select();
@@ -9756,15 +9772,10 @@ async function handleUnifiedCSV(input) {
       if (saved) showSavedRow(saved + ' rows saved (demographic)');
       if (saved) setStatus('✅ Demographic breakdown imported · ' + saved + ' rows saved');
     } else {
-      // Performance summary — normalise into the fields the live renderers read.
-      // Strip currency symbols / thousands separators / % before parsing — Meta exports
-      // like "$1,234.56" or "1,234" make a bare parseFloat return NaN or a truncated value.
-      const toNum = v => { const f = parseFloat(String(v == null ? '' : v).replace(/[$,%\s]/g,'')); return isNaN(f) ? 0 : f; };
-      const toInt = v => { const i = parseInt(String(v == null ? '' : v).replace(/[$,\s]/g,''), 10); return isNaN(i) ? 0 : i; };
+      // Performance summary — normalise into the fields the live renderers + audit brief read.
       const spendKey = headers.find(h => h.startsWith('amount_spent')); // currency-agnostic (CAD/USD/…)
       const mapped = objs.map(row => {
         const spendRaw = row.amount_spent_cad || row.amount_spent || row.spend || (spendKey ? row[spendKey] : '');
-        console.log('[CSV] spend raw:', spendRaw, '→ parsed:', toNum(spendRaw));
         return {
           campaign_name: row.campaign_name || row.name || '',
           ad_name: row.ad_name || '',
@@ -9777,7 +9788,12 @@ async function handleUnifiedCSV(input) {
           cpc: toNum(row.cpc),
           leads: toInt(row.leads || row.results),
           cost_per_lead: toNum(row.cost_per_lead || row.cost_per_result),
-          frequency: toNum(row.frequency)
+          frequency: toNum(row.frequency),
+          results: toInt(row.results || row.conversions || row.leads),
+          cost_per_result: toNum(row.cost_per_results || row.cost_per_result || row.cost_per_lead),
+          quality_ranking: row.quality_ranking || '',
+          engagement_ranking: row.engagement_rate_ranking || '',
+          conversion_ranking: row.conversion_rate_ranking || ''
         };
       });
       const totals = mapped.reduce((acc, row) => ({
@@ -9815,9 +9831,8 @@ async function handleUnifiedCSV(input) {
       if (saved) showSavedRow(saved + ' rows saved (performance)');
       setStatus('✅ ' + mapped.length + ' rows imported' + (saved ? ' · ' + saved + ' saved' : ''));
     }
-    input.value = '';
   } catch(e) {
-    console.error('[handleUnifiedCSV] error:', e);
+    console.error('[processSingleCSV] error:', e);
     setStatus('❌ Parse error: ' + e.message);
   }
 }
@@ -10353,7 +10368,7 @@ async function loadDashboardData() {
         const age    = row.age || row.age_group || '';
         const gender = (row.gender || '').toLowerCase();
         const device = (row.device || row.platform || row.device_platform || '').toLowerCase();
-        const reach  = parseFloat(row.reach || row.impressions || 0) || 0;
+        const reach  = parseInt(String(row.reach || row.impressions || '').replace(/[$,\s]/g,''), 10) || 0;
         if (age) ageBreakdown[age] = (ageBreakdown[age] || 0) + reach;
         if (gender.includes('female')) genderBreakdown.female += reach;
         else if (gender.includes('male')) genderBreakdown.male += reach;
