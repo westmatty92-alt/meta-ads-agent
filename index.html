@@ -9756,21 +9756,30 @@ async function handleUnifiedCSV(input) {
       if (saved) showSavedRow(saved + ' rows saved (demographic)');
       if (saved) setStatus('✅ Demographic breakdown imported · ' + saved + ' rows saved');
     } else {
-      // Performance summary — normalise into the fields the live renderers read
-      const mapped = objs.map(row => ({
-        campaign_name: row.campaign_name || row.name || '',
-        ad_name: row.ad_name || '',
-        impressions: parseFloat(row.impressions || row.reach || 0) || 0,
-        reach: parseFloat(row.reach || 0) || 0,
-        clicks: parseFloat(row.clicks || row.link_clicks || 0) || 0,
-        ctr: parseFloat(row.ctr || 0) || 0,
-        spend: parseFloat(row.amount_spent || row.amount_spent_cad || row.spend || 0) || 0,
-        cpm: parseFloat(row.cpm || 0) || 0,
-        cpc: parseFloat(row.cpc || 0) || 0,
-        leads: parseFloat(row.leads || row.results || 0) || 0,
-        cost_per_lead: parseFloat(row.cost_per_lead || row.cost_per_result || 0) || 0,
-        frequency: parseFloat(row.frequency || 0) || 0
-      }));
+      // Performance summary — normalise into the fields the live renderers read.
+      // Strip currency symbols / thousands separators / % before parsing — Meta exports
+      // like "$1,234.56" or "1,234" make a bare parseFloat return NaN or a truncated value.
+      const toNum = v => { const f = parseFloat(String(v == null ? '' : v).replace(/[$,%\s]/g,'')); return isNaN(f) ? 0 : f; };
+      const toInt = v => { const i = parseInt(String(v == null ? '' : v).replace(/[$,\s]/g,''), 10); return isNaN(i) ? 0 : i; };
+      const spendKey = headers.find(h => h.startsWith('amount_spent')); // currency-agnostic (CAD/USD/…)
+      const mapped = objs.map(row => {
+        const spendRaw = row.amount_spent_cad || row.amount_spent || row.spend || (spendKey ? row[spendKey] : '');
+        console.log('[CSV] spend raw:', spendRaw, '→ parsed:', toNum(spendRaw));
+        return {
+          campaign_name: row.campaign_name || row.name || '',
+          ad_name: row.ad_name || '',
+          impressions: toInt(row.impressions || row.reach),
+          reach: toInt(row.reach),
+          clicks: toInt(row.clicks || row.link_clicks),
+          ctr: toNum(row.ctr),
+          spend: toNum(spendRaw),
+          cpm: toNum(row.cpm),
+          cpc: toNum(row.cpc),
+          leads: toInt(row.leads || row.results),
+          cost_per_lead: toNum(row.cost_per_lead || row.cost_per_result),
+          frequency: toNum(row.frequency)
+        };
+      });
       const totals = mapped.reduce((acc, row) => ({
         spend: acc.spend + row.spend, leads: acc.leads + row.leads,
         clicks: acc.clicks + row.clicks, impressions: acc.impressions + row.impressions
