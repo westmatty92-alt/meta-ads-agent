@@ -1040,11 +1040,11 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
         <div class="shdr-left"><h2>🔍 Ad Account Audit</h2><p>50-check analysis: structure, creative, budget, audience, pixel, compliance</p></div>
         <div class="sacts">
           <button class="btn bg bsm" onclick="go('data')">← Back</button>
-          <button class="btn bp" id="btn-audit" onclick="runAudit()">Run Audit</button>
+          <button class="btn bp" id="btn-audit" onclick="_auditAutoRan=true;runAudit()">▶ Run AI Audit</button>
         </div>
       </div>
       <div style="background:rgba(37,99,235,0.08);border:1px solid rgba(37,99,235,0.2);border-radius:10px;padding:12px 16px;margin:0 22px 12px;font-size:12px;color:var(--t2);line-height:1.6;">
-        <strong style="color:var(--t1);">🔍 Audit is a standalone tool.</strong> Run it any time — before or after building ads. Use <em>Get Optimization Tips</em> for improvement suggestions, or <em>Build New Ads With These Findings</em> to inject audit insights into your next pipeline run.
+        <strong style="color:var(--t1);">🔍 Audit reads your Dashboard data automatically.</strong> It analyzes the performance + demographic data in memory — no manual paste needed — and runs on its own when you open this tab. Use <em>Get Optimization Tips</em> for improvement suggestions, or <em>Build New Ads With These Findings</em> to inject audit insights into your next pipeline run.
       </div>
       <div class="stream" id="stream-audit">
         <div class="amsg"><div class="av av-s">🔍</div>
@@ -1716,14 +1716,22 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
 
         </div>
 
-        <!-- ROW 4: Per-Ad Performance Table -->
+        <!-- ROW 4: Per-Ad Performance Table (collapsible, collapsed by default) -->
         <div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:10px;padding:16px;">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-            <div style="font-size:13px;font-weight:700;color:var(--t1);">📋 Ad Performance Table</div>
-            <div style="font-size:10px;color:var(--t3);">Click any row to open the ad</div>
+          <div onclick="toggleAccordion('dash-ad-table-body')"
+            style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:10px 12px;background:var(--bg-elevated);border-radius:8px;transition:background 0.15s;"
+            onmouseover="this.style.background='rgba(255,255,255,0.04)'"
+            onmouseout="this.style.background='var(--bg-elevated)'">
+            <div style="font-size:13px;font-weight:700;color:var(--t1);">📋 Ad Performance Table<span id="dash-table-row-count" style="font-size:10px;color:var(--t3);margin-left:8px;"></span></div>
+            <div style="display:flex;align-items:center;gap:12px;">
+              <span style="font-size:10px;color:var(--t3);">Click a row to open the ad</span>
+              <span id="dash-ad-table-body-arrow" style="color:var(--t3);font-size:12px;">▼</span>
+            </div>
           </div>
-          <div id="dash-ad-table">
-            <div style="font-size:12px;color:var(--t3);text-align:center;padding:20px;">No performance data — upload a Meta CSV export</div>
+          <div id="dash-ad-table-body" class="acc-body">
+            <div id="dash-ad-table" style="margin-top:12px;">
+              <div style="font-size:12px;color:var(--t3);text-align:center;padding:20px;">No performance data — upload a Meta CSV export</div>
+            </div>
           </div>
         </div>
 
@@ -3048,6 +3056,7 @@ function go(name) {
   if(name==='dashboard'){ loadDashboardData(); if(adLibrary.length){ populateDashUploadAdSelect(); } else { loadAdLibrary().then(populateDashUploadAdSelect); } }
   if(name==='data'){ populateProductSelect(); renderCustomerIntelligence(); }
   if(name==='research'){ renderS3ResearchBrief(); }
+  if(name==='audit'){ maybeAutoAudit(); }
   if(name==='discovery'){ initDiscoveryPanel(); }
   if(name==='visual'){ restoreGeneratedImages(); }
 }
@@ -3204,6 +3213,106 @@ Produce a PRE-LAUNCH SETUP CHECKLIST covering:
 ## ACCOUNT SETUP · ## PIXEL & TRACKING · ## CAMPAIGN STRUCTURE · ## BUDGET RECOMMENDATION · ## AUDIENCE RECOMMENDATION · ## CREATIVE REQUIREMENTS · ## LAUNCH SEQUENCE
 End with: READY TO LAUNCH SCORE: [0-100]`;
 
+// Build a structured audit brief from data already in memory (perf CSV, demographics,
+// ad library, brand snapshot) — replaces the old manual-paste (S.adData) workflow.
+function buildAuditBrief() {
+  const perf = perfData || [];
+  const demo = S.demographicsData || null;
+  const ads  = adLibrary || [];
+  const biz  = S.brandSnapshot || {};
+  const discovery = S.clientDiscovery || {};
+  const num = v => parseFloat(v) || 0;
+  const int = v => parseInt(v) || 0;
+
+  const totalSpend   = perf.reduce((s,r)=>s+num(r.spend),0);
+  const totalImpr    = perf.reduce((s,r)=>s+int(r.impressions),0);
+  const totalReach   = perf.reduce((s,r)=>s+int(r.reach),0);
+  const totalClicks  = perf.reduce((s,r)=>s+int(r.clicks),0);
+  // "Results" — Meta's Results column isn't stored separately; use conversions, else leads
+  const totalResults = perf.reduce((s,r)=>s+int(r.conversions ?? r.leads),0);
+  const avgCTR = totalImpr>0 ? (totalClicks/totalImpr*100).toFixed(2)
+    : (perf.length ? (perf.reduce((s,r)=>s+num(r.ctr),0)/perf.length).toFixed(2) : 0);
+  const avgCPL = totalResults>0 ? (totalSpend/totalResults).toFixed(2) : 'N/A';
+  const avgFreq = perf.length ? (perf.reduce((s,r)=>s+num(r.frequency),0)/perf.length).toFixed(2) : 0;
+
+  // Demographics live as an object of breakdowns ({ageBreakdown, genderBreakdown, deviceBreakdown})
+  let demoSummary = '';
+  if (demo && demo.ageBreakdown && Object.keys(demo.ageBreakdown).length) {
+    const ageLines = Object.entries(demo.ageBreakdown).sort((a,b)=>b[1]-a[1])
+      .map(([age,reach])=>`${age}: ${Math.round(reach).toLocaleString()} reach`).join('\n');
+    const g = demo.genderBreakdown || {}; const gTot = (g.male||0)+(g.female||0);
+    const genderLine = gTot ? `Female ${Math.round((g.female||0)/gTot*100)}% · Male ${Math.round((g.male||0)/gTot*100)}%` : '';
+    const dev = demo.deviceBreakdown || {}; const devTot = (dev.mobile||0)+(dev.desktop||0)+(dev.tablet||0);
+    const devLine = devTot ? `Mobile ${Math.round((dev.mobile||0)/devTot*100)}% · Desktop ${Math.round((dev.desktop||0)/devTot*100)}% · Tablet ${Math.round((dev.tablet||0)/devTot*100)}%` : '';
+    demoSummary = [ageLines, genderLine && ('Gender: '+genderLine), devLine && ('Device: '+devLine)].filter(Boolean).join('\n');
+  }
+
+  const adSummary = ads.slice(0,5)
+    .map(ad => '- ' + (ad.hook||ad.headline||'Untitled').replace(/[*_#>]/g,'').trim().slice(0,50)).join('\n');
+  const perTable = perf.length
+    ? perf.slice(0,15).map(r=>`${(r.ad_name||r.campaign_name||'Ad')}: Spend $${num(r.spend).toFixed(0)} · CTR ${num(r.ctr).toFixed(2)}% · Clicks ${int(r.clicks)} · Results ${int(r.conversions ?? r.leads)} · CPA $${num(r.cpa).toFixed(2)} · Freq ${num(r.frequency).toFixed(1)}`).join('\n')
+    : 'No per-campaign rows available';
+
+  const pixelStatus = discovery.has_pixel || biz.has_pixel || 'unknown';
+  const objective = discovery.campaign_objective || S.campaignObjective || ads[0]?.objective || 'unknown';
+
+  return `BUSINESS: ${biz.business_name || biz.brandName || currentBiz()?.name || 'Unknown'}
+INDUSTRY: ${biz.industry || discovery.industry || 'Unknown'}
+LOCATION: ${biz.location || 'Unknown'}
+WEBSITE: ${biz.website_url || biz.website || 'Unknown'}
+PIXEL STATUS: ${pixelStatus}
+CAMPAIGN OBJECTIVE: ${objective}
+
+PERFORMANCE SUMMARY (${perf.length} rows in memory):
+Total Spend: $${totalSpend.toFixed(2)} CAD
+Impressions: ${totalImpr.toLocaleString()}
+Reach: ${totalReach ? totalReach.toLocaleString() : 'not in dataset'}
+Link Clicks: ${totalClicks.toLocaleString()}
+CTR: ${avgCTR}%
+Results (conversions/leads): ${totalResults}
+Cost Per Result: ${avgCPL==='N/A' ? 'N/A' : '$'+avgCPL+' CAD'}
+Avg Frequency: ${avgFreq}x
+
+PER-CAMPAIGN / PER-AD ROWS:
+${perTable}
+
+ACTIVE ADS IN LIBRARY:
+${adSummary || 'No ads in library'}
+
+DEMOGRAPHIC BREAKDOWN:
+${demoSummary || 'No demographic data uploaded yet'}
+
+NOTE: Meta quality/engagement/conversion rankings and a separate Purchase-event count are NOT captured in this dataset. Do not assume specific pixel-event numbers or invent a purchase/checkout figure — if pixel or conversion-tracking status matters to a finding, ask the user rather than guessing.`;
+}
+
+// Pattern-based follow-up question surfaced after the audit renders
+function generateDiagnosticQuestion() {
+  const perf = perfData || [];
+  if (!perf.length) return null;
+  const int = v => parseInt(v)||0, num = v => parseFloat(v)||0;
+  const totalClicks  = perf.reduce((s,r)=>s+int(r.clicks),0);
+  const totalResults = perf.reduce((s,r)=>s+int(r.conversions ?? r.leads),0);
+  const totalImpr    = perf.reduce((s,r)=>s+int(r.impressions),0);
+  const avgCTR = totalImpr>0 ? totalClicks/totalImpr*100 : (perf.reduce((s,r)=>s+num(r.ctr),0)/perf.length);
+  if (avgCTR > 1 && totalResults > 0 && totalClicks/totalResults > 10)
+    return '💡 Your CTR is strong but the click→result rate is low. What happens on your landing/booking page after someone clicks the ad?';
+  if (avgCTR < 0.8)
+    return '💡 Your CTR is below 1%. Is the hook in your primary text specific to your location and audience, or could it appear on any competitor\'s ad?';
+  if (totalResults === 0 && totalClicks > 50)
+    return `💡 You have ${totalClicks} clicks but 0 conversions. Have you tested the full checkout/booking flow on mobile yourself, including any coupon code?`;
+  return null;
+}
+
+// Auto-run the audit once per session when the Audit tab opens, if there's data to analyze
+let _auditAutoRan = false;
+async function maybeAutoAudit() {
+  if (_auditAutoRan || S.launchMode) return;
+  if (!perfData.length) { await loadPerfData(); }
+  if (!perfData.length) return; // nothing to analyze — user can click Run AI Audit
+  _auditAutoRan = true;
+  runAudit();
+}
+
 async function runAudit() {
   document.getElementById('btn-audit').disabled = true;
   divider('audit', S.launchMode ? 'Pre-launch setup checklist' : 'Running 50-check audit');
@@ -3212,7 +3321,7 @@ async function runAudit() {
   const segmentAuditCtx = S.selectedSegment ? `\n\nTARGET SEGMENT FOR THIS AUDIT:\nWe are building ads for: ${S.selectedSegment.name}\nAge: ${S.selectedSegment.age_range} | Gender: ${S.selectedSegment.gender}\nTheir primary fear: ${S.selectedSegment.primary_fear}\nTheir primary desire: ${S.selectedSegment.primary_desire}\nTheir motivation to buy now: ${S.selectedSegment.motivation}\n\nAUDIT INSTRUCTION: When reviewing ad performance and gaps, focus on how well current ads speak to THIS specific segment. Identify what messaging is missing for this audience. What fears are unaddressed? What desires are untapped?` : '';
   const msg = S.launchMode
     ? `New advertiser: Product: ${S.product} · Price: ${S.price} · USP: ${S.usp} · Budget: ${S.budget} · Goal: ${S.goal} · Audience: ${S.audience} · Pain: ${S.pain} · Desire: ${S.desire} · Format: ${S.adFormat} · Niche: ${S.niche}${segmentAuditCtx}`
-    : `${S.adData?'UPLOADED DATA:\n'+S.adData.substring(0,3000):'No CSV uploaded.'}${perfCtx}\nProduct: ${S.product} · Budget: ${S.budget} · Goal: ${S.goal} · Audience: ${S.audience}${segmentAuditCtx}`;
+    : `Run a full 50-check Meta Ads audit on this campaign data. Identify what's working, what's broken, and exactly what to fix next.\n\n${buildAuditBrief()}${perfCtx ? '\n\n'+perfCtx : ''}${segmentAuditCtx}`;
   S.history.audit = [{role:'user',content:msg}];
   const reply = await ai(S.launchMode?SYS_AUDIT_LAUNCH:SYS_AUDIT, S.history.audit);
   S.history.audit.push({role:'assistant',content:reply});
@@ -3228,6 +3337,10 @@ async function runAudit() {
   const glbl=S.launchMode?(sc<40?'🔴 Not ready yet':sc<70?'🟡 Almost ready':'🟢 Ready to launch'):(sc<40?'🔴 Urgent intervention':sc<60?'🟠 Significant issues':sc<75?'🟡 Improvements needed':'🟢 Strong account');
   const html=`<div class="gauge"><div><div class="gnum" style="color:${gc}">${sc}</div><div style="font-size:10px;color:var(--t2)">${S.launchMode?'Launch Ready':'Grade '+grd}</div></div><div class="gbar-w"><div class="gbar-t"><div class="gbar-f" style="width:${sc}%;background:${gc}"></div></div><div class="glbl">${glbl}</div></div></div>${fmt(reply.replace(/SCORE[:\s]*\d+\/?\d*/i,'').replace(/GRADE[:\s]*\w/i,''))}`;
   addMsg('audit','agent',html,'res-bub');
+  if (!S.launchMode) {
+    const dq = generateDiagnosticQuestion();
+    if (dq) addMsg('audit','agent',`<div style="background:rgba(245,200,66,0.08);border:1px solid rgba(245,200,66,0.35);border-radius:10px;padding:12px 14px;font-size:12px;color:var(--t1);line-height:1.6;">${dq}</div>`,'res-bub');
+  }
   markDone('audit',sc+'/100'); S.lastAuditOutput = reply;
   updateCtx(); await savePipelineRun();
   await updateBizMeta({ last_audit_date: new Date().toISOString() });
@@ -9732,6 +9845,7 @@ async function clearDashboardData() {
   if (typeof renderPerfTable === 'function') renderPerfTable();
   const tbl = document.getElementById('dash-ad-table');
   if (tbl) tbl.innerHTML = '<div style="font-size:12px;color:var(--t3);text-align:center;padding:20px;">No performance data — upload a Meta CSV export</div>';
+  const cb = document.getElementById('dash-table-row-count'); if (cb) cb.textContent = '';
   ['dash-spend','dash-ctr','dash-cpl','dash-leads','dash-best-ctr'].forEach(id => { const e = document.getElementById(id); if (e) e.textContent = '—'; });
   const lu = document.getElementById('dash-last-updated'); if (lu) lu.textContent = 'No data uploaded yet — upload a Meta CSV to populate';
   const row = document.getElementById('dash-saved-data-row'); if (row) row.style.display = 'none';
@@ -9740,6 +9854,8 @@ async function clearDashboardData() {
 
 function renderAdPerformanceTable(data) {
   const tableEl = document.getElementById('dash-ad-table');
+  const countBadge = document.getElementById('dash-table-row-count');
+  if (countBadge) countBadge.textContent = data?.length ? '(' + data.length + ' ads)' : '';
   if (!tableEl || !data?.length) return;
 
   tableEl.innerHTML = `
